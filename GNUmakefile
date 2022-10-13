@@ -271,6 +271,10 @@ ifneq "$(findstring developer, $(MAKECMDGOALS))" ""
 	CMAKE_CONFIG_ARGS:=-C"$(BLENDER_DIR)/build_files/cmake/config/blender_developer.cmake" $(CMAKE_CONFIG_ARGS)
 endif
 
+ifneq "$(findstring gonsolo, $(MAKECMDGOALS))" ""
+	CMAKE_CONFIG_ARGS:=-C"$(BLENDER_DIR)/build_files/cmake/config/blender_gonsolo.cmake" $(CMAKE_CONFIG_ARGS)
+endif
+
 ifneq "$(findstring ccache, $(MAKECMDGOALS))" ""
 	CMAKE_CONFIG_ARGS:=-DWITH_COMPILER_CCACHE=YES $(CMAKE_CONFIG_ARGS)
 endif
