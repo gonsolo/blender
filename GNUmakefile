@@ -385,6 +385,7 @@ bpy: all
 developer: all
 ninja: all
 ccache: all
+gonsolo: all
 
 # -----------------------------------------------------------------------------
 # Build dependencies
