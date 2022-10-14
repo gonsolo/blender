@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0
  * Copyright 2011-2022 Blender Foundation */
 
+#include <array>
+
 #include "scene/curves.h"
 #include "device/device.h"
 #include "scene/mesh.h"
@@ -24,7 +26,7 @@ void curvebounds(float *lower, float *upper, float3 *p, int dim)
   float *p3 = &p[3].x;
 
   /* Catmull-Rom weights. */
-  float curve_coef[4];
+  std::array<float, 4> curve_coef;
   curve_coef[0] = p1[dim];
   curve_coef[1] = 0.5f * (-p0[dim] + p2[dim]);
   curve_coef[2] = 0.5f * (2 * p0[dim] - 5 * p1[dim] + 4 * p2[dim] - p3[dim]);
