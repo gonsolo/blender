@@ -19,6 +19,6 @@ run_zink_ubuntu:
 	$(LD)  __GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink $(BLENDER) $(THREADS) -W $(SCENE)
 rl: run_llvm
 run_llvm:
-	LIBGL_ALWAYS_SOFTWARE=1 __GLX_VENDOR_LIBRARY_NAME=mesa VK_ICD_FILENAMES=~/bin/mesa/share/vulkan/icd.d/lvp_icd.x86_64.json $(BLENDER) 
+	LIBGL_ALWAYS_SOFTWARE=1 __GLX_VENDOR_LIBRARY_NAME=mesa VK_ICD_FILENAMES=~/bin/mesa/share/vulkan/icd.d/lvp_icd.x86_64.json $(BLENDER)
 .PHONY: all c compile r run
 
