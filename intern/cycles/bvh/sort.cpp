@@ -26,9 +26,9 @@ struct BVHReferenceCompare {
   {
   }
 
-  __forceinline BoundBox get_prim_bounds(const BVHReference &prim) const
+  [[nodiscard]] __forceinline BoundBox get_prim_bounds(const BVHReference &prim) const
   {
-    return (aligned_space != NULL) ?
+    return (aligned_space != nullptr) ?
                unaligned_heuristic->compute_aligned_prim_boundbox(prim, *aligned_space) :
                prim.bounds();
   }
@@ -37,7 +37,7 @@ struct BVHReferenceCompare {
    *
    * Returns value is similar to return value of strcmp().
    */
-  __forceinline int compare(const BVHReference &ra, const BVHReference &rb) const
+  [[nodiscard]] __forceinline int compare(const BVHReference &ra, const BVHReference &rb) const
   {
     BoundBox ra_bounds = get_prim_bounds(ra), rb_bounds = get_prim_bounds(rb);
     float ca = ra_bounds.min[dim] + ra_bounds.max[dim];
@@ -63,7 +63,7 @@ struct BVHReferenceCompare {
     return 0;
   }
 
-  bool operator()(const BVHReference &ra, const BVHReference &rb)
+  auto operator()(const BVHReference &ra, const BVHReference &rb) -> bool
   {
     return (compare(ra, rb) < 0);
   }
@@ -134,7 +134,7 @@ static void bvh_reference_sort_threaded(TaskPool *task_pool,
     if (left < end) {
       if (start < right) {
         task_pool->push(
-            function_bind(bvh_reference_sort_threaded, task_pool, data, left, end, compare));
+            [task_pool, data, left, end, compare] { return bvh_reference_sort_threaded(task_pool, data, left, end, compare); });
       }
       else {
         start = left;
