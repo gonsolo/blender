@@ -43,23 +43,30 @@ struct BVHReferenceCompare {
     float ca = ra_bounds.min[dim] + ra_bounds.max[dim];
     float cb = rb_bounds.min[dim] + rb_bounds.max[dim];
 
-    if (ca < cb)
+    if (ca < cb) {
       return -1;
-    else if (ca > cb)
+    }
+    if (ca > cb) {
       return 1;
-    else if (ra.prim_object() < rb.prim_object())
+    }
+    if (ra.prim_object() < rb.prim_object()) {
       return -1;
-    else if (ra.prim_object() > rb.prim_object())
+    }
+    if (ra.prim_object() > rb.prim_object()) {
       return 1;
-    else if (ra.prim_index() < rb.prim_index())
+    }
+    if (ra.prim_index() < rb.prim_index()) {
       return -1;
-    else if (ra.prim_index() > rb.prim_index())
+    }
+    if (ra.prim_index() > rb.prim_index()) {
       return 1;
-    else if (ra.prim_type() < rb.prim_type())
+    }
+    if (ra.prim_type() < rb.prim_type()) {
       return -1;
-    else if (ra.prim_type() > rb.prim_type())
+    }
+    if (ra.prim_type() > rb.prim_type()) {
       return 1;
-
+    }
     return 0;
   }
 
