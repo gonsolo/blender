@@ -1,2 +1,0 @@
-make developer ccache ninja gonsolo && ../build_linux/bin/blender ~/Dokumente/blender/junkshop/gonso.blend
-
