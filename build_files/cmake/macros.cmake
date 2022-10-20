@@ -756,7 +756,7 @@ macro(remove_cc_flag_unsigned_char)
   endif()
 endmacro()
 
-function(ADD_CHECK_C_COMPILER_FLAG
+function(add_check_c_compiler_flag
   _CFLAGS
   _CACHE_VAR
   _FLAG
@@ -773,7 +773,7 @@ function(ADD_CHECK_C_COMPILER_FLAG
   endif()
 endfunction()
 
-function(ADD_CHECK_CXX_COMPILER_FLAG
+function(add_check_cxx_compiler_flag
   _CXXFLAGS
   _CACHE_VAR
   _FLAG
