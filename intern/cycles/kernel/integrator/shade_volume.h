@@ -63,17 +63,18 @@ typedef struct VolumeShaderCoefficients {
 ccl_device_inline bool shadow_volume_shader_sample(KernelGlobals kg,
                                                    IntegratorShadowState state,
                                                    ccl_private ShaderData *ccl_restrict sd,
+                                                   ccl_private ShaderClosures *ccl_restrict closures,
                                                    ccl_private Spectrum *ccl_restrict extinction)
 {
   VOLUME_READ_LAMBDA(integrator_state_read_shadow_volume_stack(state, i))
-  volume_shader_eval<true>(kg, state, sd, PATH_RAY_SHADOW, volume_read_lambda_pass);
+  volume_shader_eval<true>(kg, state, sd, closures, PATH_RAY_SHADOW, volume_read_lambda_pass);
 
   if (!(sd->flag & SD_EXTINCTION)) {
     return false;
   }
 
   const float density = object_volume_density(kg, sd->object);
-  *extinction = sd->closure_transparent_extinction * density;
+  *extinction = closures->closure_transparent_extinction * density;
   return true;
 }
 
@@ -81,24 +82,25 @@ ccl_device_inline bool shadow_volume_shader_sample(KernelGlobals kg,
 ccl_device_inline bool volume_shader_sample(KernelGlobals kg,
                                             IntegratorState state,
                                             ccl_private ShaderData *ccl_restrict sd,
+                                            ccl_private ShaderClosures *ccl_restrict closures,
                                             ccl_private VolumeShaderCoefficients *coeff)
 {
   const uint32_t path_flag = INTEGRATOR_STATE(state, path, flag);
   VOLUME_READ_LAMBDA(integrator_state_read_volume_stack(state, i))
-  volume_shader_eval<false>(kg, state, sd, path_flag, volume_read_lambda_pass);
+  volume_shader_eval<false>(kg, state, sd, closures, path_flag, volume_read_lambda_pass);
 
   if (!(sd->flag & (SD_EXTINCTION | SD_SCATTER | SD_EMISSION))) {
     return false;
   }
 
   coeff->sigma_s = zero_spectrum();
-  coeff->sigma_t = (sd->flag & SD_EXTINCTION) ? sd->closure_transparent_extinction :
+  coeff->sigma_t = (sd->flag & SD_EXTINCTION) ? closures->closure_transparent_extinction :
                                                 zero_spectrum();
-  coeff->emission = (sd->flag & SD_EMISSION) ? sd->closure_emission_background : zero_spectrum();
+  coeff->emission = (sd->flag & SD_EMISSION) ? closures->closure_emission_background : zero_spectrum();
 
   if (sd->flag & SD_SCATTER) {
-    for (int i = 0; i < sd->num_closure; i++) {
-      ccl_private const ShaderClosure *sc = &sd->closure[i];
+    for (int i = 0; i < closures->num_closure; i++) {
+      ccl_private const ShaderClosure *sc = &closures->closure[i];
 
       if (CLOSURE_IS_VOLUME(sc->type)) {
         coeff->sigma_s += sc->weight;
@@ -181,6 +183,7 @@ ccl_device void volume_shadow_heterogeneous(KernelGlobals kg,
                                             IntegratorShadowState state,
                                             ccl_private Ray *ccl_restrict ray,
                                             ccl_private ShaderData *ccl_restrict sd,
+                                            ccl_private ShaderClosures *ccl_restrict closures,
                                             ccl_private Spectrum *ccl_restrict throughput,
                                             const float object_step_size)
 {
@@ -222,7 +225,7 @@ ccl_device void volume_shadow_heterogeneous(KernelGlobals kg,
 
     /* compute attenuation over segment */
     sd->P = new_P;
-    if (shadow_volume_shader_sample(kg, state, sd, &sigma_t)) {
+    if (shadow_volume_shader_sample(kg, state, sd, closures, &sigma_t)) {
       /* Compute `expf()` only for every Nth step, to save some calculations
        * because `exp(a)*exp(b) = exp(a+b)`, also do a quick #VOLUME_THROUGHPUT_EPSILON
        * check then. */
@@ -421,6 +424,7 @@ typedef struct VolumeIntegrateState {
 
 ccl_device_forceinline void volume_integrate_step_scattering(
     ccl_private const ShaderData *sd,
+    ccl_private const ShaderClosures *closures,
     ccl_private const Ray *ray,
     const float3 equiangular_light_P,
     ccl_private const VolumeShaderCoefficients &ccl_restrict coeff,
@@ -444,7 +448,7 @@ ccl_device_forceinline void volume_integrate_step_scattering(
 
       result.direct_scatter = true;
       result.direct_throughput *= coeff.sigma_s * new_transmittance / vstate.equiangular_pdf;
-      volume_shader_copy_phases(&result.direct_phases, sd);
+      volume_shader_copy_phases(&result.direct_phases, closures);
 
       /* Multiple importance sampling. */
       if (vstate.use_mis) {
@@ -480,7 +484,7 @@ ccl_device_forceinline void volume_integrate_step_scattering(
         result.indirect_scatter = true;
         result.indirect_t = new_t;
         result.indirect_throughput *= coeff.sigma_s * new_transmittance / distance_pdf;
-        volume_shader_copy_phases(&result.indirect_phases, sd);
+        volume_shader_copy_phases(&result.indirect_phases, closures);
 
         if (vstate.direct_sample_method != VOLUME_SAMPLE_EQUIANGULAR) {
           /* If using distance sampling for direct light, just copy parameters
@@ -488,7 +492,7 @@ ccl_device_forceinline void volume_integrate_step_scattering(
           result.direct_scatter = true;
           result.direct_t = result.indirect_t;
           result.direct_throughput = result.indirect_throughput;
-          volume_shader_copy_phases(&result.direct_phases, sd);
+          volume_shader_copy_phases(&result.direct_phases, closures);
 
           /* Multiple importance sampling. */
           if (vstate.use_mis) {
@@ -523,6 +527,7 @@ ccl_device_forceinline void volume_integrate_heterogeneous(
     IntegratorState state,
     ccl_private Ray *ccl_restrict ray,
     ccl_private ShaderData *ccl_restrict sd,
+    ccl_private ShaderClosures *ccl_restrict closures,
     ccl_private const RNGState *rng_state,
     ccl_global float *ccl_restrict render_buffer,
     const float object_step_size,
@@ -596,7 +601,7 @@ ccl_device_forceinline void volume_integrate_heterogeneous(
 
     /* compute segment */
     VolumeShaderCoefficients coeff ccl_optional_struct_init;
-    if (volume_shader_sample(kg, state, sd, &coeff)) {
+    if (volume_shader_sample(kg, state, sd, closures, &coeff)) {
       const int closure_flag = sd->flag;
 
       /* Evaluate transmittance over segment. */
@@ -629,7 +634,7 @@ ccl_device_forceinline void volume_integrate_heterogeneous(
 
           /* Scattering and absorption. */
           volume_integrate_step_scattering(
-              sd, ray, equiangular_light_P, coeff, transmittance, vstate, result);
+              sd, closures, ray, equiangular_light_P, coeff, transmittance, vstate, result);
         }
         else {
           /* Absorption only. */
@@ -754,9 +759,10 @@ ccl_device_forceinline void integrate_volume_direct_light(
    * integrate_surface_bounce, evaluate the BSDF, and only then evaluate
    * the light shader. This could also move to its own kernel, for
    * non-constant light sources. */
-  ShaderDataTinyStorage emission_sd_storage;
+  ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
-  const Spectrum light_eval = light_sample_shader_eval(kg, state, emission_sd, ls, sd->time);
+  ShaderClosures emission_closures;
+  const Spectrum light_eval = light_sample_shader_eval(kg, state, emission_sd, &emission_closures, ls, sd->time);
   if (is_zero(light_eval)) {
     return;
   }
@@ -966,6 +972,7 @@ ccl_device VolumeIntegrateEvent volume_integrate(KernelGlobals kg,
                                                  ccl_global float *ccl_restrict render_buffer)
 {
   ShaderData sd;
+  ShaderClosures closures;
   shader_setup_from_volume(kg, &sd, ray);
 
   /* Load random number state. */
@@ -999,6 +1006,7 @@ ccl_device VolumeIntegrateEvent volume_integrate(KernelGlobals kg,
                                  state,
                                  ray,
                                  &sd,
+                                 &closures,
                                  &rng_state,
                                  render_buffer,
                                  step_size,

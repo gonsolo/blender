@@ -12,27 +12,31 @@ CCL_NAMESPACE_BEGIN
 
 /* BACKGROUND CLOSURE */
 
-ccl_device void background_setup(ccl_private ShaderData *sd, const Spectrum weight)
+ccl_device void background_setup(ccl_private ShaderData *sd,
+                                 ccl_private ShaderClosures* closures,
+                                 const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {
-    sd->closure_emission_background += weight;
+    closures->closure_emission_background += weight;
   }
   else {
     sd->flag |= SD_EMISSION;
-    sd->closure_emission_background = weight;
+    closures->closure_emission_background = weight;
   }
 }
 
 /* EMISSION CLOSURE */
 
-ccl_device void emission_setup(ccl_private ShaderData *sd, const Spectrum weight)
+ccl_device void emission_setup(ccl_private ShaderData *sd,
+                               ccl_private ShaderClosures* closures,
+                               const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {
-    sd->closure_emission_background += weight;
+    closures->closure_emission_background += weight;
   }
   else {
     sd->flag |= SD_EMISSION;
-    sd->closure_emission_background = weight;
+    closures->closure_emission_background = weight;
   }
 }
 

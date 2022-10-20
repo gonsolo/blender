@@ -26,6 +26,7 @@ CCL_NAMESPACE_BEGIN
 ccl_device int subsurface_bounce(KernelGlobals kg,
                                  IntegratorState state,
                                  ccl_private ShaderData *sd,
+                                 ccl_private ShaderClosures *closures,
                                  ccl_private const ShaderClosure *sc)
 {
   /* We should never have two consecutive BSSRDF bounces, the second one should
@@ -51,7 +52,7 @@ ccl_device int subsurface_bounce(KernelGlobals kg,
                                                                  PATH_RAY_SUBSURFACE_RANDOM_WALK);
 
   /* Compute weight, optionally including Fresnel from entry point. */
-  Spectrum weight = surface_shader_bssrdf_sample_weight(sd, sc);
+  Spectrum weight = surface_shader_bssrdf_sample_weight(sd, closures, sc);
   if (bssrdf->roughness != FLT_MAX) {
     path_flag |= PATH_RAY_SUBSURFACE_USE_FRESNEL;
   }
@@ -87,24 +88,25 @@ ccl_device int subsurface_bounce(KernelGlobals kg,
 ccl_device void subsurface_shader_data_setup(KernelGlobals kg,
                                              IntegratorState state,
                                              ccl_private ShaderData *sd,
+                                             ccl_private ShaderClosures *closures,
                                              const uint32_t path_flag)
 {
   /* Get bump mapped normal from shader evaluation at exit point. */
   float3 N = sd->N;
   if (sd->flag & SD_HAS_BSSRDF_BUMP) {
-    N = surface_shader_bssrdf_normal(sd);
+    N = surface_shader_bssrdf_normal(sd, closures);
   }
 
   /* Setup diffuse BSDF at the exit point. This replaces shader_eval_surface. */
   sd->flag &= ~SD_CLOSURE_FLAGS;
-  sd->num_closure = 0;
-  sd->num_closure_left = kernel_data.max_closures;
+  closures->num_closure = 0;
+  closures->num_closure_left = kernel_data.max_closures;
 
   const Spectrum weight = one_spectrum();
 
   if (path_flag & PATH_RAY_SUBSURFACE_USE_FRESNEL) {
     ccl_private PrincipledDiffuseBsdf *bsdf = (ccl_private PrincipledDiffuseBsdf *)bsdf_alloc(
-        sd, sizeof(PrincipledDiffuseBsdf), weight);
+        closures, sizeof(PrincipledDiffuseBsdf), weight);
 
     if (bsdf) {
       bsdf->N = N;
@@ -114,7 +116,7 @@ ccl_device void subsurface_shader_data_setup(KernelGlobals kg,
   }
   else {
     ccl_private DiffuseBsdf *bsdf = (ccl_private DiffuseBsdf *)bsdf_alloc(
-        sd, sizeof(DiffuseBsdf), weight);
+        closures, sizeof(DiffuseBsdf), weight);
 
     if (bsdf) {
       bsdf->N = N;
