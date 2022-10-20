@@ -40,12 +40,7 @@ CCL_NAMESPACE_BEGIN
     const char *label;
 #define OSL_CLOSURE_STRUCT_END(Upper, lower) \
   } \
-  ; \
-  ccl_device void osl_closure_##lower##_setup(KernelGlobals kg, \
-                                              ccl_private ShaderData *sd, \
-                                              uint32_t path_flag, \
-                                              float3 weight, \
-                                              ccl_private Upper##Closure *closure);
+  ;
 #define OSL_CLOSURE_STRUCT_MEMBER(Upper, TYPE, type, name, key) type name;
 #define OSL_CLOSURE_STRUCT_ARRAY_MEMBER(Upper, TYPE, type, name, key, size) type name[size];
 
