@@ -759,6 +759,7 @@ ccl_device_forceinline void integrate_volume_direct_light(
    * integrate_surface_bounce, evaluate the BSDF, and only then evaluate
    * the light shader. This could also move to its own kernel, for
    * non-constant light sources. */
+  // Was ShaderDataTinyStorage
   ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
   ShaderClosures emission_closures;
