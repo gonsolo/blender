@@ -36,7 +36,7 @@ if(WITH_CYCLES_NATIVE_ONLY)
   )
 
   if(NOT MSVC)
-    #add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _warn_error "-Werror")
+    add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _warn_error "-Werror")
     add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _has_march_native "-march=native")
     if(_has_march_native)
       set(CYCLES_KERNEL_FLAGS "-march=native")
