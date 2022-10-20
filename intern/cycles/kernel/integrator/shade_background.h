@@ -41,7 +41,8 @@ ccl_device Spectrum integrator_eval_background_shader(KernelGlobals kg,
 
   /* TODO: does aliasing like this break automatic SoA in CUDA?
    * Should we instead store closures separate from ShaderData? */
-  ShaderDataTinyStorage emission_sd_storage;
+  //ShaderDataTinyStorage emission_sd_storage;
+  ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
 
   PROFILING_INIT_FOR_SHADER(kg, PROFILING_SHADE_LIGHT_SETUP);

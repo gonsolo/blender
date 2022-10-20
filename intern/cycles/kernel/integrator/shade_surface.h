@@ -168,7 +168,8 @@ ccl_device_forceinline void integrate_surface_direct_light(KernelGlobals kg,
    * integrate_surface_bounce, evaluate the BSDF, and only then evaluate
    * the light shader. This could also move to its own kernel, for
    * non-constant light sources. */
-  ShaderDataCausticsStorage emission_sd_storage;
+  //ShaderDataCausticsStorage emission_sd_storage;
+  ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
 
   Ray ray ccl_optional_struct_init;
