@@ -925,6 +925,23 @@ typedef struct ccl_align(16) ShaderData
   uint lcg_state;
 
   /* Closure data, we store a fixed array of closures */
+  //int num_closure;
+  //int num_closure_left;
+  //Spectrum svm_closure_weight;
+
+  /* Closure weights summed directly, so we can evaluate
+   * emission and shadow transparency with MAX_CLOSURE 0. */
+  //Spectrum closure_emission_background;
+  //Spectrum closure_transparent_extinction;
+
+  /* At the end so we can adjust size in ShaderDataTinyStorage. */
+  //struct ShaderClosure closure[MAX_CLOSURE];
+}
+ShaderData;
+
+typedef struct ccl_align(16) ShaderClosures {
+
+  /* Closure data, we store a fixed array of closures */
   int num_closure;
   int num_closure_left;
   Spectrum svm_closure_weight;
@@ -934,26 +951,25 @@ typedef struct ccl_align(16) ShaderData
   Spectrum closure_emission_background;
   Spectrum closure_transparent_extinction;
 
-  /* At the end so we can adjust size in ShaderDataTinyStorage. */
   struct ShaderClosure closure[MAX_CLOSURE];
 }
-ShaderData;
+ShaderClosures;
 
 /* ShaderDataTinyStorage needs the same alignment as ShaderData, or else
  * the pointer cast in AS_SHADER_DATA invokes undefined behavior. */
-typedef struct ccl_align(16) ShaderDataTinyStorage
-{
-  char pad[sizeof(ShaderData) - sizeof(ShaderClosure) * MAX_CLOSURE];
-}
-ShaderDataTinyStorage;
+//typedef struct ccl_align(16) ShaderDataTinyStorage
+//{
+//  char pad[sizeof(ShaderData) - sizeof(ShaderClosure) * MAX_CLOSURE];
+//}
+//ShaderDataTinyStorage;
 
 /* ShaderDataCausticsStorage needs the same alignment as ShaderData, or else
  * the pointer cast in AS_SHADER_DATA invokes undefined behavior. */
-typedef struct ccl_align(16) ShaderDataCausticsStorage
-{
-  char pad[sizeof(ShaderData) - sizeof(ShaderClosure) * (MAX_CLOSURE - CAUSTICS_MAX_CLOSURE)];
-}
-ShaderDataCausticsStorage;
+//typedef struct ccl_align(16) ShaderDataCausticsStorage
+//{
+//  char pad[sizeof(ShaderData) - sizeof(ShaderClosure) * (MAX_CLOSURE - CAUSTICS_MAX_CLOSURE)];
+//}
+//ShaderDataCausticsStorage;
 
 #define AS_SHADER_DATA(shader_data_tiny_storage) \
   ((ccl_private ShaderData *)shader_data_tiny_storage)

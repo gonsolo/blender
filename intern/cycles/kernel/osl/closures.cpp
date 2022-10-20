@@ -125,6 +125,7 @@ static void shaderdata_to_shaderglobals(const KernelGlobalsCPU *kg,
 
 static void flatten_closure_tree(const KernelGlobalsCPU *kg,
                                  ShaderData *sd,
+                                 ShaderClosures *closures,
                                  uint32_t path_flag,
                                  const OSL::ClosureColor *closure,
                                  float3 weight = make_float3(1.0f, 1.0f, 1.0f))
@@ -135,13 +136,13 @@ static void flatten_closure_tree(const KernelGlobalsCPU *kg,
   switch (closure->id) {
     case OSL::ClosureColor::MUL: {
       OSL::ClosureMul *mul = (OSL::ClosureMul *)closure;
-      flatten_closure_tree(kg, sd, path_flag, mul->closure, TO_FLOAT3(mul->weight) * weight);
+      flatten_closure_tree(kg, sd, closures, path_flag, mul->closure, TO_FLOAT3(mul->weight) * weight);
       break;
     }
     case OSL::ClosureColor::ADD: {
       OSL::ClosureAdd *add = (OSL::ClosureAdd *)closure;
-      flatten_closure_tree(kg, sd, path_flag, add->closureA, weight);
-      flatten_closure_tree(kg, sd, path_flag, add->closureB, weight);
+      flatten_closure_tree(kg, sd, closures, path_flag, add->closureA, weight);
+      flatten_closure_tree(kg, sd, closures, path_flag, add->closureB, weight);
       break;
     }
 #define OSL_CLOSURE_STRUCT_BEGIN(Upper, lower) \
@@ -149,7 +150,7 @@ static void flatten_closure_tree(const KernelGlobalsCPU *kg,
     const OSL::ClosureComponent *comp = reinterpret_cast<const OSL::ClosureComponent *>(closure); \
     weight *= TO_FLOAT3(comp->w); \
     osl_closure_##lower##_setup( \
-        kg, sd, path_flag, weight, reinterpret_cast<const Upper##Closure *>(comp + 1)); \
+        kg, sd, closures, path_flag, weight, reinterpret_cast<const Upper##Closure *>(comp + 1)); \
     break; \
   }
 #include "closures_template.h"
@@ -163,6 +164,7 @@ static void flatten_closure_tree(const KernelGlobalsCPU *kg,
 void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
                              const void *state,
                              ShaderData *sd,
+                             ShaderClosures *closures,
                              uint32_t path_flag)
 {
   /* setup shader globals from shader data */
@@ -230,7 +232,7 @@ void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
 
   /* flatten closure tree */
   if (globals->Ci) {
-    flatten_closure_tree(kg, sd, path_flag, globals->Ci);
+    flatten_closure_tree(kg, sd, closures, path_flag, globals->Ci);
   }
 }
 
@@ -239,6 +241,7 @@ void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
 void OSLShader::eval_background(const KernelGlobalsCPU *kg,
                                 const void *state,
                                 ShaderData *sd,
+                                ShaderClosures *closures,
                                 uint32_t path_flag)
 {
   /* setup shader globals from shader data */
@@ -256,7 +259,7 @@ void OSLShader::eval_background(const KernelGlobalsCPU *kg,
 
   /* return background color immediately */
   if (globals->Ci) {
-    flatten_closure_tree(kg, sd, path_flag, globals->Ci);
+    flatten_closure_tree(kg, sd, closures, path_flag, globals->Ci);
   }
 }
 
@@ -265,6 +268,7 @@ void OSLShader::eval_background(const KernelGlobalsCPU *kg,
 void OSLShader::eval_volume(const KernelGlobalsCPU *kg,
                             const void *state,
                             ShaderData *sd,
+                            ShaderClosures *closures,
                             uint32_t path_flag)
 {
   /* setup shader globals from shader data */
@@ -283,7 +287,7 @@ void OSLShader::eval_volume(const KernelGlobalsCPU *kg,
 
   /* flatten closure tree */
   if (globals->Ci) {
-    flatten_closure_tree(kg, sd, path_flag, globals->Ci);
+    flatten_closure_tree(kg, sd, closures, path_flag, globals->Ci);
   }
 }
 

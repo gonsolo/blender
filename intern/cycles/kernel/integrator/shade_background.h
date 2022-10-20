@@ -44,6 +44,7 @@ ccl_device Spectrum integrator_eval_background_shader(KernelGlobals kg,
   //ShaderDataTinyStorage emission_sd_storage;
   ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
+  ShaderClosures emission_closures;
 
   PROFILING_INIT_FOR_SHADER(kg, PROFILING_SHADE_LIGHT_SETUP);
   shader_setup_from_background(kg,
@@ -55,9 +56,9 @@ ccl_device Spectrum integrator_eval_background_shader(KernelGlobals kg,
   PROFILING_SHADER(emission_sd->object, emission_sd->shader);
   PROFILING_EVENT(PROFILING_SHADE_LIGHT_EVAL);
   surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_BACKGROUND>(
-      kg, state, emission_sd, render_buffer, path_flag | PATH_RAY_EMISSION);
+      kg, state, emission_sd, &emission_closures, render_buffer, path_flag | PATH_RAY_EMISSION);
 
-  return surface_shader_background(emission_sd);
+  return surface_shader_background(emission_sd, &emission_closures);
 }
 
 ccl_device_inline void integrate_background(KernelGlobals kg,
@@ -171,9 +172,11 @@ ccl_device_inline void integrate_distant_lights(KernelGlobals kg,
 
       /* Evaluate light shader. */
       /* TODO: does aliasing like this break automatic SoA in CUDA? */
-      ShaderDataTinyStorage emission_sd_storage;
+      ShaderData emission_sd_storage;
       ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
-      Spectrum light_eval = light_sample_shader_eval(kg, state, emission_sd, &ls, ray_time);
+      ShaderClosures emission_closures;
+
+      Spectrum light_eval = light_sample_shader_eval(kg, state, emission_sd, &emission_closures, &ls, ray_time);
       if (is_zero(light_eval)) {
         return;
       }

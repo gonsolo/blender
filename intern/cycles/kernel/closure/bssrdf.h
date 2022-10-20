@@ -260,10 +260,10 @@ ccl_device_forceinline float bssrdf_pdf(const Spectrum radius, float r)
 
 /* Setup */
 
-ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private ShaderData *sd, Spectrum weight)
+ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private ShaderClosures *closures, Spectrum weight)
 {
   ccl_private Bssrdf *bssrdf = (ccl_private Bssrdf *)closure_alloc(
-      sd, sizeof(Bssrdf), CLOSURE_NONE_ID, weight);
+      closures, sizeof(Bssrdf), CLOSURE_NONE_ID, weight);
 
   if (bssrdf == NULL) {
     return NULL;
@@ -275,6 +275,7 @@ ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private ShaderData *sd, S
 }
 
 ccl_device int bssrdf_setup(ccl_private ShaderData *sd,
+                            ccl_private ShaderClosures *closures,
                             ccl_private Bssrdf *bssrdf,
                             ClosureType type,
                             const float ior)
@@ -284,7 +285,7 @@ ccl_device int bssrdf_setup(ccl_private ShaderData *sd,
   /* Add retro-reflection component as separate diffuse BSDF. */
   if (bssrdf->roughness != FLT_MAX) {
     ccl_private PrincipledDiffuseBsdf *bsdf = (ccl_private PrincipledDiffuseBsdf *)bsdf_alloc(
-        sd, sizeof(PrincipledDiffuseBsdf), bssrdf->weight);
+        closures, sizeof(PrincipledDiffuseBsdf), bssrdf->weight);
 
     if (bsdf) {
       bsdf->N = bssrdf->N;
@@ -314,7 +315,7 @@ ccl_device int bssrdf_setup(ccl_private ShaderData *sd,
     /* Add diffuse BSDF if any radius too small. */
     if (bssrdf->roughness != FLT_MAX) {
       ccl_private PrincipledDiffuseBsdf *bsdf = (ccl_private PrincipledDiffuseBsdf *)bsdf_alloc(
-          sd, sizeof(PrincipledDiffuseBsdf), diffuse_weight);
+          closures, sizeof(PrincipledDiffuseBsdf), diffuse_weight);
 
       if (bsdf) {
         bsdf->N = bssrdf->N;
@@ -324,7 +325,7 @@ ccl_device int bssrdf_setup(ccl_private ShaderData *sd,
     }
     else {
       ccl_private DiffuseBsdf *bsdf = (ccl_private DiffuseBsdf *)bsdf_alloc(
-          sd, sizeof(DiffuseBsdf), diffuse_weight);
+          closures, sizeof(DiffuseBsdf), diffuse_weight);
 
       if (bsdf) {
         bsdf->N = bssrdf->N;

@@ -23,18 +23,18 @@ CCL_NAMESPACE_BEGIN
 
 /* Merging */
 
-ccl_device_inline void volume_shader_merge_closures(ccl_private ShaderData *sd)
+ccl_device_inline void volume_shader_merge_closures(ccl_private ShaderClosures *closures)
 {
   /* Merge identical closures to save closure space with stacked volumes. */
-  for (int i = 0; i < sd->num_closure; i++) {
-    ccl_private ShaderClosure *sci = &sd->closure[i];
+  for (int i = 0; i < closures->num_closure; i++) {
+    ccl_private ShaderClosure *sci = &closures->closure[i];
 
     if (sci->type != CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID) {
       continue;
     }
 
-    for (int j = i + 1; j < sd->num_closure; j++) {
-      ccl_private ShaderClosure *scj = &sd->closure[j];
+    for (int j = i + 1; j < closures->num_closure; j++) {
+      ccl_private ShaderClosure *scj = &closures->closure[j];
       if (sci->type != scj->type) {
         continue;
       }
@@ -50,28 +50,28 @@ ccl_device_inline void volume_shader_merge_closures(ccl_private ShaderData *sd)
       sci->weight += scj->weight;
       sci->sample_weight += scj->sample_weight;
 
-      int size = sd->num_closure - (j + 1);
+      int size = closures->num_closure - (j + 1);
       if (size > 0) {
         for (int k = 0; k < size; k++) {
           scj[k] = scj[k + 1];
         }
       }
 
-      sd->num_closure--;
-      kernel_assert(sd->num_closure >= 0);
+      closures->num_closure--;
+      kernel_assert(closures->num_closure >= 0);
       j--;
     }
   }
 }
 
-ccl_device_inline void volume_shader_copy_phases(ccl_private ShaderVolumePhases *ccl_restrict
-                                                     phases,
-                                                 ccl_private const ShaderData *ccl_restrict sd)
+ccl_device_inline void volume_shader_copy_phases(
+                ccl_private ShaderVolumePhases *ccl_restrict phases,
+                ccl_private const ShaderClosures *ccl_restrict closures)
 {
   phases->num_closure = 0;
 
-  for (int i = 0; i < sd->num_closure; i++) {
-    ccl_private const ShaderClosure *from_sc = &sd->closure[i];
+  for (int i = 0; i < closures->num_closure; i++) {
+    ccl_private const ShaderClosure *from_sc = &closures->closure[i];
     ccl_private const HenyeyGreensteinVolume *from_hg =
         (ccl_private const HenyeyGreensteinVolume *)from_sc;
 
@@ -442,6 +442,7 @@ template<const bool shadow, typename StackReadOp, typename ConstIntegratorGeneri
 ccl_device_inline void volume_shader_eval(KernelGlobals kg,
                                           ConstIntegratorGenericState state,
                                           ccl_private ShaderData *ccl_restrict sd,
+                                          ccl_private ShaderClosures *ccl_restrict closures,
                                           const uint32_t path_flag,
                                           StackReadOp stack_read)
 {
@@ -458,8 +459,8 @@ ccl_device_inline void volume_shader_eval(KernelGlobals kg,
 
   /* reset closures once at the start, we will be accumulating the closures
    * for all volumes in the stack into a single array of closures */
-  sd->num_closure = 0;
-  sd->num_closure_left = max_closures;
+  closures->num_closure = 0;
+  closures->num_closure_left = max_closures;
   sd->flag = 0;
   sd->object_flag = 0;
 
@@ -494,21 +495,21 @@ ccl_device_inline void volume_shader_eval(KernelGlobals kg,
     /* evaluate shader */
 #  ifdef __OSL__
     if (kg->osl) {
-      OSLShader::eval_volume(kg, state, sd, path_flag);
+      OSLShader::eval_volume(kg, state, sd, closures, path_flag);
     }
     else
 #  endif
     {
 #  ifdef __SVM__
       svm_eval_nodes<KERNEL_FEATURE_NODE_MASK_VOLUME, SHADER_TYPE_VOLUME>(
-          kg, state, sd, NULL, path_flag);
+          kg, state, sd, closures, NULL, path_flag);
 #  endif
     }
 
     /* Merge closures to avoid exceeding number of closures limit. */
     if (!shadow) {
       if (i > 0) {
-        volume_shader_merge_closures(sd);
+        volume_shader_merge_closures(closures);
       }
     }
   }

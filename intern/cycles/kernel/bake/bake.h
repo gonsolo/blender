@@ -22,11 +22,12 @@ ccl_device void kernel_displace_evaluate(KernelGlobals kg,
   const KernelShaderEvalInput in = input[offset];
 
   ShaderData sd;
+  ShaderClosures closures;
   shader_setup_from_displace(kg, &sd, in.object, in.prim, in.u, in.v);
 
   /* Evaluate displacement shader. */
   const float3 P = sd.P;
-  displacement_shader_eval(kg, INTEGRATOR_STATE_NULL, &sd);
+  displacement_shader_eval(kg, INTEGRATOR_STATE_NULL, &sd, &closures);
   float3 D = sd.P - P;
 
   object_inverse_dir_transform(kg, &sd, &D);
@@ -60,6 +61,7 @@ ccl_device void kernel_background_evaluate(KernelGlobals kg,
 
   /* Setup shader data. */
   ShaderData sd;
+  ShaderClosures closures;
   shader_setup_from_background(kg, &sd, ray_P, ray_D, ray_time);
 
   /* Evaluate shader.
@@ -67,8 +69,8 @@ ccl_device void kernel_background_evaluate(KernelGlobals kg,
   const uint32_t path_flag = PATH_RAY_EMISSION;
   surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_LIGHT &
                       ~(KERNEL_FEATURE_NODE_RAYTRACE | KERNEL_FEATURE_NODE_LIGHT_PATH)>(
-      kg, INTEGRATOR_STATE_NULL, &sd, NULL, path_flag);
-  Spectrum color = surface_shader_background(&sd);
+      kg, INTEGRATOR_STATE_NULL, &sd, &closures, NULL, path_flag);
+  Spectrum color = surface_shader_background(&sd, &closures);
 
 #ifdef __KERNEL_DEBUG_NAN__
   if (!isfinite_safe(color)) {
@@ -97,15 +99,16 @@ ccl_device void kernel_curve_shadow_transparency_evaluate(
   const KernelShaderEvalInput in = input[offset];
 
   ShaderData sd;
+  ShaderClosures closures;
   shader_setup_from_curve(kg, &sd, in.object, in.prim, __float_as_int(in.v), in.u);
 
   /* Evaluate transparency. */
   surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_SHADOW &
                       ~(KERNEL_FEATURE_NODE_RAYTRACE | KERNEL_FEATURE_NODE_LIGHT_PATH)>(
-      kg, INTEGRATOR_STATE_NULL, &sd, NULL, PATH_RAY_SHADOW);
+      kg, INTEGRATOR_STATE_NULL, &sd, &closures, NULL, PATH_RAY_SHADOW);
 
   /* Write output. */
-  output[offset] = clamp(average(surface_shader_transparency(kg, &sd)), 0.0f, 1.0f);
+  output[offset] = clamp(average(surface_shader_transparency(kg, &sd, &closures)), 0.0f, 1.0f);
 }
 
 CCL_NAMESPACE_END

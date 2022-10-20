@@ -13,6 +13,7 @@ CCL_NAMESPACE_BEGIN
 ccl_device_forceinline void film_write_denoising_features_surface(KernelGlobals kg,
                                                                   IntegratorState state,
                                                                   ccl_private const ShaderData *sd,
+                                                                  ccl_private const ShaderClosures *closures,
                                                                   ccl_global float *ccl_restrict
                                                                       render_buffer)
 {
@@ -40,8 +41,8 @@ ccl_device_forceinline void film_write_denoising_features_surface(KernelGlobals 
   Spectrum specular_albedo = zero_spectrum();
   float sum_weight = 0.0f, sum_nonspecular_weight = 0.0f;
 
-  for (int i = 0; i < sd->num_closure; i++) {
-    ccl_private const ShaderClosure *sc = &sd->closure[i];
+  for (int i = 0; i < closures->num_closure; i++) {
+    ccl_private const ShaderClosure *sc = &closures->closure[i];
 
     if (!CLOSURE_IS_BSDF_OR_BSSRDF(sc->type)) {
       continue;
