@@ -10,8 +10,12 @@
 #define __KERNEL_GPU__
 #define __KERNEL_CUDA__ /* OptiX kernels are implicitly CUDA kernels too */
 #define __KERNEL_OPTIX__
+#ifndef CCL_NAMESPACE_BEGIN
 #define CCL_NAMESPACE_BEGIN
+#endif
+#ifndef CCL_NAMESPACE_END
 #define CCL_NAMESPACE_END
+#endif
 
 #ifndef ATTR_FALLTHROUGH
 #  define ATTR_FALLTHROUGH
