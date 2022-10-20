@@ -51,6 +51,7 @@ ccl_device_inline void integrate_light(KernelGlobals kg,
 
   /* Evaluate light shader. */
   /* TODO: does aliasing like this break automatic SoA in CUDA? */
+  // Was ShaderDataTinyStorage
   ShaderData emission_sd_storage;
   ccl_private ShaderData *emission_sd = AS_SHADER_DATA(&emission_sd_storage);
   ShaderClosures emission_closures;
