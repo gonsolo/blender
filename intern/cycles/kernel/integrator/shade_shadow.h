@@ -27,6 +27,7 @@ ccl_device_inline Spectrum integrate_transparent_surface_shadow(KernelGlobals kg
    *
    * TODO: is it better to declare this outside the loop or keep it local
    * so the compiler can see there is no dependency between iterations? */
+  // Was ShaderDataTinyStorage
   ShaderData shadow_sd_storage;
   ccl_private ShaderData *shadow_sd = AS_SHADER_DATA(&shadow_sd_storage);
   ShaderClosures shadow_closures;
