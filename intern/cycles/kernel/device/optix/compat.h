@@ -27,7 +27,7 @@
 typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
 #else
-#  include <stdint.h>
+#  include <cstdint>
 #endif
 
 #ifdef CYCLES_CUBIN_CC
@@ -80,9 +80,9 @@ typedef unsigned long long uint64_t;
 
 /* GPU texture objects */
 
-typedef unsigned long long CUtexObject;
-typedef CUtexObject ccl_gpu_tex_object_2D;
-typedef CUtexObject ccl_gpu_tex_object_3D;
+using CUtexObject = unsigned long long;
+using ccl_gpu_tex_object_2D = CUtexObject;
+using ccl_gpu_tex_object_3D = CUtexObject;
 
 template<typename T>
 ccl_device_forceinline T ccl_gpu_tex_object_read_2D(const ccl_gpu_tex_object_2D texobj,
@@ -103,7 +103,7 @@ ccl_device_forceinline T ccl_gpu_tex_object_read_3D(const ccl_gpu_tex_object_3D 
 
 /* Half */
 
-typedef unsigned short half;
+using half = unsigned short;
 
 __device__ half __float2half(const float f)
 {
