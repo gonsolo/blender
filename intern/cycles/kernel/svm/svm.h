@@ -218,6 +218,7 @@ template<uint node_feature_mask, ShaderType type, typename ConstIntegratorGeneri
 ccl_device void svm_eval_nodes(KernelGlobals kg,
                                ConstIntegratorGenericState state,
                                ccl_private ShaderData *sd,
+                               ccl_private ShaderClosures *closures,
                                ccl_global float *render_buffer,
                                uint32_t path_flag)
 {
@@ -244,30 +245,30 @@ ccl_device void svm_eval_nodes(KernelGlobals kg,
       }
       SVM_CASE(NODE_CLOSURE_BSDF)
       offset = svm_node_closure_bsdf<node_feature_mask, type>(
-          kg, sd, stack, node, path_flag, offset);
+          kg, sd, closures, stack, node, path_flag, offset);
       break;
       SVM_CASE(NODE_CLOSURE_EMISSION)
       IF_KERNEL_NODES_FEATURE(EMISSION)
       {
-        svm_node_closure_emission(sd, stack, node);
+        svm_node_closure_emission(sd, closures, stack, node);
       }
       break;
       SVM_CASE(NODE_CLOSURE_BACKGROUND)
       IF_KERNEL_NODES_FEATURE(EMISSION)
       {
-        svm_node_closure_background(sd, stack, node);
+        svm_node_closure_background(sd, closures, stack, node);
       }
       break;
       SVM_CASE(NODE_CLOSURE_SET_WEIGHT)
-      svm_node_closure_set_weight(sd, node.y, node.z, node.w);
+      svm_node_closure_set_weight(closures, node.y, node.z, node.w);
       break;
       SVM_CASE(NODE_CLOSURE_WEIGHT)
-      svm_node_closure_weight(sd, stack, node.y);
+      svm_node_closure_weight(closures, stack, node.y);
       break;
       SVM_CASE(NODE_EMISSION_WEIGHT)
       IF_KERNEL_NODES_FEATURE(EMISSION)
       {
-        svm_node_emission_weight(kg, sd, stack, node);
+        svm_node_emission_weight(kg, closures, stack, node);
       }
       break;
       SVM_CASE(NODE_MIX_CLOSURE)
@@ -393,7 +394,7 @@ ccl_device void svm_eval_nodes(KernelGlobals kg,
       svm_node_hsv(kg, sd, stack, node);
       break;
       SVM_CASE(NODE_CLOSURE_HOLDOUT)
-      svm_node_closure_holdout(sd, stack, node);
+      svm_node_closure_holdout(sd, closures, stack, node);
       break;
       SVM_CASE(NODE_FRESNEL)
       svm_node_fresnel(sd, stack, node.y, node.z, node.w);
@@ -404,13 +405,13 @@ ccl_device void svm_eval_nodes(KernelGlobals kg,
       SVM_CASE(NODE_CLOSURE_VOLUME)
       IF_KERNEL_NODES_FEATURE(VOLUME)
       {
-        svm_node_closure_volume<type>(kg, sd, stack, node);
+        svm_node_closure_volume<type>(kg, sd, closures, stack, node);
       }
       break;
       SVM_CASE(NODE_PRINCIPLED_VOLUME)
       IF_KERNEL_NODES_FEATURE(VOLUME)
       {
-        offset = svm_node_principled_volume<type>(kg, sd, stack, node, path_flag, offset);
+        offset = svm_node_principled_volume<type>(kg, sd, closures, stack, node, path_flag, offset);
       }
       break;
       SVM_CASE(NODE_MATH)

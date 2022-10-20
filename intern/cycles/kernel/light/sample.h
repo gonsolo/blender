@@ -18,6 +18,7 @@ ccl_device_noinline_cpu Spectrum
 light_sample_shader_eval(KernelGlobals kg,
                          IntegratorState state,
                          ccl_private ShaderData *ccl_restrict emission_sd,
+                         ccl_private ShaderClosures *ccl_restrict emission_closures,
                          ccl_private LightSample *ccl_restrict ls,
                          float time)
 {
@@ -61,14 +62,14 @@ light_sample_shader_eval(KernelGlobals kg,
     /* No proper path flag, we're evaluating this for all closures. that's
      * weak but we'd have to do multiple evaluations otherwise. */
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_LIGHT>(
-        kg, state, emission_sd, NULL, PATH_RAY_EMISSION);
+        kg, state, emission_sd, emission_closures, NULL, PATH_RAY_EMISSION);
 
     /* Evaluate closures. */
     if (ls->type == LIGHT_BACKGROUND) {
-      eval = surface_shader_background(emission_sd);
+      eval = surface_shader_background(emission_sd, emission_closures);
     }
     else {
-      eval = surface_shader_emission(emission_sd);
+      eval = surface_shader_emission(emission_sd, emission_closures);
     }
   }
 

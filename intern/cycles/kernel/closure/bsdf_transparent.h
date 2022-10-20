@@ -11,6 +11,7 @@
 CCL_NAMESPACE_BEGIN
 
 ccl_device void bsdf_transparent_setup(ccl_private ShaderData *sd,
+                                       ccl_private ShaderClosures *closures,
                                        const Spectrum weight,
                                        uint32_t path_flag)
 {
@@ -21,11 +22,11 @@ ccl_device void bsdf_transparent_setup(ccl_private ShaderData *sd,
   }
 
   if (sd->flag & SD_TRANSPARENT) {
-    sd->closure_transparent_extinction += weight;
+    closures->closure_transparent_extinction += weight;
 
     /* Add weight to existing transparent BSDF. */
-    for (int i = 0; i < sd->num_closure; i++) {
-      ccl_private ShaderClosure *sc = &sd->closure[i];
+    for (int i = 0; i < closures->num_closure; i++) {
+      ccl_private ShaderClosure *sc = &closures->closure[i];
 
       if (sc->type == CLOSURE_BSDF_TRANSPARENT_ID) {
         sc->weight += weight;
@@ -36,25 +37,25 @@ ccl_device void bsdf_transparent_setup(ccl_private ShaderData *sd,
   }
   else {
     sd->flag |= SD_BSDF | SD_TRANSPARENT;
-    sd->closure_transparent_extinction = weight;
+    closures->closure_transparent_extinction = weight;
 
     if (path_flag & PATH_RAY_TERMINATE) {
       /* In this case the number of closures is set to zero to disable
        * all others, but we still want to get transparency so increase
        * the number just for this. */
-      sd->num_closure_left = 1;
+      closures->num_closure_left = 1;
     }
 
     /* Create new transparent BSDF. */
     ccl_private ShaderClosure *bsdf = closure_alloc(
-        sd, sizeof(ShaderClosure), CLOSURE_BSDF_TRANSPARENT_ID, weight);
+        closures, sizeof(ShaderClosure), CLOSURE_BSDF_TRANSPARENT_ID, weight);
 
     if (bsdf) {
       bsdf->sample_weight = sample_weight;
       bsdf->N = sd->N;
     }
     else if (path_flag & PATH_RAY_TERMINATE) {
-      sd->num_closure_left = 0;
+      closures->num_closure_left = 0;
     }
   }
 }

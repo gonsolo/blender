@@ -16,7 +16,8 @@ ccl_device void integrator_volume_stack_update_for_subsurface(KernelGlobals kg,
 {
   PROFILING_INIT(kg, PROFILING_INTERSECT_VOLUME_STACK);
 
-  ShaderDataTinyStorage stack_sd_storage;
+  //ShaderDataTinyStorage stack_sd_storage;
+  ShaderData stack_sd_storage;
   ccl_private ShaderData *stack_sd = AS_SHADER_DATA(&stack_sd_storage);
 
   kernel_assert(kernel_data.integrator.use_volumes);
@@ -69,7 +70,8 @@ ccl_device void integrator_volume_stack_init(KernelGlobals kg, IntegratorState s
 {
   PROFILING_INIT(kg, PROFILING_INTERSECT_VOLUME_STACK);
 
-  ShaderDataTinyStorage stack_sd_storage;
+  //ShaderDataTinyStorage stack_sd_storage;
+  ShaderData stack_sd_storage;
   ccl_private ShaderData *stack_sd = AS_SHADER_DATA(&stack_sd_storage);
 
   Ray volume_ray ccl_optional_struct_init;
