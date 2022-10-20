@@ -352,6 +352,7 @@ string CUDADevice::compile_kernel(const uint kernel_features,
 
   string command = string_printf(
       "\"%s\" "
+      "-allow-unsupported-compiler "
       "-arch=%s_%d%d "
       "--%s \"%s\" "
       "-o \"%s\" "
