@@ -4,7 +4,7 @@ SCENE = ~/Dokumente/blender/junkshop/gonso.blend
 THREADS = #-t 1
 LD = LD_LIBRARY_PATH=/home/gonsolo/bin/mesa/lib/x86_64-linux-gnu
 
-all: compile
+all: compile run
 c: compile
 compile:
 	cd ..; make developer ccache ninja gonsolo; cd -
