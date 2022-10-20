@@ -49,6 +49,3 @@ waveletNoiseTile.bin
 
 # testing environment
 /Testing
-
-# compilation database for IDE integration (e.g. vim and ale lsp)
-compile_commands.json
