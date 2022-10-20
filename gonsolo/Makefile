@@ -14,8 +14,8 @@ run:
 rz: run_zink
 run_zink:
 	__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink $(BLENDER) $(THREADS) -W $(SCENE)
-rzu: run_zink_ubuntu
-run_zink_ubuntu:
+rzm: run_zink_mesa
+run_zink_mesa:
 	$(LD)  __GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink $(BLENDER) $(THREADS) -W $(SCENE)
 rl: run_llvm
 run_llvm:
