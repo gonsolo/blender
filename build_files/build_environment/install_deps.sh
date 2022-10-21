@@ -420,7 +420,7 @@ PYTHON_URLLIB3_VERSION_MEX="2.0"
 PYTHON_URLLIB3_NAME="urllib3"
 
 PYTHON_CERTIFI_VERSION="2021.10.8"
-PYTHON_CERTIFI_VERSION_MIN="2021.0"
+PYTHON_CERTIFI_VERSION_MIN="2020.0"
 PYTHON_CERTIFI_VERSION_MEX="2023.0"
 PYTHON_CERTIFI_NAME="certifi"
 
@@ -1139,7 +1139,7 @@ LLVM_SOURCE=( "$_LLVM_SOURCE_ROOT/llvm-$LLVM_VERSION.src.tar.xz" )
 LLVM_CLANG_SOURCE=( "$_LLVM_SOURCE_ROOT/clang-$LLVM_VERSION.src.tar.xz" "$_LLVM_SOURCE_ROOT/cfe-$LLVM_VERSION.src.tar.xz" )
 
 OSL_USE_REPO=false
-OSL_SOURCE=( "https://github.com/imageworks/OpenShadingLanguage/archive/v$OSL_VERSION.tar.gz" )
+OSL_SOURCE=( "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/archive/v$OSL_VERSION.tar.gz" )
 #~ OSL_SOURCE_REPO=( "https://github.com/imageworks/OpenShadingLanguage.git" )
 #~ OSL_SOURCE_REPO_BRANCH="master"
 #~ OSL_SOURCE_REPO_UID="85179714e1bc69cd25ecb6bb711c1a156685d395"
@@ -4506,7 +4506,16 @@ install_DEB() {
       LLVM_VERSION_FOUND=$LLVM_VERSION
       clean_LLVM
     else
-      _do_compile_llvm=true
+      check_package_version_ge_lt_DEB llvm-12-dev $LLVM_VERSION_MIN $LLVM_VERSION_MEX
+      if [ $? -eq 0 ]; then
+        install_packages_DEB llvm-12-dev clang-12 libclang-12-dev
+        have_llvm=true
+        LLVM_VERSION=`/usr/lib/llvm-12/bin/llvm-config --version`
+        LLVM_VERSION_FOUND=$LLVM_VERSION
+        clean_LLVM
+      else
+        _do_compile_llvm=true
+      fi
     fi
   fi
 
