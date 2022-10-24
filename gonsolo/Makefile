@@ -1,16 +1,22 @@
 BLENDER = ../../build_linux/bin/blender
+#BLENDER = ../../build_linux_debug/bin/blender
 #BLENDER = blender
 SCENE = ~/Dokumente/blender/junkshop/gonso.blend
 THREADS = #-t 1
 LD = LD_LIBRARY_PATH=/home/gonsolo/bin/mesa/lib/x86_64-linux-gnu
+#OPTIX_ROOT_DIR=~/bin/NVIDIA-OptiX-SDK-7.5.0-linux64-x86_64
 
-all: compile
+all: compile run
 c: compile
 compile:
+	#cd ..; make debug developer ccache ninja gonsolo; cd -
 	cd ..; make developer ccache ninja gonsolo; cd -
 r: run
 run:
 	$(BLENDER) -W $(SCENE)
+gdb:
+	echo "run -W $(SCENE)" > gdb_execution
+	gdb -x gdb_execution $(BLENDER)
 rz: run_zink
 run_zink:
 	__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink $(BLENDER) $(THREADS) -W $(SCENE)
