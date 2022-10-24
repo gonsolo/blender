@@ -1141,6 +1141,7 @@ LLVM_CLANG_SOURCE=( "$_LLVM_SOURCE_ROOT/clang-$LLVM_VERSION.src.tar.xz" "$_LLVM_
 
 OSL_USE_REPO=false
 OSL_SOURCE=( "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/archive/v$OSL_VERSION.tar.gz" )
+#OSL_SOURCE=( "https://github.com/imageworks/OpenShadingLanguage/archive/Release-$OSL_VERSION.tar.gz" )
 #~ OSL_SOURCE_REPO=( "https://github.com/imageworks/OpenShadingLanguage.git" )
 #~ OSL_SOURCE_REPO_BRANCH="master"
 #~ OSL_SOURCE_REPO_UID="85179714e1bc69cd25ecb6bb711c1a156685d395"
