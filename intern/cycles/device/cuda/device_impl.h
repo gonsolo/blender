@@ -77,7 +77,7 @@ class CUDADevice : public Device {
 
   bool use_adaptive_compilation();
 
-  virtual string compile_kernel_get_common_cflags(const uint kernel_features);
+  string compile_kernel_get_common_cflags(const uint kernel_features);
 
   string compile_kernel(const uint kernel_features,
                         const char *name,
