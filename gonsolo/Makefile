@@ -14,6 +14,10 @@ compile:
 r: run
 run:
 	$(BLENDER) -W $(SCENE)
+b: background
+background:
+	$(BLENDER) --background $(SCENE) --render-output ./bla. --render-format OPEN_EXR --render-frame 1 -- --cycles-device OPTIX
+	gimp ./bla.0001.exr
 gdb:
 	echo "run -W $(SCENE)" > gdb_execution
 	gdb -x gdb_execution $(BLENDER)
