@@ -489,8 +489,9 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
             optix_include_dir.c_str()));
         return false;
       }
+      string cflags = compile_kernel_get_common_cflags(kernel_features);
       ptx_filename = compile_kernel(
-          kernel_features,
+          cflags,
           (kernel_features & (KERNEL_FEATURE_NODE_RAYTRACE | KERNEL_FEATURE_MNEE)) ?
               "kernel_shader_raytrace" :
               "kernel",
