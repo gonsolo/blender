@@ -17,10 +17,11 @@ CCL_NAMESPACE_BEGIN
 template<typename ConstIntegratorGenericState>
 ccl_device void displacement_shader_eval(KernelGlobals kg,
                                          ConstIntegratorGenericState state,
-                                         ccl_private ShaderData *sd)
+                                         ccl_private ShaderData *sd,
+                                         ccl_private ShaderClosures *closures)
 {
-  sd->num_closure = 0;
-  sd->num_closure_left = 0;
+  closures->num_closure = 0;
+  closures->num_closure_left = 0;
 
   /* this will modify sd->P */
 #ifdef __OSL__
@@ -32,7 +33,7 @@ ccl_device void displacement_shader_eval(KernelGlobals kg,
   {
 #ifdef __SVM__
     svm_eval_nodes<KERNEL_FEATURE_NODE_MASK_DISPLACEMENT, SHADER_TYPE_DISPLACEMENT>(
-        kg, state, sd, NULL, 0);
+        kg, state, sd, closures, NULL, 0);
 #endif
   }
 }

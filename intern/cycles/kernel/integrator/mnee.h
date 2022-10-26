@@ -805,7 +805,9 @@ ccl_device_forceinline bool mnee_compute_transfer_matrix(ccl_private const Shade
 ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
                                                    IntegratorState state,
                                                    ccl_private ShaderData *sd,
+                                                   ccl_private ShaderClosures *closures,
                                                    ccl_private ShaderData *sd_mnee,
+                                                   ccl_private ShaderClosures *closures_mnee,
                                                    ccl_private LightSample *ls,
                                                    int vertex_count,
                                                    ccl_private ManifoldVertex *vertices,
@@ -815,7 +817,7 @@ ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
   float3 wo = normalize_len(vertices[0].p - sd->P, &wo_len);
 
   /* Initialize throughput and evaluate receiver bsdf * |n.wo|. */
-  surface_shader_bsdf_eval(kg, state, sd, wo, throughput, ls->shader);
+  surface_shader_bsdf_eval(kg, state, sd, closures, wo, throughput, ls->shader);
 
   /* Update light sample with new position / direct.ion
    * and keep pdf in vertex area measure */
@@ -843,7 +845,7 @@ ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
                                                              1;
   INTEGRATOR_STATE_WRITE(state, path, bounce) = bounce + vertex_count;
 
-  Spectrum light_eval = light_sample_shader_eval(kg, state, sd_mnee, ls, sd->time);
+  Spectrum light_eval = light_sample_shader_eval(kg, state, sd_mnee, closures, ls, sd->time);
   bsdf_eval_mul(throughput, light_eval / ls->pdf);
 
   /* Generalized geometry term. */
@@ -922,7 +924,7 @@ ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
 
     /* Evaluate shader nodes at solution vi. */
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_SHADOW>(
-        kg, state, sd_mnee, NULL, PATH_RAY_DIFFUSE, true);
+        kg, state, sd_mnee, closures_mnee, NULL, PATH_RAY_DIFFUSE, true);
 
     /* Set light looking dir. */
     wo = (vi == vertex_count - 1) ? (ls->t == FLT_MAX ? ls->D : ls->P - v.p) :
@@ -948,7 +950,9 @@ ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
 ccl_device_forceinline int kernel_path_mnee_sample(KernelGlobals kg,
                                                    IntegratorState state,
                                                    ccl_private ShaderData *sd,
+                                                   ccl_private ShaderClosures *closures,
                                                    ccl_private ShaderData *sd_mnee,
+                                                   ccl_private ShaderClosures *closures_mnee,
                                                    ccl_private const RNGState *rng_state,
                                                    ccl_private LightSample *ls,
                                                    ccl_private BsdfEval *throughput)
@@ -1015,12 +1019,12 @@ ccl_device_forceinline int kernel_path_mnee_sample(KernelGlobals kg,
 
       /* Last bool argument is the MNEE flag (for TINY_MAX_CLOSURE cap in kernel_shader.h). */
       surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_SHADOW>(
-          kg, state, sd_mnee, NULL, PATH_RAY_DIFFUSE, true);
+          kg, state, sd_mnee, closures_mnee, NULL, PATH_RAY_DIFFUSE, true);
 
       /* Get and sample refraction bsdf */
       bool found_transimissive_microfacet_bsdf = false;
-      for (int ci = 0; ci < sd_mnee->num_closure; ci++) {
-        ccl_private ShaderClosure *bsdf = &sd_mnee->closure[ci];
+      for (int ci = 0; ci < closures_mnee->num_closure; ci++) {
+        ccl_private ShaderClosure *bsdf = &closures_mnee->closure[ci];
         if (bsdf->type == CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID ||
             bsdf->type == CLOSURE_BSDF_MICROFACET_GGX_REFRACTION_ID ||
             bsdf->type == CLOSURE_BSDF_MICROFACET_MULTI_GGX_GLASS_ID ||
@@ -1094,7 +1098,7 @@ ccl_device_forceinline int kernel_path_mnee_sample(KernelGlobals kg,
    */
   if (mnee_newton_solver(kg, sd, sd_mnee, ls, vertex_count, vertices)) {
     /* 3. If a solution exists, calculate contribution of the corresponding path */
-    if (!mnee_path_contribution(kg, state, sd, sd_mnee, ls, vertex_count, vertices, throughput))
+    if (!mnee_path_contribution(kg, state, sd, closures, sd_mnee, closures_mnee, ls, vertex_count, vertices, throughput))
       return 0;
 
     return vertex_count;
