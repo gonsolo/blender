@@ -194,6 +194,8 @@ class Device {
   {
   }
 
+  virtual size_t get_used_memory() = 0;
+
   virtual bool is_resident(device_ptr /*key*/, Device *sub_device)
   {
     /* Memory is always resident if this is not a multi device, regardless of whether the pointer

@@ -63,13 +63,13 @@ class CUDADevice : public Device {
 
   static bool have_precompiled_kernels();
 
-  virtual BVHLayoutMask get_bvh_layout_mask() const override;
+  BVHLayoutMask get_bvh_layout_mask() const override;
 
   void set_error(const string &error) override;
 
   CUDADevice(const DeviceInfo &info, Stats &stats, Profiler &profiler);
 
-  virtual ~CUDADevice();
+  ~CUDADevice() override;
 
   bool support_device(const uint /*kernel_features*/);
 
@@ -79,12 +79,14 @@ class CUDADevice : public Device {
 
   virtual string compile_kernel_get_common_cflags(const uint kernel_features);
 
+  size_t get_used_memory() override;
+
   string compile_kernel(const uint kernel_features,
                         const char *name,
                         const char *base = "cuda",
                         bool force_ptx = false);
 
-  virtual bool load_kernels(const uint kernel_features) override;
+  bool load_kernels(const uint kernel_features) override;
 
   void reserve_local_memory(const uint kernel_features);
 
@@ -112,7 +114,7 @@ class CUDADevice : public Device {
 
   device_ptr mem_alloc_sub_ptr(device_memory &mem, size_t offset, size_t /*size*/) override;
 
-  virtual void const_copy_to(const char *name, void *host, size_t size) override;
+  void const_copy_to(const char *name, void *host, size_t size) override;
 
   void global_alloc(device_memory &mem);
 
@@ -122,9 +124,9 @@ class CUDADevice : public Device {
 
   void tex_free(device_texture &mem);
 
-  virtual bool should_use_graphics_interop() override;
+  bool should_use_graphics_interop() override;
 
-  virtual unique_ptr<DeviceQueue> gpu_queue_create() override;
+  unique_ptr<DeviceQueue> gpu_queue_create() override;
 
   int get_num_multiprocessors();
   int get_max_num_threads_per_multiprocessor();
