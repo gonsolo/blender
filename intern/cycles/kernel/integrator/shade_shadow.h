@@ -29,6 +29,7 @@ ccl_device_inline Spectrum integrate_transparent_surface_shadow(KernelGlobals kg
    * so the compiler can see there is no dependency between iterations? */
   ShaderData shadow_sd;
   ShaderClosures shadow_closures;
+  ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
 
   /* Setup shader data at surface. */
   Intersection isect ccl_optional_struct_init;
@@ -42,7 +43,7 @@ ccl_device_inline Spectrum integrate_transparent_surface_shadow(KernelGlobals kg
   /* Evaluate shader. */
   if (!(shadow_sd.flag & SD_HAS_ONLY_VOLUME)) {
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE_SHADOW>(
-        kg, state, &shadow_sd, &shadow_closures, NULL, PATH_RAY_SHADOW);
+        kg, state, &shadow_sd, shadow_closures_pointer, NULL, PATH_RAY_SHADOW);
   }
 
 #  ifdef __VOLUME__
@@ -67,6 +68,7 @@ ccl_device_inline void integrate_transparent_volume_shadow(KernelGlobals kg,
   /* TODO: deduplicate with surface, or does it not matter for memory usage? */
   ShaderData shadow_sd;
   ShaderClosures shadow_closures;
+  ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
 
   /* Setup shader data. */
   Ray ray ccl_optional_struct_init;
@@ -85,7 +87,7 @@ ccl_device_inline void integrate_transparent_volume_shadow(KernelGlobals kg,
   VOLUME_READ_LAMBDA(integrator_state_read_shadow_volume_stack(state, i));
   const float step_size = volume_stack_step_size(kg, volume_read_lambda_pass);
 
-  volume_shadow_heterogeneous(kg, state, &ray, &shadow_sd, &shadow_closures, throughput, step_size);
+  volume_shadow_heterogeneous(kg, state, &ray, &shadow_sd, shadow_closures_pointer, throughput, step_size);
 }
 #  endif
 

@@ -760,8 +760,9 @@ ccl_device_forceinline void integrate_volume_direct_light(
    * the light shader. This could also move to its own kernel, for
    * non-constant light sources. */
   ShaderData emission_sd;
-  ShaderClosures emission_closures;
-  const Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, &emission_closures, ls, sd->time);
+  ShaderClosuresTiny emission_closures;
+  ShaderClosures* emission_closures_pointer = (ShaderClosures*)&emission_closures;
+  const Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, emission_closures_pointer, ls, sd->time);
   if (is_zero(light_eval)) {
     return;
   }

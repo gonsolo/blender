@@ -172,7 +172,8 @@ ccl_device_forceinline void integrate_surface_direct_light(KernelGlobals kg,
    * the light shader. This could also move to its own kernel, for
    * non-constant light sources. */
   ShaderData emission_sd;
-  ShaderClosures emission_closures;
+  ShaderClosuresCaustics emission_closures;
+  ShaderClosures* emission_closures_pointer = (ShaderClosures*)&emission_closures;
 
   Ray ray ccl_optional_struct_init;
   BsdfEval bsdf_eval ccl_optional_struct_init;
@@ -195,7 +196,7 @@ ccl_device_forceinline void integrate_surface_direct_light(KernelGlobals kg,
         /* Are we on a caustic receiver? */
         if (!is_transmission && (sd->object_flag & SD_OBJECT_CAUSTICS_RECEIVER)) {
           mnee_vertex_count = kernel_path_mnee_sample(
-              kg, state, sd, closures, &emission_sd, &emission_closures, rng_state, &ls, &bsdf_eval);
+              kg, state, sd, closures, &emission_sd, emission_closures_pointer, rng_state, &ls, &bsdf_eval);
         }
       }
     }
@@ -209,7 +210,7 @@ ccl_device_forceinline void integrate_surface_direct_light(KernelGlobals kg,
   else
 #endif /* __MNEE__ */
   {
-    const Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, &emission_closures, &ls, sd->time);
+    const Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, emission_closures_pointer, &ls, sd->time);
     if (is_zero(light_eval)) {
       return;
     }

@@ -926,7 +926,7 @@ typedef struct ccl_align(16) ShaderData
 }
 ShaderData;
 
-typedef struct ccl_align(16) ShaderClosures {
+struct ccl_align(16) ShaderClosuresTiny {
 
   /* Closure data, we store a fixed array of closures */
   int num_closure;
@@ -937,10 +937,15 @@ typedef struct ccl_align(16) ShaderClosures {
    * emission and shadow transparency with MAX_CLOSURE 0. */
   Spectrum closure_emission_background;
   Spectrum closure_transparent_extinction;
+};
 
+struct ccl_align(16) ShaderClosures : public ShaderClosuresTiny {
   struct ShaderClosure closure[MAX_CLOSURE];
-}
-ShaderClosures;
+};
+
+struct ccl_align(16) ShaderClosuresCaustics : public ShaderClosuresTiny {
+  struct ShaderClosure closure[CAUSTICS_MAX_CLOSURE];
+};
 
 /* Compact volume closures storage.
  *
