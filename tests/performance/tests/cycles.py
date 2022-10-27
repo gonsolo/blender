@@ -78,9 +78,11 @@ class CyclesTest(api.Test):
         prefix_time = "Render time (without synchronization): "
         prefix_memory = "Peak: "
         prefix_time_per_sample = "Average time per sample: "
+        prefix_gpu = "GPU: "
         time = None
         time_per_sample = None
         memory = None
+        gpu_memory = None
         for line in lines:
             line = line.strip()
             offset = line.find(prefix_time)
@@ -97,6 +99,11 @@ class CyclesTest(api.Test):
                 memory = line[offset + len(prefix_memory):]
                 memory = memory.split()[0].replace(',', '')
                 memory = float(memory)
+            offset = line.find(prefix_gpu)
+            if offset != -1:
+                gpu_memory = line[offset + len(prefix_gpu):]
+                gpu_memory = gpu_memory.split()[0].replace(',', '')
+                gpu_memory = float(gpu_memory)
 
         if time_per_sample:
             time = time_per_sample
@@ -104,7 +111,7 @@ class CyclesTest(api.Test):
         if not (time and memory):
             raise Exception("Error parsing render time output")
 
-        return {'time': time, 'peak_memory': memory}
+        return {'time': time, 'peak_memory': memory, 'gpu_memory': gpu_memory}
 
 
 def generate(env):
