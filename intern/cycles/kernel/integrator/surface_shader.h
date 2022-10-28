@@ -762,9 +762,9 @@ ccl_device bool surface_shader_constant_emission(KernelGlobals kg,
 }
 
 /* Background */
-
+template<typename GenericShaderClosures>
 ccl_device Spectrum surface_shader_background(ccl_private const ShaderData *sd,
-                                              ccl_private const ShaderClosures *closures)
+                                              ccl_private const GenericShaderClosures *closures)
 {
   if (sd->flag & SD_EMISSION) {
     return closures->closure_emission_background;
@@ -775,9 +775,9 @@ ccl_device Spectrum surface_shader_background(ccl_private const ShaderData *sd,
 }
 
 /* Emission */
-
+template<typename GenericShaderClosures>
 ccl_device Spectrum surface_shader_emission(ccl_private const ShaderData *sd,
-                                            ccl_private const ShaderClosures *closures)
+                                            ccl_private const GenericShaderClosures *closures)
 {
   if (sd->flag & SD_EMISSION) {
     return emissive_simple_eval(sd->Ng, sd->I) * closures->closure_emission_background;
@@ -828,11 +828,11 @@ ccl_device Spectrum surface_shader_apply_holdout(KernelGlobals kg,
 
 /* Surface Evaluation */
 
-template<uint node_feature_mask, typename ConstIntegratorGenericState>
+template<uint node_feature_mask, typename ConstIntegratorGenericState, typename GenericShaderClosures>
 ccl_device void surface_shader_eval(KernelGlobals kg,
                                     ConstIntegratorGenericState state,
                                     ccl_private ShaderData *ccl_restrict sd,
-                                    ccl_private ShaderClosures *ccl_restrict closures,
+                                    ccl_private GenericShaderClosures *ccl_restrict closures,
                                     ccl_global float *ccl_restrict buffer,
                                     uint32_t path_flag,
                                     bool use_caustics_storage = false)

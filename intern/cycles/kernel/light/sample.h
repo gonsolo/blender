@@ -14,11 +14,12 @@
 CCL_NAMESPACE_BEGIN
 
 /* Evaluate shader on light. */
+template<typename GenericShaderClosures>
 ccl_device_noinline_cpu Spectrum
 light_sample_shader_eval(KernelGlobals kg,
                          IntegratorState state,
                          ccl_private ShaderData *ccl_restrict emission_sd,
-                         ccl_private ShaderClosures *ccl_restrict emission_closures,
+                         ccl_private GenericShaderClosures *ccl_restrict emission_closures,
                          ccl_private LightSample *ccl_restrict ls,
                          float time)
 {

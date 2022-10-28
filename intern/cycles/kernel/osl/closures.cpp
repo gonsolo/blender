@@ -164,6 +164,15 @@ static void flatten_closure_tree(const KernelGlobalsCPU *kg,
 void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
                              const void *state,
                              ShaderData *sd,
+                             ShaderClosuresCaustics *closures,
+                             uint32_t path_flag)
+{
+  eval_surface(kg, state, sd, (ShaderClosures*)closures, path_flag);
+}
+
+void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
+                             const void *state,
+                             ShaderData *sd,
                              ShaderClosures *closures,
                              uint32_t path_flag)
 {
@@ -237,6 +246,15 @@ void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
 }
 
 /* Background */
+
+void OSLShader::eval_background(const KernelGlobalsCPU *kg,
+                                const void *state,
+                                ShaderData *sd,
+                                ShaderClosuresCaustics *closures,
+                                uint32_t path_flag)
+{
+  eval_background(kg, state, sd, (ShaderClosures*)closures, path_flag);
+}
 
 void OSLShader::eval_background(const KernelGlobalsCPU *kg,
                                 const void *state,

@@ -10,8 +10,9 @@
 
 CCL_NAMESPACE_BEGIN
 
+template<typename GenericShaderClosures>
 ccl_device void bsdf_transparent_setup(ccl_private ShaderData *sd,
-                                       ccl_private ShaderClosures *closures,
+                                       ccl_private GenericShaderClosures *closures,
                                        const Spectrum weight,
                                        uint32_t path_flag)
 {
