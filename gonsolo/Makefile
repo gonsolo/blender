@@ -21,6 +21,7 @@ background:
 gdb:
 	echo "run -W $(SCENE)" > gdb_execution
 	gdb -x gdb_execution $(BLENDER)
+	rm gdb_execution
 rz: run_zink
 run_zink:
 	__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink $(BLENDER) $(THREADS) -W $(SCENE)
