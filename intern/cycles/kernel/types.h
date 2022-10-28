@@ -929,23 +929,6 @@ ShaderData;
 struct ccl_align(16) ShaderClosuresTiny {
 
   /* Closure data, we store a fixed array of closures */
-  //int num_closure;
-  //int num_closure_left;
-  //Spectrum svm_closure_weight;
-
-  /* Closure weights summed directly, so we can evaluate
-   * emission and shadow transparency with MAX_CLOSURE 0. */
-  //Spectrum closure_emission_background;
-  //Spectrum closure_transparent_extinction;
-
-  /* At the end so we can adjust size in ShaderDataTinyStorage. */
-  //struct ShaderClosure closure[MAX_CLOSURE];
-}
-ShaderData;
-
-typedef struct ccl_align(16) ShaderClosures {
-
-  /* Closure data, we store a fixed array of closures */
   int num_closure;
   int num_closure_left;
   Spectrum svm_closure_weight;

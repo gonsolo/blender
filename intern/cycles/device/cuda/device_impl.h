@@ -81,7 +81,7 @@ class CUDADevice : public Device {
 
   size_t get_used_memory() override;
 
-  string compile_kernel(const uint kernel_features,
+  string compile_kernel(const string& cflags,
                         const char *name,
                         const char *base = "cuda",
                         bool force_ptx = false);
