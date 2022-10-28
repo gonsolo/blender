@@ -70,10 +70,10 @@ ccl_device_inline int svm_node_closure_bsdf_skip(KernelGlobals kg, int offset, u
   return offset;
 }
 
-template<uint node_feature_mask, ShaderType shader_type>
+template<uint node_feature_mask, ShaderType shader_type, typename GenericShaderClosures>
 ccl_device_noinline int svm_node_closure_bsdf(KernelGlobals kg,
                                               ccl_private ShaderData *sd,
-                                              ccl_private ShaderClosures *closures,
+                                              ccl_private GenericShaderClosures *closures,
                                               ccl_private float *stack,
                                               uint4 node,
                                               uint32_t path_flag,
@@ -951,10 +951,10 @@ ccl_device_noinline int svm_node_closure_bsdf(KernelGlobals kg,
   return offset;
 }
 
-template<ShaderType shader_type>
+template<ShaderType shader_type, typename GenericShaderClosures>
 ccl_device_noinline void svm_node_closure_volume(KernelGlobals kg,
                                                  ccl_private ShaderData *sd,
-                                                 ccl_private ShaderClosures *closures,
+                                                 ccl_private GenericShaderClosures *closures,
                                                  ccl_private float *stack,
                                                  uint4 node)
 {
@@ -1007,10 +1007,10 @@ ccl_device_noinline void svm_node_closure_volume(KernelGlobals kg,
 #endif
 }
 
-template<ShaderType shader_type>
+template<ShaderType shader_type, typename GenericShaderClosures>
 ccl_device_noinline int svm_node_principled_volume(KernelGlobals kg,
                                                    ccl_private ShaderData *sd,
-                                                   ccl_private ShaderClosures *closures,
+                                                   ccl_private GenericShaderClosures *closures,
                                                    ccl_private float *stack,
                                                    uint4 node,
                                                    uint32_t path_flag,
@@ -1128,8 +1128,9 @@ ccl_device_noinline int svm_node_principled_volume(KernelGlobals kg,
   return offset;
 }
 
+template<typename GenericShaderClosures>
 ccl_device_noinline void svm_node_closure_emission(ccl_private ShaderData *sd,
-                                                   ccl_private ShaderClosures *closures,
+                                                   ccl_private GenericShaderClosures *closures,
                                                    ccl_private float *stack,
                                                    uint4 node)
 {
@@ -1148,8 +1149,9 @@ ccl_device_noinline void svm_node_closure_emission(ccl_private ShaderData *sd,
   emission_setup(sd, closures, weight);
 }
 
+template<typename GenericShaderClosures>
 ccl_device_noinline void svm_node_closure_background(ccl_private ShaderData *sd,
-                                                     ccl_private ShaderClosures* closures,
+                                                     ccl_private GenericShaderClosures* closures,
                                                      ccl_private float *stack,
                                                      uint4 node)
 {
@@ -1168,8 +1170,9 @@ ccl_device_noinline void svm_node_closure_background(ccl_private ShaderData *sd,
   background_setup(sd, closures, weight);
 }
 
+template<typename GenericShaderClosures>
 ccl_device_noinline void svm_node_closure_holdout(ccl_private ShaderData *sd,
-                                                  ccl_private ShaderClosures* closures,
+                                                  ccl_private GenericShaderClosures* closures,
                                                   ccl_private float *stack,
                                                   uint4 node)
 {
@@ -1192,19 +1195,22 @@ ccl_device_noinline void svm_node_closure_holdout(ccl_private ShaderData *sd,
 
 /* Closure Nodes */
 
-ccl_device_inline void svm_node_closure_store_weight(ccl_private ShaderClosures *closures, Spectrum weight)
+template<typename GenericShaderClosures>
+ccl_device_inline void svm_node_closure_store_weight(ccl_private GenericShaderClosures *closures, Spectrum weight)
 {
   closures->svm_closure_weight = weight;
 }
 
-ccl_device void svm_node_closure_set_weight(ccl_private ShaderClosures *closures, uint r, uint g, uint b)
+template<typename GenericShaderClosures>
+ccl_device void svm_node_closure_set_weight(ccl_private GenericShaderClosures *closures, uint r, uint g, uint b)
 {
   Spectrum weight = rgb_to_spectrum(
       make_float3(__uint_as_float(r), __uint_as_float(g), __uint_as_float(b)));
   svm_node_closure_store_weight(closures, weight);
 }
 
-ccl_device void svm_node_closure_weight(ccl_private ShaderClosures *closures,
+template<typename GenericShaderClosures>
+ccl_device void svm_node_closure_weight(ccl_private GenericShaderClosures *closures,
                                         ccl_private float *stack,
                                         uint weight_offset)
 {
@@ -1212,8 +1218,9 @@ ccl_device void svm_node_closure_weight(ccl_private ShaderClosures *closures,
   svm_node_closure_store_weight(closures, weight);
 }
 
+template<typename GenericShaderClosures>
 ccl_device_noinline void svm_node_emission_weight(KernelGlobals kg,
-                                                  ccl_private ShaderClosures *closures,
+                                                  ccl_private GenericShaderClosures *closures,
                                                   ccl_private float *stack,
                                                   uint4 node)
 {

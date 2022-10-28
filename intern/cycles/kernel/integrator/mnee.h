@@ -802,12 +802,13 @@ ccl_device_forceinline bool mnee_compute_transfer_matrix(ccl_private const Shade
 }
 
 /* Calculate the path contribution. */
+template<typename GenericShaderClosures>
 ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
                                                    IntegratorState state,
                                                    ccl_private ShaderData *sd,
                                                    ccl_private ShaderClosures *closures,
                                                    ccl_private ShaderData *sd_mnee,
-                                                   ccl_private ShaderClosures *closures_mnee,
+                                                   ccl_private GenericShaderClosures *closures_mnee,
                                                    ccl_private LightSample *ls,
                                                    int vertex_count,
                                                    ccl_private ManifoldVertex *vertices,
@@ -947,12 +948,13 @@ ccl_device_forceinline bool mnee_path_contribution(KernelGlobals kg,
 }
 
 /* Manifold next event estimation path sampling. */
+template<typename GenericShaderClosures>
 ccl_device_forceinline int kernel_path_mnee_sample(KernelGlobals kg,
                                                    IntegratorState state,
                                                    ccl_private ShaderData *sd,
                                                    ccl_private ShaderClosures *closures,
                                                    ccl_private ShaderData *sd_mnee,
-                                                   ccl_private ShaderClosures *closures_mnee,
+                                                   ccl_private GenericShaderClosures *closures_mnee,
                                                    ccl_private const RNGState *rng_state,
                                                    ccl_private LightSample *ls,
                                                    ccl_private BsdfEval *throughput)

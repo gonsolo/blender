@@ -12,8 +12,9 @@ CCL_NAMESPACE_BEGIN
 
 /* BACKGROUND CLOSURE */
 
+template<typename GenericShaderClosures>
 ccl_device void background_setup(ccl_private ShaderData *sd,
-                                 ccl_private ShaderClosures* closures,
+                                 ccl_private GenericShaderClosures* closures,
                                  const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {
@@ -27,8 +28,9 @@ ccl_device void background_setup(ccl_private ShaderData *sd,
 
 /* EMISSION CLOSURE */
 
+template<typename GenericShaderClosures>
 ccl_device void emission_setup(ccl_private ShaderData *sd,
-                               ccl_private ShaderClosures* closures,
+                               ccl_private GenericShaderClosures* closures,
                                const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {

@@ -7,8 +7,9 @@ CCL_NAMESPACE_BEGIN
 
 /* VOLUME EXTINCTION */
 
+template<typename GenericShaderClosures>
 ccl_device void volume_extinction_setup(ccl_private ShaderData *sd,
-                                        ccl_private ShaderClosures *closures,
+                                        ccl_private GenericShaderClosures *closures,
                                         Spectrum weight)
 {
   if (sd->flag & SD_EXTINCTION) {

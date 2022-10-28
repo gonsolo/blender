@@ -214,11 +214,11 @@ CCL_NAMESPACE_BEGIN
 #endif
 
 /* Main Interpreter Loop */
-template<uint node_feature_mask, ShaderType type, typename ConstIntegratorGenericState>
+template<uint node_feature_mask, ShaderType type, typename ConstIntegratorGenericState, typename GenericShaderClosures>
 ccl_device void svm_eval_nodes(KernelGlobals kg,
                                ConstIntegratorGenericState state,
                                ccl_private ShaderData *sd,
-                               ccl_private ShaderClosures *closures,
+                               ccl_private GenericShaderClosures *closures,
                                ccl_global float *render_buffer,
                                uint32_t path_flag)
 {

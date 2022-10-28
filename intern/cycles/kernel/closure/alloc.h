@@ -36,7 +36,8 @@ ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private ShaderClosuresTi
   return NULL;
 }
 
-ccl_device ccl_private void *closure_alloc_extra(ccl_private ShaderClosures *closures, int size)
+template<typename GenericShaderClosures>
+ccl_device ccl_private void *closure_alloc_extra(ccl_private GenericShaderClosures *closures, int size)
 {
   /* Allocate extra space for closure that need more parameters. We allocate
    * in chunks of sizeof(ShaderClosure) starting from the end of the closure
@@ -57,7 +58,8 @@ ccl_device ccl_private void *closure_alloc_extra(ccl_private ShaderClosures *clo
   return (ccl_private void *)(closures->closure + closures->num_closure + closures->num_closure_left);
 }
 
-ccl_device_inline ccl_private ShaderClosure *bsdf_alloc(ccl_private ShaderClosures *closures,
+template<typename GenericShaderClosures>
+ccl_device_inline ccl_private ShaderClosure *bsdf_alloc(ccl_private GenericShaderClosures *closures,
                                                         int size,
                                                         Spectrum weight)
 {

@@ -25,10 +25,20 @@ class OSLShader {
                            ShaderData *sd,
                            ShaderClosures *closures,
                            uint32_t path_flag);
+  static void eval_surface(const KernelGlobalsCPU *kg,
+                           const void *state,
+                           ShaderData *sd,
+                           ShaderClosuresCaustics *closures,
+                           uint32_t path_flag);
   static void eval_background(const KernelGlobalsCPU *kg,
                               const void *state,
                               ShaderData *sd,
                               ShaderClosures *closures,
+                              uint32_t path_flag);
+  static void eval_background(const KernelGlobalsCPU *kg,
+                              const void *state,
+                              ShaderData *sd,
+                              ShaderClosuresCaustics *closures,
                               uint32_t path_flag);
   static void eval_volume(const KernelGlobalsCPU *kg,
                           const void *state,

@@ -259,8 +259,8 @@ ccl_device_forceinline float bssrdf_pdf(const Spectrum radius, float r)
 }
 
 /* Setup */
-
-ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private ShaderClosures *closures, Spectrum weight)
+template<typename GenericShaderClosures>
+ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private GenericShaderClosures *closures, Spectrum weight)
 {
   ccl_private Bssrdf *bssrdf = (ccl_private Bssrdf *)closure_alloc(
       closures, sizeof(Bssrdf), CLOSURE_NONE_ID, weight);
@@ -274,8 +274,9 @@ ccl_device_inline ccl_private Bssrdf *bssrdf_alloc(ccl_private ShaderClosures *c
   return (sample_weight >= CLOSURE_WEIGHT_CUTOFF) ? bssrdf : NULL;
 }
 
+template<typename GenericShaderClosures>
 ccl_device int bssrdf_setup(ccl_private ShaderData *sd,
-                            ccl_private ShaderClosures *closures,
+                            ccl_private GenericShaderClosures *closures,
                             ccl_private Bssrdf *bssrdf,
                             ClosureType type,
                             const float ior)
