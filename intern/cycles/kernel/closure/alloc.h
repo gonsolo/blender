@@ -5,7 +5,8 @@
 
 CCL_NAMESPACE_BEGIN
 
-ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private ShaderClosures *closures,
+template<typename GenericShaderClosures>
+ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private GenericShaderClosures *closures,
                                                     int size,
                                                     ClosureType type,
                                                     Spectrum weight)
@@ -24,6 +25,15 @@ ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private ShaderClosures *
   closures->num_closure_left--;
 
   return sc;
+}
+
+template<>
+ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private ShaderClosuresTiny *closures,
+                                                    int size,
+                                                    ClosureType type,
+                                                    Spectrum weight)
+{
+  return NULL;
 }
 
 ccl_device ccl_private void *closure_alloc_extra(ccl_private ShaderClosures *closures, int size)
