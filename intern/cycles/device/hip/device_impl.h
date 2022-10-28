@@ -120,6 +120,8 @@ class HIPDevice : public Device {
 
   virtual unique_ptr<DeviceQueue> gpu_queue_create() override;
 
+  size_t get_used_memory() override;
+
   int get_num_multiprocessors();
   int get_max_num_threads_per_multiprocessor();
 

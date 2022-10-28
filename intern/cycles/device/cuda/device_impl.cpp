@@ -232,7 +232,12 @@ string CUDADevice::compile_kernel_get_common_cflags(const uint kernel_features)
   return cflags;
 }
 
-string CUDADevice::compile_kernel(const string& common_cflags,
+size_t CUDADevice::get_used_memory()
+{
+  return 0;
+}
+
+string CUDADevice::compile_kernel(const uint kernel_features,
                                   const char *name,
                                   const char *base,
                                   bool force_ptx)

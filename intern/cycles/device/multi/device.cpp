@@ -407,6 +407,15 @@ class MultiDevice : public Device {
       sub.device->foreach_device(callback);
     }
   }
+
+  size_t get_used_memory() override
+  {
+    size_t memory = 0;
+    foreach (const SubDevice &sub, devices) {
+      memory += sub.device->get_used_memory();
+    }
+    return memory;
+  }
 };
 
 Device *device_multi_create(const DeviceInfo &info, Stats &stats, Profiler &profiler)
