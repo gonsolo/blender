@@ -141,8 +141,6 @@ class MetalDevice : public Device {
 
   virtual void const_copy_to(const char *name, void *host, size_t size) override;
 
-  virtual size_t get_used_memory() override;
-
   void global_alloc(device_memory &mem);
 
   void global_free(device_memory &mem);

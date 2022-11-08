@@ -1142,11 +1142,6 @@ unique_ptr<DeviceQueue> HIPDevice::gpu_queue_create()
   return make_unique<HIPDeviceQueue>(this);
 }
 
-size_t HIPDevice::get_used_memory()
-{
-  return 0;
-}
-
 bool HIPDevice::should_use_graphics_interop()
 {
   /* Check whether this device is part of OpenGL context.

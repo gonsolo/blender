@@ -774,11 +774,6 @@ void MetalDevice::const_copy_to(const char *name, void *host, size_t size)
 #  undef KERNEL_DATA_ARRAY
 }
 
-size_t MetalDevice::get_used_memory()
-{
-  return 0;
-}
-
 void MetalDevice::global_alloc(device_memory &mem)
 {
   if (mem.is_resident(this)) {

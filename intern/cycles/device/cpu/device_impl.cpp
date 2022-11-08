@@ -318,11 +318,6 @@ void *CPUDevice::get_cpu_osl_memory()
 #endif
 }
 
-size_t CPUDevice::get_used_memory()
-{
-  return 0;
-}
-
 bool CPUDevice::load_kernels(const uint /*kernel_features*/)
 {
   return true;

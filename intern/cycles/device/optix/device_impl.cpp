@@ -2097,16 +2097,6 @@ void OptiXDevice::update_launch_params(size_t offset, void *data, size_t data_si
   cuda_assert(cuMemcpyHtoD(launch_params.device_pointer + offset, data, data_size));
 }
 
-size_t OptiXDevice::get_used_memory()
-{
-  const CUDAContextScope scope(this);
-
-  size_t free;
-  size_t total;
-  cuMemGetInfo(&free, &total);
-  return total - free;
-}
-
 CCL_NAMESPACE_END
 
 #endif /* WITH_OPTIX */

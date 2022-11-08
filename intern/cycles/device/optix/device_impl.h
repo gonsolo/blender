@@ -96,10 +96,9 @@ class OptiXDevice : public CUDADevice {
   };
   Denoiser denoiser_;
 
-  size_t get_used_memory() override;
-
+ public:
   OptiXDevice(const DeviceInfo &info, Stats &stats, Profiler &profiler);
-  ~OptiXDevice() override;
+  ~OptiXDevice();
 
  private:
   BVHLayoutMask get_bvh_layout_mask() const override;

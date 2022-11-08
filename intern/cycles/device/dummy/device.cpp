@@ -50,11 +50,6 @@ class DummyDevice : public Device {
   virtual void const_copy_to(const char *, void *, size_t) override
   {
   }
-
-  size_t get_used_memory() override
-  {
-    return 0;
-  }
 };
 
 Device *device_dummy_create(const DeviceInfo &info, Stats &stats, Profiler &profiler)

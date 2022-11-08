@@ -374,15 +374,12 @@ void Scene::device_update(Device *device_, Progress &progress)
   if (print_stats) {
     size_t mem_used = util_guarded_get_mem_used();
     size_t mem_peak = util_guarded_get_mem_peak();
-    size_t gpu_mem = device->get_used_memory();
 
     VLOG_INFO << "System memory statistics after full device sync:\n"
               << "  Usage: " << string_human_readable_number(mem_used) << " ("
               << string_human_readable_size(mem_used) << ")\n"
               << "  Peak: " << string_human_readable_number(mem_peak) << " ("
-              << string_human_readable_size(mem_peak) << ")\n"
-              << "  GPU: " << string_human_readable_number(gpu_mem) << " ("
-              << string_human_readable_size(gpu_mem) << ")";
+              << string_human_readable_size(mem_peak) << ")";
   }
 }
 
