@@ -13,16 +13,16 @@ ccl_device ccl_private ShaderClosure *closure_alloc(ccl_private GenericShaderClo
 {
   kernel_assert(size <= sizeof(ShaderClosure));
 
-  if (closures->num_closure_left == 0)
+  if (closures->tiny.num_closure_left == 0)
     return NULL;
 
-  ccl_private ShaderClosure *sc = &closures->closure[closures->num_closure];
+  ccl_private ShaderClosure *sc = &closures->closure[closures->tiny.num_closure];
 
   sc->type = type;
   sc->weight = weight;
 
-  closures->num_closure++;
-  closures->num_closure_left--;
+  closures->tiny.num_closure++;
+  closures->tiny.num_closure_left--;
 
   return sc;
 }
@@ -47,15 +47,15 @@ ccl_device ccl_private void *closure_alloc_extra(ccl_private GenericShaderClosur
    * found linked list iteration and iteration with skipping to be slower. */
   int num_extra = ((size + sizeof(ShaderClosure) - 1) / sizeof(ShaderClosure));
 
-  if (num_extra > closures->num_closure_left) {
+  if (num_extra > closures->tiny.num_closure_left) {
     /* Remove previous closure if it was allocated. */
-    closures->num_closure--;
-    closures->num_closure_left++;
+    closures->tiny.num_closure--;
+    closures->tiny.num_closure_left++;
     return NULL;
   }
 
-  closures->num_closure_left -= num_extra;
-  return (ccl_private void *)(closures->closure + closures->num_closure + closures->num_closure_left);
+  closures->tiny.num_closure_left -= num_extra;
+  return (ccl_private void *)(closures->closure + closures->tiny.num_closure + closures->tiny.num_closure_left);
 }
 
 template<typename GenericShaderClosures>

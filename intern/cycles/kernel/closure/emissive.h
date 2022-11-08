@@ -18,11 +18,11 @@ ccl_device void background_setup(ccl_private ShaderData *sd,
                                  const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {
-    closures->closure_emission_background += weight;
+    closures->tiny.closure_emission_background += weight;
   }
   else {
     sd->flag |= SD_EMISSION;
-    closures->closure_emission_background = weight;
+    closures->tiny.closure_emission_background = weight;
   }
 }
 
@@ -34,11 +34,11 @@ ccl_device void emission_setup(ccl_private ShaderData *sd,
                                const Spectrum weight)
 {
   if (sd->flag & SD_EMISSION) {
-    closures->closure_emission_background += weight;
+    closures->tiny.closure_emission_background += weight;
   }
   else {
     sd->flag |= SD_EMISSION;
-    closures->closure_emission_background = weight;
+    closures->tiny.closure_emission_background = weight;
   }
 }
 

@@ -1025,7 +1025,7 @@ ccl_device_forceinline int kernel_path_mnee_sample(KernelGlobals kg,
 
       /* Get and sample refraction bsdf */
       bool found_transimissive_microfacet_bsdf = false;
-      for (int ci = 0; ci < closures_mnee->num_closure; ci++) {
+      for (int ci = 0; ci < closures_mnee->tiny.num_closure; ci++) {
         ccl_private ShaderClosure *bsdf = &closures_mnee->closure[ci];
         if (bsdf->type == CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID ||
             bsdf->type == CLOSURE_BSDF_MICROFACET_GGX_REFRACTION_ID ||

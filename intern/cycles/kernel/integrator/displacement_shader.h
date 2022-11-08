@@ -20,8 +20,8 @@ ccl_device void displacement_shader_eval(KernelGlobals kg,
                                          ccl_private ShaderData *sd,
                                          ccl_private ShaderClosures *closures)
 {
-  closures->num_closure = 0;
-  closures->num_closure_left = 0;
+  closures->tiny.num_closure = 0;
+  closures->tiny.num_closure_left = 0;
 
   /* this will modify sd->P */
 #ifdef __OSL__
