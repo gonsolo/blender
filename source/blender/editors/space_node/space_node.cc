@@ -181,7 +181,7 @@ void ED_node_tree_path_get(SpaceNode *snode, char *value)
       value += strlen(path->display_name);
     }
     else {
-      sprintf(value, "/%s", path->display_name);
+      BLI_sprintf(value, "/%s", path->display_name);
       value += strlen(path->display_name) + 1;
     }
   }
@@ -1169,6 +1169,9 @@ void ED_spacetype_node()
   art->init = node_toolbar_region_init;
   art->draw = node_toolbar_region_draw;
   BLI_addhead(&st->regiontypes, art);
+
+  WM_menutype_add(MEM_new<MenuType>(__func__, add_catalog_assets_menu_type()));
+  WM_menutype_add(MEM_new<MenuType>(__func__, add_root_catalogs_menu_type()));
 
   BKE_spacetype_register(st);
 }

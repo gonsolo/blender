@@ -319,7 +319,7 @@ static void gpencil_buffer_add_point(GPUIndexBufBuilder *ibo,
 
   vert->strength = (round_cap0) ? pt->strength : -pt->strength;
   vert->u_stroke = pt->uv_fac;
-  vert->stroke_id = gps->runtime.stroke_start;
+  vert->stroke_id = gps->runtime.vertex_start;
   vert->point_id = v;
   vert->thickness = max_ff(0.0f, gps->thickness * pt->pressure) * (round_cap1 ? 1.0f : -1.0f);
   /* Tag endpoint material to -1 so they get discarded by vertex shader. */
@@ -612,7 +612,7 @@ static void gpencil_sbuffer_stroke_ensure(bGPdata *gpd, bool do_fill)
 
     for (int i = 0; i < vert_len; i++) {
       ED_gpencil_tpoint_to_point(region, origin, &tpoints[i], &gps->points[i]);
-      mul_m4_v3(ob->imat, &gps->points[i].x);
+      mul_m4_v3(ob->world_to_object, &gps->points[i].x);
       bGPDspoint *pt = &gps->points[i];
       copy_v4_v4(pt->vert_color, tpoints[i].vert_color);
     }

@@ -30,6 +30,11 @@ void ShaderBind::execute(RecordingState &state) const
   }
 }
 
+void FramebufferBind::execute() const
+{
+  GPU_framebuffer_bind(framebuffer);
+}
+
 void ResourceBind::execute() const
 {
   if (slot == -1) {
@@ -161,7 +166,10 @@ void StateSet::execute(RecordingState &recording_state) const
    */
   BLI_assert(DST.state_lock == 0);
 
-  if (!assign_if_different(recording_state.pipeline_state, new_state)) {
+  bool state_changed = assign_if_different(recording_state.pipeline_state, new_state);
+  bool clip_changed = assign_if_different(recording_state.clip_plane_count, clip_plane_count);
+
+  if (!state_changed && !clip_changed) {
     return;
   }
 
@@ -185,12 +193,7 @@ void StateSet::execute(RecordingState &recording_state) const
   }
 
   /* TODO: this should be part of shader state. */
-  if (new_state & DRW_STATE_CLIP_PLANES) {
-    GPU_clip_distances(recording_state.view_clip_plane_count);
-  }
-  else {
-    GPU_clip_distances(0);
-  }
+  GPU_clip_distances(recording_state.clip_plane_count);
 
   if (new_state & DRW_STATE_IN_FRONT_SELECT) {
     /* XXX `GPU_depth_range` is not a perfect solution
@@ -227,6 +230,11 @@ void StencilSet::execute() const
 std::string ShaderBind::serialize() const
 {
   return std::string(".shader_bind(") + GPU_shader_get_name(shader) + ")";
+}
+
+std::string FramebufferBind::serialize() const
+{
+  return std::string(".framebuffer_bind(") + GPU_framebuffer_get_name(framebuffer) + ")";
 }
 
 std::string ResourceBind::serialize() const
