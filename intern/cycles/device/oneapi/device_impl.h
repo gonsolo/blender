@@ -46,6 +46,8 @@ class OneapiDevice : public Device {
 
   bool load_kernels(const uint requested_features) override;
 
+  size_t get_used_memory() override;
+
   void load_texture_info();
 
   void generic_alloc(device_memory &mem);

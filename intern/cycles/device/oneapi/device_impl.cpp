@@ -852,6 +852,11 @@ int OneapiDevice::get_max_num_threads_per_multiprocessor()
     return 0;
 }
 
+size_t OneapiDevice::get_used_memory()
+{
+  return 0;
+}
+
 CCL_NAMESPACE_END
 
 #endif
