@@ -74,7 +74,7 @@ ccl_device_inline bool shadow_volume_shader_sample(KernelGlobals kg,
   }
 
   const float density = object_volume_density(kg, sd->object);
-  *extinction = closures->closure_transparent_extinction * density;
+  *extinction = closures->tiny.closure_transparent_extinction * density;
   return true;
 }
 
@@ -94,12 +94,12 @@ ccl_device_inline bool volume_shader_sample(KernelGlobals kg,
   }
 
   coeff->sigma_s = zero_spectrum();
-  coeff->sigma_t = (sd->flag & SD_EXTINCTION) ? closures->closure_transparent_extinction :
+  coeff->sigma_t = (sd->flag & SD_EXTINCTION) ? closures->tiny.closure_transparent_extinction :
                                                 zero_spectrum();
-  coeff->emission = (sd->flag & SD_EMISSION) ? closures->closure_emission_background : zero_spectrum();
+  coeff->emission = (sd->flag & SD_EMISSION) ? closures->tiny.closure_emission_background : zero_spectrum();
 
   if (sd->flag & SD_SCATTER) {
-    for (int i = 0; i < closures->num_closure; i++) {
+    for (int i = 0; i < closures->tiny.num_closure; i++) {
       ccl_private const ShaderClosure *sc = &closures->closure[i];
 
       if (CLOSURE_IS_VOLUME(sc->type)) {

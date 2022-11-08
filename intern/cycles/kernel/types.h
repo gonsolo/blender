@@ -939,11 +939,15 @@ struct ccl_align(16) ShaderClosuresTiny {
   Spectrum closure_transparent_extinction;
 };
 
-struct ccl_align(16) ShaderClosures : public ShaderClosuresTiny {
+struct ccl_align(16) ShaderClosures {
+//struct ccl_align(16) ShaderClosures : public ShaderClosuresTiny {
+  struct ShaderClosuresTiny tiny;
   struct ShaderClosure closure[MAX_CLOSURE];
 };
 
-struct ccl_align(16) ShaderClosuresCaustics : public ShaderClosuresTiny {
+struct ccl_align(16) ShaderClosuresCaustics {
+//struct ccl_align(16) ShaderClosuresCaustics : public ShaderClosuresTiny {
+  struct ShaderClosuresTiny tiny;
   struct ShaderClosure closure[CAUSTICS_MAX_CLOSURE];
 };
 

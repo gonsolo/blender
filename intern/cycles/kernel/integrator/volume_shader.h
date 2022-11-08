@@ -26,14 +26,14 @@ CCL_NAMESPACE_BEGIN
 ccl_device_inline void volume_shader_merge_closures(ccl_private ShaderClosures *closures)
 {
   /* Merge identical closures to save closure space with stacked volumes. */
-  for (int i = 0; i < closures->num_closure; i++) {
+  for (int i = 0; i < closures->tiny.num_closure; i++) {
     ccl_private ShaderClosure *sci = &closures->closure[i];
 
     if (sci->type != CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID) {
       continue;
     }
 
-    for (int j = i + 1; j < closures->num_closure; j++) {
+    for (int j = i + 1; j < closures->tiny.num_closure; j++) {
       ccl_private ShaderClosure *scj = &closures->closure[j];
       if (sci->type != scj->type) {
         continue;
@@ -50,15 +50,15 @@ ccl_device_inline void volume_shader_merge_closures(ccl_private ShaderClosures *
       sci->weight += scj->weight;
       sci->sample_weight += scj->sample_weight;
 
-      int size = closures->num_closure - (j + 1);
+      int size = closures->tiny.num_closure - (j + 1);
       if (size > 0) {
         for (int k = 0; k < size; k++) {
           scj[k] = scj[k + 1];
         }
       }
 
-      closures->num_closure--;
-      kernel_assert(closures->num_closure >= 0);
+      closures->tiny.num_closure--;
+      kernel_assert(closures->tiny.num_closure >= 0);
       j--;
     }
   }
@@ -70,7 +70,7 @@ ccl_device_inline void volume_shader_copy_phases(
 {
   phases->num_closure = 0;
 
-  for (int i = 0; i < closures->num_closure; i++) {
+  for (int i = 0; i < closures->tiny.num_closure; i++) {
     ccl_private const ShaderClosure *from_sc = &closures->closure[i];
     ccl_private const HenyeyGreensteinVolume *from_hg =
         (ccl_private const HenyeyGreensteinVolume *)from_sc;
@@ -459,8 +459,8 @@ ccl_device_inline void volume_shader_eval(KernelGlobals kg,
 
   /* reset closures once at the start, we will be accumulating the closures
    * for all volumes in the stack into a single array of closures */
-  closures->num_closure = 0;
-  closures->num_closure_left = max_closures;
+  closures->tiny.num_closure = 0;
+  closures->tiny.num_closure_left = max_closures;
   sd->flag = 0;
   sd->object_flag = 0;
 

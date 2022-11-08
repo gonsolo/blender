@@ -99,8 +99,8 @@ ccl_device void subsurface_shader_data_setup(KernelGlobals kg,
 
   /* Setup diffuse BSDF at the exit point. This replaces shader_eval_surface. */
   sd->flag &= ~SD_CLOSURE_FLAGS;
-  closures->num_closure = 0;
-  closures->num_closure_left = kernel_data.max_closures;
+  closures->tiny.num_closure = 0;
+  closures->tiny.num_closure_left = kernel_data.max_closures;
 
   const Spectrum weight = one_spectrum();
 
