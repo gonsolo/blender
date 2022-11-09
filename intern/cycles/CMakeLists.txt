@@ -36,7 +36,14 @@ if(WITH_CYCLES_NATIVE_ONLY)
   )
 
   if(NOT MSVC)
-    add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _warn_error "-Werror")
+
+    # Conservatively set -Werror just for tested compilers
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+      if(CMAKE_CXX_COMPILER_VERSION MATCHES "12.2.0")
+        add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _warn_error "-Werror")
+      endif()
+    endif()
+
     add_check_cxx_compiler_flag(CMAKE_CXX_FLAGS _has_march_native "-march=native")
     if(_has_march_native)
       set(CYCLES_KERNEL_FLAGS "-march=native")
