@@ -53,7 +53,7 @@ ccl_device_inline void integrate_light(KernelGlobals kg,
   /* TODO: does aliasing like this break automatic SoA in CUDA? */
   ShaderData emission_sd;
   ShaderClosures emission_closures;
-  ccl_private ShaderClosures *emission_closures_pointer = (ShaderClosures*)&emission_closures;
+  ccl_private ShaderClosures *emission_closures_pointer = (ccl_private ShaderClosures*)&emission_closures;
   Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, emission_closures_pointer, &ls, ray_time);
   if (is_zero(light_eval)) {
     return;

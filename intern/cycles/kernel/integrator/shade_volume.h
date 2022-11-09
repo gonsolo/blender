@@ -761,7 +761,7 @@ ccl_device_forceinline void integrate_volume_direct_light(
    * non-constant light sources. */
   ShaderData emission_sd;
   ShaderClosuresTiny emission_closures;
-  ccl_private ShaderClosures* emission_closures_pointer = (ShaderClosures*)&emission_closures;
+  ccl_private ShaderClosures* emission_closures_pointer = (ccl_private ShaderClosures*)&emission_closures;
 
   const Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, emission_closures_pointer, ls, sd->time);
   if (is_zero(light_eval)) {

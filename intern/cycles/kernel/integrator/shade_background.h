@@ -43,7 +43,7 @@ ccl_device Spectrum integrator_eval_background_shader(KernelGlobals kg,
    * Should we instead store closures separate from ShaderData? */
   ShaderData emission_sd;
   ShaderClosuresTiny emission_closures;
-  ccl_private ShaderClosures* emission_closures_pointer = (ShaderClosures*)&emission_closures;
+  ccl_private ShaderClosures* emission_closures_pointer = (ccl_private ShaderClosures*)&emission_closures;
 
   PROFILING_INIT_FOR_SHADER(kg, PROFILING_SHADE_LIGHT_SETUP);
   shader_setup_from_background(kg,
@@ -173,7 +173,7 @@ ccl_device_inline void integrate_distant_lights(KernelGlobals kg,
       /* TODO: does aliasing like this break automatic SoA in CUDA? */
       ShaderData emission_sd;
       ShaderClosuresTiny emission_closures;
-      ccl_private ShaderClosures* emission_closures_pointer = (ShaderClosures*)&emission_closures;
+      ccl_private ShaderClosures* emission_closures_pointer = (ccl_private ShaderClosures*)&emission_closures;
 
       Spectrum light_eval = light_sample_shader_eval(kg, state, &emission_sd, emission_closures_pointer, &ls, ray_time);
       if (is_zero(light_eval)) {
