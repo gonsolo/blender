@@ -29,7 +29,7 @@ ccl_device_inline Spectrum integrate_transparent_surface_shadow(KernelGlobals kg
    * so the compiler can see there is no dependency between iterations? */
   ShaderData shadow_sd;
   ShaderClosures shadow_closures;
-  ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
+  ccl_private ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
 
   /* Setup shader data at surface. */
   Intersection isect ccl_optional_struct_init;
@@ -68,7 +68,7 @@ ccl_device_inline void integrate_transparent_volume_shadow(KernelGlobals kg,
   /* TODO: deduplicate with surface, or does it not matter for memory usage? */
   ShaderData shadow_sd;
   ShaderClosures shadow_closures;
-  ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
+  ccl_private ShaderClosures* shadow_closures_pointer = (ShaderClosures*)&shadow_closures;
 
   /* Setup shader data. */
   Ray ray ccl_optional_struct_init;

@@ -167,7 +167,8 @@ void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
                              ShaderClosuresCaustics *closures,
                              uint32_t path_flag)
 {
-  eval_surface(kg, state, sd, (ShaderClosures*)closures, path_flag);
+  ccl_private ShaderClosures* closures_pointer = (ShaderClosures*)closures;
+  eval_surface(kg, state, sd, closures_pointer, path_flag);
 }
 
 void OSLShader::eval_surface(const KernelGlobalsCPU *kg,
@@ -253,7 +254,8 @@ void OSLShader::eval_background(const KernelGlobalsCPU *kg,
                                 ShaderClosuresCaustics *closures,
                                 uint32_t path_flag)
 {
-  eval_background(kg, state, sd, (ShaderClosures*)closures, path_flag);
+  ccl_private ShaderClosures* closures_pointer = (ShaderClosures*)closures;
+  eval_background(kg, state, sd, closures_pointer, path_flag);
 }
 
 void OSLShader::eval_background(const KernelGlobalsCPU *kg,
