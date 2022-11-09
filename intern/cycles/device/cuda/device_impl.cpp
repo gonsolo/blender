@@ -237,7 +237,7 @@ size_t CUDADevice::get_used_memory()
   return 0;
 }
 
-string CUDADevice::compile_kernel(const string& common_cflags,
+string CUDADevice::compile_kernel(const string &common_cflags,
                                   const char *name,
                                   const char *base,
                                   bool force_ptx)
