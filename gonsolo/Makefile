@@ -4,7 +4,8 @@ THREADS = #-t 1
 LD = LD_LIBRARY_PATH=/home/gonsolo/bin/mesa/lib/x86_64-linux-gnu
 OPTIX_ROOT = ~/bin/NVIDIA-OptiX-SDK-7.5.0-linux64-x86_64
 
-all: compile run
+#all: compile run
+all: compile_and_notify
 c: compile_and_notify
 compile_and_notify: compile notify
 compile:
