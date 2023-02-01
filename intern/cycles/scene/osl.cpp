@@ -68,7 +68,7 @@ void OSLShaderManager::free_memory()
    * that the LLVM destructors run before the osl destructors, causing a crash
    * when the process exits. the OSL in svn has a special cleanup hack to
    * sidestep this behavior */
-  OSL::pvt::LLVM_Util::Cleanup();
+  //OSL::pvt::LLVM_Util::Cleanup();
 #  endif
 }
 
