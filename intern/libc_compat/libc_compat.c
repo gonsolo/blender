@@ -130,5 +130,14 @@ void (*__free_hook)(void *__ptr, const void *) = NULL;
 
 #    endif /* __GLIBC_PREREQ(2, 34) */
 
+#    if __GLIBC_PREREQ(2, 36)
+
+void *(*__malloc_hook)(size_t __size, const void *) = NULL;
+void *(*__realloc_hook)(void *__ptr, size_t __size, const void *) = NULL;
+void *(*__memalign_hook)(size_t __alignment, size_t __size, const void *) = NULL;
+void (*__free_hook)(void *__ptr, const void *) = NULL;
+
+#    endif /* __GLIBC_PREREQ(2, 36) */
+
 #  endif /* __GLIBC_PREREQ */
 #endif   /* __linux__ */
