@@ -42,5 +42,8 @@ configure:
 
 rebase:
 	cd ..; git rebase main; cd -
-.PHONY: all c compile_and_notify compile configure notify r run
+push:
+	cd ..; git push; cd -
+
+.PHONY: all c compile_and_notify compile configure notify push r rebase run
 
