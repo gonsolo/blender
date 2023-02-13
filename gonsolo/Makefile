@@ -13,6 +13,8 @@ compile:
 	CYCLES_RUNTIME_OPTIX_ROOT_DIR=$(OPTIX_ROOT) OPTIX_ROOT_DIR=$(OPTIX_ROOT) cd ..; $(MOLD) make developer ccache ninja gonsolo; cd -
 notify:
 	$(shell notify-send "Compilation finished")
+clean:
+	cd ..; make clean; cd -
 r: run
 run:
 	$(BLENDER) -W $(SCENE)
