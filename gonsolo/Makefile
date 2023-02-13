@@ -43,7 +43,7 @@ configure:
 rebase:
 	cd ..; git rebase main; cd -
 push:
-	cd ..; git push; cd -
+	cd ..; git push --force github; cd -
 
 .PHONY: all c compile_and_notify compile configure notify push r rebase run
 
