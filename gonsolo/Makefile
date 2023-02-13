@@ -1,5 +1,5 @@
 BLENDER = ../../build_linux/bin/blender
-SCENE = ~/Dokumente/blender/junkshop/gonso.blend
+SCENE = ~/Dokumente/blender/junkshop/junkshop.blend
 THREADS = #-t 1
 LD = LD_LIBRARY_PATH=/home/gonsolo/bin/mesa/lib/x86_64-linux-gnu
 OPTIX_ROOT = ~/bin/NVIDIA-OptiX-SDK-7.5.0-linux64-x86_64
