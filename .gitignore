@@ -72,3 +72,6 @@ waveletNoiseTile.bin
 CMakeSettings.json
 CMakePresets.json
 CMakeUserPresets.json
+
+# gonsolo
+/compile_commands.json
