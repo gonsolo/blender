@@ -2,7 +2,7 @@ BLENDER = ../../build_linux/bin/blender
 SCENE = ~/Dokumente/blender/junkshop/junkshop.blend
 THREADS = #-t 1
 LD = LD_LIBRARY_PATH=/home/gonsolo/bin/mesa/lib/x86_64-linux-gnu
-OPTIX_ROOT = ~/bin/NVIDIA-OptiX-SDK-7.5.0-linux64-x86_64
+OPTIX_ROOT = ~/bin/NVIDIA-OptiX-SDK-7.6.0-linux64-x86_64
 MOLD = mold --run
 
 #all: compile run
@@ -10,7 +10,7 @@ all: compile_and_notify
 c: compile_and_notify
 compile_and_notify: compile notify
 compile:
-	CYCLES_RUNTIME_OPTIX_ROOT_DIR=$(OPTIX_ROOT) OPTIX_ROOT_DIR=$(OPTIX_ROOT) cd ..; $(MOLD) make developer ccache ninja gonsolo; cd -
+	cd ..; CYCLES_RUNTIME_OPTIX_ROOT_DIR=$(OPTIX_ROOT) OPTIX_ROOT_DIR=$(OPTIX_ROOT) $(MOLD) make developer ccache ninja gonsolo; cd -
 notify:
 	$(shell notify-send "Compilation finished")
 clean:
