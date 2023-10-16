@@ -10,7 +10,7 @@ all: compile_and_notify
 c: compile_and_notify
 compile_and_notify: compile notify
 compile:
-	cd ..; CYCLES_RUNTIME_OPTIX_ROOT_DIR=$(OPTIX_ROOT) OPTIX_ROOT_DIR=$(OPTIX_ROOT) $(MOLD) make developer ccache ninja gonsolo; cd -
+	cd ..; CYCLES_RUNTIME_OPTIX_ROOT_DIR=$(OPTIX_ROOT) OPTIX_ROOT_DIR=$(OPTIX_ROOT) $(MOLD) make CC=gcc-12 CPP=g++-12 CXX=g++-12 LD=g++-12 developer ccache ninja gonsolo; cd -
 notify:
 	$(shell notify-send "Compilation finished")
 clean:
