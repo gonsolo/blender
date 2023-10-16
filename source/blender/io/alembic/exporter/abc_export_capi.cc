@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "ABC_alembic.h"
 #include "abc_archive.h"
@@ -8,9 +9,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_build.h"
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_build.hh"
+#include "DEG_depsgraph_query.hh"
 
 #include "DNA_modifier_types.h"
 #include "DNA_scene_types.h"
@@ -26,8 +27,8 @@
 #include "BLI_string.h"
 #include "BLI_timeit.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 #include "CLG_log.h"
 static CLG_LogRef LOG = {"io.alembic"};
@@ -40,7 +41,7 @@ struct ExportJobData {
   Depsgraph *depsgraph;
   wmWindowManager *wm;
 
-  char filename[FILE_MAX];
+  char filepath[FILE_MAX];
   AlembicExportParams params;
 
   bool was_canceled;
@@ -64,17 +65,12 @@ static void build_depsgraph(Depsgraph *depsgraph, const bool visible_objects_onl
 static void report_job_duration(const ExportJobData *data)
 {
   blender::timeit::Nanoseconds duration = blender::timeit::Clock::now() - data->start_time;
-  std::cout << "Alembic export of '" << data->filename << "' took ";
+  std::cout << "Alembic export of '" << data->filepath << "' took ";
   blender::timeit::print_duration(duration);
   std::cout << '\n';
 }
 
-static void export_startjob(void *customdata,
-                            /* Cannot be const, this function implements wm_jobs_start_callback.
-                             * NOLINTNEXTLINE: readability-non-const-parameter. */
-                            bool *stop,
-                            bool *do_update,
-                            float *progress)
+static void export_startjob(void *customdata, wmJobWorkerStatus *worker_status)
 {
   ExportJobData *data = static_cast<ExportJobData *>(customdata);
   data->was_canceled = false;
@@ -84,8 +80,8 @@ static void export_startjob(void *customdata,
   WM_set_locked_interface(data->wm, true);
   G.is_break = false;
 
-  *progress = 0.0f;
-  *do_update = true;
+  worker_status->progress = 0.0f;
+  worker_status->do_update = true;
 
   build_depsgraph(data->depsgraph, data->params.visible_objects_only);
   SubdivModifierDisabler subdiv_disabler(data->depsgraph);
@@ -103,11 +99,11 @@ static void export_startjob(void *customdata,
   std::unique_ptr<ABCArchive> abc_archive;
   try {
     abc_archive = std::make_unique<ABCArchive>(
-        data->bmain, scene, data->params, std::string(data->filename));
+        data->bmain, scene, data->params, std::string(data->filepath));
   }
   catch (const std::exception &ex) {
     std::stringstream error_message_stream;
-    error_message_stream << "Error writing to " << data->filename;
+    error_message_stream << "Error writing to " << data->filepath;
     const std::string &error_message = error_message_stream.str();
 
     /* The exception message can be very cryptic (just "iostream error" on Linux, for example),
@@ -120,7 +116,7 @@ static void export_startjob(void *customdata,
   catch (...) {
     /* Unknown exception class, so we cannot include its message. */
     std::stringstream error_message_stream;
-    error_message_stream << "Unknown error writing to " << data->filename;
+    error_message_stream << "Unknown error writing to " << data->filepath;
     WM_report(RPT_ERROR, error_message_stream.str().c_str());
     data->export_ok = false;
     return;
@@ -139,7 +135,7 @@ static void export_startjob(void *customdata,
     for (; frame_it != frames_end; frame_it++) {
       double frame = *frame_it;
 
-      if (G.is_break || (stop != nullptr && *stop)) {
+      if (G.is_break || worker_status->stop) {
         break;
       }
 
@@ -153,8 +149,8 @@ static void export_startjob(void *customdata,
       iter.set_export_subset(export_subset);
       iter.iterate_and_write();
 
-      *progress += progress_per_frame;
-      *do_update = true;
+      worker_status->progress += progress_per_frame;
+      worker_status->do_update = true;
     }
   }
   else {
@@ -172,8 +168,8 @@ static void export_startjob(void *customdata,
 
   data->export_ok = !data->was_canceled;
 
-  *progress = 1.0f;
-  *do_update = true;
+  worker_status->progress = 1.0f;
+  worker_status->do_update = true;
 }
 
 static void export_endjob(void *customdata)
@@ -182,8 +178,8 @@ static void export_endjob(void *customdata)
 
   DEG_graph_free(data->depsgraph);
 
-  if (data->was_canceled && BLI_exists(data->filename)) {
-    BLI_delete(data->filename, false, false);
+  if (data->was_canceled && BLI_exists(data->filepath)) {
+    BLI_delete(data->filepath, false, false);
   }
 
   G.is_rendering = false;
@@ -207,7 +203,7 @@ bool ABC_export(Scene *scene,
   job->bmain = CTX_data_main(C);
   job->wm = CTX_wm_manager(C);
   job->export_ok = false;
-  BLI_strncpy(job->filename, filepath, sizeof(job->filename));
+  STRNCPY(job->filepath, filepath);
 
   job->depsgraph = DEG_graph_new(job->bmain, scene, view_layer, params->evaluation_mode);
   job->params = *params;
@@ -229,11 +225,8 @@ bool ABC_export(Scene *scene,
     WM_jobs_start(CTX_wm_manager(C), wm_job);
   }
   else {
-    /* Fake a job context, so that we don't need NULL pointer checks while exporting. */
-    bool stop = false, do_update = false;
-    float progress = 0.0f;
-
-    blender::io::alembic::export_startjob(job, &stop, &do_update, &progress);
+    wmJobWorkerStatus worker_status = {};
+    blender::io::alembic::export_startjob(job, &worker_status);
     blender::io::alembic::export_endjob(job);
     export_ok = job->export_ok;
 

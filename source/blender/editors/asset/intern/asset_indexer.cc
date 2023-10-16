@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edasset
@@ -20,6 +22,7 @@
 #include "BLI_path_util.h"
 #include "BLI_serialize.hh"
 #include "BLI_set.hh"
+#include "BLI_string.h"
 #include "BLI_string_ref.hh"
 #include "BLI_uuid.h"
 
@@ -29,6 +32,8 @@
 #include "BKE_idprop.hh"
 
 #include "CLG_log.h"
+
+#include <sstream>
 
 static CLG_LogRef LOG = {"ed.asset"};
 
@@ -119,7 +124,7 @@ class BlendFile : public AbstractFile {
   std::string get_filename() const
   {
     char filename[FILE_MAX];
-    BLI_split_file_part(get_file_path(), filename, sizeof(filename));
+    BLI_path_split_file_part(get_file_path(), filename, sizeof(filename));
     return std::string(filename);
   }
 
@@ -266,7 +271,7 @@ struct AssetEntryWriter {
 
   void add_catalog_id(const CatalogID &catalog_id)
   {
-    char catalog_id_str[UUID_STRING_LEN];
+    char catalog_id_str[UUID_STRING_SIZE];
     BLI_uuid_format(catalog_id_str, catalog_id);
     attributes.append_as(std::pair(ATTRIBUTE_ENTRIES_CATALOG_ID, new StringValue(catalog_id_str)));
   }
@@ -388,8 +393,7 @@ static void init_indexer_entry_from_value(FileIndexerEntry &indexer_entry,
   indexer_entry.idcode = entry.get_idcode();
 
   const std::string name = entry.get_name();
-  BLI_strncpy(
-      indexer_entry.datablock_info.name, name.c_str(), sizeof(indexer_entry.datablock_info.name));
+  STRNCPY(indexer_entry.datablock_info.name, name.c_str());
 
   AssetMetaData *asset_data = BKE_asset_metadata_create();
   indexer_entry.datablock_info.asset_data = asset_data;
@@ -397,33 +401,35 @@ static void init_indexer_entry_from_value(FileIndexerEntry &indexer_entry,
 
   if (entry.has_description()) {
     const StringRefNull description = entry.get_description();
-    char *description_c_str = static_cast<char *>(MEM_mallocN(description.size() + 1, __func__));
-    BLI_strncpy(description_c_str, description.c_str(), description.size() + 1);
+    const size_t c_str_size = description.size() + 1;
+    char *description_c_str = static_cast<char *>(MEM_mallocN(c_str_size, __func__));
+    memcpy(description_c_str, description.c_str(), c_str_size);
     asset_data->description = description_c_str;
   }
   if (entry.has_author()) {
     const StringRefNull author = entry.get_author();
-    char *author_c_str = static_cast<char *>(MEM_mallocN(author.size() + 1, __func__));
-    BLI_strncpy(author_c_str, author.c_str(), author.size() + 1);
+    const size_t c_str_size = author.size() + 1;
+    char *author_c_str = static_cast<char *>(MEM_mallocN(c_str_size, __func__));
+    memcpy(author_c_str, author.c_str(), c_str_size);
     asset_data->author = author_c_str;
   }
   if (entry.has_copyright()) {
     const StringRefNull copyright = entry.get_copyright();
-    char *copyright_c_str = static_cast<char *>(MEM_mallocN(copyright.size() + 1, __func__));
-    BLI_strncpy(copyright_c_str, copyright.c_str(), copyright.size() + 1);
+    const size_t c_str_size = copyright.size() + 1;
+    char *copyright_c_str = static_cast<char *>(MEM_mallocN(c_str_size, __func__));
+    memcpy(copyright_c_str, copyright.c_str(), c_str_size);
     asset_data->copyright = copyright_c_str;
   }
   if (entry.has_license()) {
     const StringRefNull license = entry.get_license();
-    char *license_c_str = static_cast<char *>(MEM_mallocN(license.size() + 1, __func__));
-    BLI_strncpy(license_c_str, license.c_str(), license.size() + 1);
+    const size_t c_str_size = license.size() + 1;
+    char *license_c_str = static_cast<char *>(MEM_mallocN(c_str_size, __func__));
+    memcpy(license_c_str, license.c_str(), c_str_size);
     asset_data->license = license_c_str;
   }
 
   const StringRefNull catalog_name = entry.get_catalog_name();
-  BLI_strncpy(asset_data->catalog_simple_name,
-              catalog_name.c_str(),
-              sizeof(asset_data->catalog_simple_name));
+  STRNCPY(asset_data->catalog_simple_name, catalog_name.c_str());
 
   asset_data->catalog_id = entry.get_catalog_id();
 
@@ -483,7 +489,7 @@ struct AssetLibraryIndex {
   /**
    * \brief Absolute path where the indices of `library` are stored.
    *
-   * \NOTE: includes trailing directory separator.
+   * \note includes trailing directory separator.
    */
   std::string indices_base_path;
 
@@ -549,10 +555,10 @@ struct AssetLibraryIndex {
     if (!BLI_is_dir(index_path)) {
       return;
     }
-    struct direntry *dir_entries = nullptr;
+    direntry *dir_entries = nullptr;
     const int dir_entries_num = BLI_filelist_dir_contents(index_path, &dir_entries);
     for (int i = 0; i < dir_entries_num; i++) {
-      struct direntry *entry = &dir_entries[i];
+      direntry *entry = &dir_entries[i];
       if (BLI_str_endswith(entry->relname, ".index.json")) {
         preexisting_file_indices.add_as(std::string(entry->path));
       }
@@ -657,8 +663,7 @@ struct AssetIndex {
   AssetIndex(const FileIndexerEntries &indexer_entries)
   {
     std::unique_ptr<DictionaryValue> root = std::make_unique<DictionaryValue>();
-    DictionaryValue::Items &root_attributes = root->elements();
-    root_attributes.append_as(std::pair(ATTRIBUTE_VERSION, new IntValue(CURRENT_VERSION)));
+    root->append_int(ATTRIBUTE_VERSION, CURRENT_VERSION);
     init_value_from_file_indexer_entries(*root, indexer_entries);
 
     contents = std::move(root);
@@ -762,9 +767,7 @@ class AssetIndexFile : public AbstractFile {
 
   bool ensure_parent_path_exists() const
   {
-    /* `BLI_make_existing_file` only ensures parent path, otherwise than expected from the name of
-     * the function. */
-    return BLI_make_existing_file(get_file_path());
+    return BLI_file_ensure_parent_dir_exists(get_file_path());
   }
 
   void write_contents(AssetIndex &content)
@@ -903,10 +906,10 @@ static void update_index(const char *filename, FileIndexerEntries *entries, void
   asset_index_file.write_contents(content);
 }
 
-static void *init_user_data(const char *root_directory, size_t root_directory_maxlen)
+static void *init_user_data(const char *root_directory, size_t root_directory_maxncpy)
 {
   AssetLibraryIndex *library_index = MEM_new<AssetLibraryIndex>(
-      __func__, StringRef(root_directory, BLI_strnlen(root_directory, root_directory_maxlen)));
+      __func__, StringRef(root_directory, BLI_strnlen(root_directory, root_directory_maxncpy)));
   library_index->collect_preexisting_file_indices();
   library_index->remove_broken_index_files();
   return library_index;

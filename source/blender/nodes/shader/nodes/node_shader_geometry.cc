@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
 
@@ -7,15 +8,15 @@ namespace blender::nodes::node_shader_geometry_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_output<decl::Vector>(N_("Position"));
-  b.add_output<decl::Vector>(N_("Normal"));
-  b.add_output<decl::Vector>(N_("Tangent"));
-  b.add_output<decl::Vector>(N_("True Normal"));
-  b.add_output<decl::Vector>(N_("Incoming"));
-  b.add_output<decl::Vector>(N_("Parametric"));
-  b.add_output<decl::Float>(N_("Backfacing"));
-  b.add_output<decl::Float>(N_("Pointiness"));
-  b.add_output<decl::Float>(N_("Random Per Island"));
+  b.add_output<decl::Vector>("Position");
+  b.add_output<decl::Vector>("Normal");
+  b.add_output<decl::Vector>("Tangent");
+  b.add_output<decl::Vector>("True Normal");
+  b.add_output<decl::Vector>("Incoming");
+  b.add_output<decl::Vector>("Parametric");
+  b.add_output<decl::Float>("Backfacing");
+  b.add_output<decl::Float>("Pointiness");
+  b.add_output<decl::Float>("Random Per Island");
 }
 
 static int node_shader_gpu_geometry(GPUMaterial *mat,
@@ -57,6 +58,30 @@ static int node_shader_gpu_geometry(GPUMaterial *mat,
   return success;
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  /* NOTE: Some outputs aren't supported by MaterialX.*/
+  NodeItem res = empty();
+  std::string name = socket_out_->name;
+
+  if (name == "Position") {
+    res = create_node("position", NodeItem::Type::Vector3, {{"space", val(std::string("world"))}});
+  }
+  else if (name == "Normal") {
+    res = create_node("normal", NodeItem::Type::Vector3, {{"space", val(std::string("world"))}});
+  }
+  else if (ELEM(name, "Tangent", "True Normal")) {
+    res = create_node("tangent", NodeItem::Type::Vector3, {{"space", val(std::string("world"))}});
+  }
+  else {
+    res = get_output_default(name, NodeItem::Type::Any);
+  }
+  return res;
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_geometry_cc
 
 /* node type definition */
@@ -69,6 +94,7 @@ void register_node_type_sh_geometry()
   sh_node_type_base(&ntype, SH_NODE_NEW_GEOMETRY, "Geometry", NODE_CLASS_INPUT);
   ntype.declare = file_ns::node_declare;
   ntype.gpu_fn = file_ns::node_shader_gpu_geometry;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
@@ -11,8 +12,8 @@
 #include "BLI_math_vector.hh"
 #include "BLI_math_vector_types.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "IMB_colormanagement.h"
 
@@ -27,11 +28,11 @@ namespace blender::nodes::node_composite_levels_cc {
 
 static void cmp_node_levels_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image"))
+  b.add_input<decl::Color>("Image")
       .default_value({0.0f, 0.0f, 0.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_output<decl::Float>(N_("Mean"));
-  b.add_output<decl::Float>(N_("Std Dev"));
+  b.add_output<decl::Float>("Mean");
+  b.add_output<decl::Float>("Std Dev");
 }
 
 static void node_composit_init_view_levels(bNodeTree * /*ntree*/, bNode *node)

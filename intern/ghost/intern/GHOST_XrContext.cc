@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2020-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup GHOST
@@ -207,7 +209,8 @@ void GHOST_XrContext::initDebugMessenger()
       XR_FAILED(xrGetInstanceProcAddr(
           m_oxr->instance,
           "xrDestroyDebugUtilsMessengerEXT",
-          (PFN_xrVoidFunction *)&m_oxr->s_xrDestroyDebugUtilsMessengerEXT_fn))) {
+          (PFN_xrVoidFunction *)&m_oxr->s_xrDestroyDebugUtilsMessengerEXT_fn)))
+  {
     m_oxr->s_xrCreateDebugUtilsMessengerEXT_fn = nullptr;
     m_oxr->s_xrDestroyDebugUtilsMessengerEXT_fn = nullptr;
 
@@ -227,7 +230,8 @@ void GHOST_XrContext::initDebugMessenger()
   create_info.userCallback = debug_messenger_func;
 
   if (XR_FAILED(m_oxr->s_xrCreateDebugUtilsMessengerEXT_fn(
-          m_oxr->instance, &create_info, &m_oxr->debug_messenger))) {
+          m_oxr->instance, &create_info, &m_oxr->debug_messenger)))
+  {
     fprintf(stderr,
             "Failed to create OpenXR debug messenger. Not a fatal error, continuing without the "
             "messenger.\n");
@@ -272,7 +276,7 @@ void GHOST_XrContext::setErrorHandler(GHOST_XrErrorHandlerFn handler_fn, void *c
  * \{ */
 
 /**
- * \param layer_name: May be NULL for extensions not belonging to a specific layer.
+ * \param layer_name: May be nullptr for extensions not belonging to a specific layer.
  */
 void GHOST_XrContext::initExtensionsEx(std::vector<XrExtensionProperties> &extensions,
                                        const char *layer_name)
@@ -458,7 +462,7 @@ std::vector<GHOST_TXrGraphicsBinding> GHOST_XrContext::determineGraphicsBindingT
     const GHOST_XrContextCreateInfo *create_info)
 {
   std::vector<GHOST_TXrGraphicsBinding> result;
-  assert(create_info->gpu_binding_candidates != NULL);
+  assert(create_info->gpu_binding_candidates != nullptr);
   assert(create_info->gpu_binding_candidates_count > 0);
 
   for (uint32_t i = 0; i < create_info->gpu_binding_candidates_count; i++) {
@@ -487,7 +491,8 @@ GHOST_TXrGraphicsBinding GHOST_XrContext::determineGraphicsBindingTypeToUse(
     /* The SteamVR OpenGL backend currently fails for NVIDIA GPU's. Disable it and allow falling
      * back to the DirectX one. */
     if ((m_runtime_id == OPENXR_RUNTIME_STEAMVR) && (type == GHOST_kXrGraphicsOpenGL) &&
-        ((create_info->context_flag & GHOST_kXrContextGpuNVIDIA) != 0)) {
+        ((create_info->context_flag & GHOST_kXrContextGpuNVIDIA) != 0))
+    {
       continue;
     }
 #else

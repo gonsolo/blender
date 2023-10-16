@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -8,6 +9,7 @@
 #include <string>
 
 #include "BLI_assert.h"
+#include "BLI_string.h"
 
 #include "DNA_userdef_types.h"
 
@@ -178,7 +180,7 @@ bool GLTexture::init_internal(GPUVertBuf *vbo)
   return true;
 }
 
-bool GLTexture::init_internal(const GPUTexture *src, int mip_offset, int layer_offset)
+bool GLTexture::init_internal(GPUTexture *src, int mip_offset, int layer_offset, bool use_stencil)
 {
   BLI_assert(GLContext::texture_storage_support);
 
@@ -196,6 +198,11 @@ bool GLTexture::init_internal(const GPUTexture *src, int mip_offset, int layer_o
                 this->layer_count());
 
   debug::object_label(GL_TEXTURE, tex_id_, name_);
+
+  /* Stencil view support. */
+  if (ELEM(format_, GPU_DEPTH24_STENCIL8, GPU_DEPTH32F_STENCIL8)) {
+    stencil_texture_mode_set(use_stencil);
+  }
 
   return true;
 }
@@ -459,9 +466,9 @@ void *GLTexture::read(int mip, eGPUDataFormat type)
     GLContext::state_manager_active_get()->texture_bind_temp(this);
     if (type_ == GPU_TEXTURE_CUBE) {
       size_t cube_face_size = texture_size / 6;
-      char *face_data = (char *)data;
-      for (int i = 0; i < 6; i++, face_data += cube_face_size) {
-        glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip, gl_format, gl_type, face_data);
+      char *pdata = (char *)data;
+      for (int i = 0; i < 6; i++, pdata += cube_face_size) {
+        glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip, gl_format, gl_type, pdata);
       }
     }
     else {
@@ -521,7 +528,7 @@ void GLTexture::mip_range_set(int min, int max)
   }
 }
 
-struct GPUFrameBuffer *GLTexture::framebuffer_get()
+GPUFrameBuffer *GLTexture::framebuffer_get()
 {
   if (framebuffer_) {
     return framebuffer_;
@@ -597,7 +604,7 @@ void GLTexture::samplers_init()
         glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, min_filter);
         glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, mag_filter);
 
-        /** Other states are left to default:
+        /* Other states are left to default:
          * - GL_TEXTURE_BORDER_COLOR is {0, 0, 0, 0}.
          * - GL_TEXTURE_MIN_LOD is -1000.
          * - GL_TEXTURE_MAX_LOD is 1000.
@@ -728,20 +735,14 @@ bool GLTexture::proxy_check(int mip)
   }
 
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_WIN, GPU_DRIVER_ANY) ||
-      GPU_type_matches(GPU_DEVICE_NVIDIA, GPU_OS_MAC, GPU_DRIVER_OFFICIAL) ||
-      GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OFFICIAL)) {
+      GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OFFICIAL))
+  {
     /* Some AMD drivers have a faulty `GL_PROXY_TEXTURE_..` check.
      * (see #55888, #56185, #59351).
      * Checking with `GL_PROXY_TEXTURE_..` doesn't prevent `Out Of Memory` issue,
      * it just states that the OGL implementation can support the texture.
      * So we already manually check the maximum size and maximum number of layers.
      * Same thing happens on Nvidia/macOS 10.15 (#78175). */
-    return true;
-  }
-
-  if ((type_ == GPU_TEXTURE_CUBE_ARRAY) &&
-      GPU_type_matches(GPU_DEVICE_ANY, GPU_OS_MAC, GPU_DRIVER_ANY)) {
-    /* Special fix for #79703. */
     return true;
   }
 
@@ -808,7 +809,10 @@ void GLTexture::check_feedback_loop()
     if (fb_[i] == fb) {
       GPUAttachmentType type = fb_attachment_[i];
       GPUAttachment attachment = fb->attachments_[type];
-      if (attachment.mip <= mip_max_ && attachment.mip >= mip_min_) {
+      /* Check for when texture is used with texture barrier. */
+      GPUAttachment attachment_read = fb->tmp_detached_[type];
+      if (attachment.mip <= mip_max_ && attachment.mip >= mip_min_ &&
+          attachment_read.tex == nullptr) {
         char msg[256];
         SNPRINTF(msg,
                  "Feedback loop: Trying to bind a texture (%s) with mip range %d-%d but mip %d is "
@@ -884,7 +888,7 @@ int64_t GLPixelBuffer::get_native_handle()
   return int64_t(gl_id_);
 }
 
-uint GLPixelBuffer::get_size()
+size_t GLPixelBuffer::get_size()
 {
   return size_;
 }

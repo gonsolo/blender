@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2022 NVIDIA Corporation
- * Copyright 2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2022 NVIDIA Corporation
+ * SPDX-FileCopyrightText: 2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifdef _WIN32
 // Include first to avoid "NOGDI" definition set in Cycles headers
@@ -226,7 +227,8 @@ void HdCyclesDisplayDriver::draw(const Params &params)
   const auto renderBuffer = static_cast<HdCyclesRenderBuffer *>(
       _renderParam->GetDisplayAovBinding().renderBuffer);
   if (!renderBuffer ||  // Ensure this render buffer matches the texture dimensions
-      (renderBuffer->GetWidth() != params.size.x || renderBuffer->GetHeight() != params.size.y)) {
+      (renderBuffer->GetWidth() != params.size.x || renderBuffer->GetHeight() != params.size.y))
+  {
     return;
   }
 

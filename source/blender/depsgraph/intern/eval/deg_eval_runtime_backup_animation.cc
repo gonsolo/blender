@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2019 Blender Foundation */
+/* SPDX-FileCopyrightText: 2019 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup depsgraph
@@ -11,10 +12,10 @@
 
 #include "BKE_animsys.h"
 
-#include "RNA_access.h"
-#include "RNA_types.h"
+#include "RNA_access.hh"
+#include "RNA_types.hh"
 
-#include "intern/depsgraph.h"
+#include "intern/depsgraph.hh"
 
 namespace blender::deg {
 
@@ -44,7 +45,8 @@ void animated_property_store_cb(ID *id, FCurve *fcurve, void *data_v)
   /* Resolve path to the property. */
   PathResolvedRNA resolved_rna;
   if (!BKE_animsys_rna_path_resolve(
-          &data->id_pointer_rna, fcurve->rna_path, fcurve->array_index, &resolved_rna)) {
+          &data->id_pointer_rna, fcurve->rna_path, fcurve->array_index, &resolved_rna))
+  {
     return;
   }
 
@@ -85,7 +87,7 @@ void AnimationBackup::init_from_id(ID *id)
   AnimatedPropertyStoreCalbackData data;
   data.backup = this;
   data.id = id;
-  RNA_id_pointer_create(id, &data.id_pointer_rna);
+  data.id_pointer_rna = RNA_id_pointer_create(id);
   BKE_fcurves_id_cb(id, animated_property_store_cb, &data);
 }
 
@@ -93,8 +95,7 @@ void AnimationBackup::restore_to_id(ID *id)
 {
   return;
 
-  PointerRNA id_pointer_rna;
-  RNA_id_pointer_create(id, &id_pointer_rna);
+  PointerRNA id_pointer_rna = RNA_id_pointer_create(id);
   for (const AnimationValueBackup &value_backup : values_backup) {
     /* Resolve path to the property.
      *
@@ -104,7 +105,8 @@ void AnimationBackup::restore_to_id(ID *id)
     if (!BKE_animsys_rna_path_resolve(&id_pointer_rna,
                                       value_backup.rna_path.c_str(),
                                       value_backup.array_index,
-                                      &resolved_rna)) {
+                                      &resolved_rna))
+    {
       return;
     }
 

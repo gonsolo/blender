@@ -1,27 +1,24 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_output_linestyle_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Color")).default_value({1.0f, 0.0f, 1.0f, 1.0f});
-  b.add_input<decl::Float>(N_("Color Fac"))
+  b.add_input<decl::Color>("Color").default_value({1.0f, 0.0f, 1.0f, 1.0f});
+  b.add_input<decl::Float>("Color Fac")
       .default_value(1.0f)
       .min(0.0f)
       .max(1.0f)
       .subtype(PROP_FACTOR);
-  b.add_input<decl::Float>(N_("Alpha"))
-      .default_value(1.0f)
-      .min(0.0f)
-      .max(1.0f)
-      .subtype(PROP_FACTOR);
-  b.add_input<decl::Float>(N_("Alpha Fac"))
+  b.add_input<decl::Float>("Alpha").default_value(1.0f).min(0.0f).max(1.0f).subtype(PROP_FACTOR);
+  b.add_input<decl::Float>("Alpha Fac")
       .default_value(1.0f)
       .min(0.0f)
       .max(1.0f)

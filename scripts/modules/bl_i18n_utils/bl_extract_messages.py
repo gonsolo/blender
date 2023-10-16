@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2013-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Populate a template file (POT format currently) from Blender RNA/py/C data.
@@ -26,8 +28,8 @@ def init_spell_check(settings, lang="en_US"):
     try:
         from bl_i18n_utils import utils_spell_check
         return utils_spell_check.SpellChecker(settings, lang)
-    except Exception as e:
-        print("Failed to import utils_spell_check ({})".format(str(e)))
+    except BaseException as ex:
+        print("Failed to import utils_spell_check ({})".format(str(ex)))
         return None
 
 
@@ -204,7 +206,7 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
     def class_blacklist():
         blacklist_rna_class = {getattr(bpy.types, cls_id) for cls_id in (
             # core classes
-            "Context", "Event", "Function", "UILayout", "UnknownType", "Property", "Struct",
+            "Context", "Event", "Function", "UILayout", "UnknownType", "Struct",
             # registerable classes
             "Panel", "Menu", "Header", "RenderEngine", "Operator", "OperatorMacro", "Macro", "KeyingSetInfo",
         )
@@ -384,7 +386,6 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
                 walk_keymap_hierarchy(lvl[3], msgsrc)
 
     # Dump Messages
-    operator_categories = {}
 
     def process_cls_list(cls_list):
         if not cls_list:
@@ -411,15 +412,6 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
                 bl_rna = bl_rna.base
             return cls_id
 
-        def operator_category(cls):
-            """Extract operators' categories, as displayed in 'search' space menu."""
-            # NOTE: keep in sync with C code in ui_searchbox_region_draw_cb__operator().
-            if issubclass(cls, bpy.types.OperatorProperties) and "_OT_" in cls.__name__:
-                cat_id = cls.__name__.split("_OT_")[0]
-                if cat_id not in operator_categories:
-                    cat_str = cat_id.capitalize() + ":"
-                    operator_categories[cat_id] = cat_str
-
         if verbose:
             print(cls_list)
         cls_list.sort(key=full_class_id)
@@ -431,7 +423,6 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
             if (cls in blacklist_rna_class) or issubclass(cls, bpy.types.Operator):
                 reports["rna_structs_skipped"].append(cls)
             else:
-                operator_category(cls)
                 walk_class(cls)
             # Recursively process subclasses.
             process_cls_list(cls.__subclasses__())
@@ -445,11 +436,6 @@ def dump_rna_messages(msgs, reports, settings, verbose=False):
 
     # Parse everything (recursively parsing from bpy_struct "class"...).
     process_cls_list(bpy.types.ID.__base__.__subclasses__())
-
-    # Finalize generated 'operator categories' messages.
-    for cat_str in operator_categories.values():
-        process_msg(msgs, bpy.app.translations.contexts.operator_default, cat_str, "Generated operator category",
-                    reports, check_ctxt_rna, settings)
 
     # Parse keymap preset preferences
     for preset_filename in sorted(
@@ -574,9 +560,9 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
             op = getattr(op, n)
         try:
             return op.get_rna_type().translation_context
-        except Exception as e:
+        except BaseException as ex:
             default_op_context = i18n_contexts.operator_default
-            print("ERROR: ", str(e))
+            print("ERROR: ", str(ex))
             print("       Assuming default operator context '{}'".format(default_op_context))
             return default_op_context
 
@@ -602,6 +588,7 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
                   ),
         "message": (),
         "heading": (),
+        "placeholder": ((("text_ctxt",), _ctxt_to_ctxt),),
     }
 
     context_kw_set = {}
@@ -635,7 +622,8 @@ def dump_py_messages_from_files(msgs, reports, files, settings):
         for arg_pos, (arg_kw, arg) in enumerate(func.parameters.items()):
             if (not arg.is_output) and (arg.type == 'STRING'):
                 for msgid, msgctxts in context_kw_set.items():
-                    if arg_kw in msgctxts:
+                    # The msgid can be missing if it is used in only some UILayout functions but not all
+                    if arg_kw in msgctxts and msgid in func_translate_args[func_id]:
                         func_translate_args[func_id][msgid][1][arg_kw] = arg_pos
     # The report() func of operators.
     for func_id, func in bpy.types.Operator.bl_rna.functions.items():
@@ -867,7 +855,7 @@ def dump_src_messages(msgs, reports, settings):
                 elif l[0] != '#':
                     forced.add(l.rstrip('\n'))
     for root, dirs, files in os.walk(settings.POTFILES_SOURCE_DIR):
-        if "/.svn" in root:
+        if "/.git" in root:
             continue
         for fname in files:
             if os.path.splitext(fname)[1] not in settings.PYGETTEXT_ALLOWED_EXTS:
@@ -1119,7 +1107,7 @@ def dump_addon_messages(module_name, do_checks, settings):
     dump_rna_messages(msgs, reports, settings)
     print("C")
 
-    # Now disable our addon, and rescan RNA.
+    # Now disable our addon, and re-scan RNA.
     utils.enable_addons(addons={module_name}, disable=True)
     print("D")
     reports["check_ctxt"] = minus_check_ctxt

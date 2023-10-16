@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/shader.h"
 #include "scene/background.h"
@@ -189,6 +190,7 @@ static SocketType::Type convert_socket_type(BL::NodeSocket &b_socket)
   switch (b_socket.type()) {
     case BL::NodeSocket::type_VALUE:
       return SocketType::FLOAT;
+    case BL::NodeSocket::type_BOOLEAN:
     case BL::NodeSocket::type_INT:
       return SocketType::INT;
     case BL::NodeSocket::type_VECTOR:
@@ -253,8 +255,9 @@ static void set_default_value(ShaderInput *input,
 
 static void get_tex_mapping(TextureNode *mapping, BL::TexMapping &b_mapping)
 {
-  if (!b_mapping)
+  if (!b_mapping) {
     return;
+  }
 
   mapping->set_tex_mapping_translation(get_float3(b_mapping.translation()));
   mapping->set_tex_mapping_rotation(get_float3(b_mapping.rotation()));
@@ -523,27 +526,6 @@ static ShaderNode *add_node(Scene *scene,
   else if (b_node.is_a(&RNA_ShaderNodeHoldout)) {
     node = graph->create_node<HoldoutNode>();
   }
-  else if (b_node.is_a(&RNA_ShaderNodeBsdfAnisotropic)) {
-    BL::ShaderNodeBsdfAnisotropic b_aniso_node(b_node);
-    AnisotropicBsdfNode *aniso = graph->create_node<AnisotropicBsdfNode>();
-
-    switch (b_aniso_node.distribution()) {
-      case BL::ShaderNodeBsdfAnisotropic::distribution_BECKMANN:
-        aniso->set_distribution(CLOSURE_BSDF_MICROFACET_BECKMANN_ID);
-        break;
-      case BL::ShaderNodeBsdfAnisotropic::distribution_GGX:
-        aniso->set_distribution(CLOSURE_BSDF_MICROFACET_GGX_ID);
-        break;
-      case BL::ShaderNodeBsdfAnisotropic::distribution_MULTI_GGX:
-        aniso->set_distribution(CLOSURE_BSDF_MICROFACET_MULTI_GGX_ID);
-        break;
-      case BL::ShaderNodeBsdfAnisotropic::distribution_ASHIKHMIN_SHIRLEY:
-        aniso->set_distribution(CLOSURE_BSDF_ASHIKHMIN_SHIRLEY_ID);
-        break;
-    }
-
-    node = aniso;
-  }
   else if (b_node.is_a(&RNA_ShaderNodeBsdfDiffuse)) {
     node = graph->create_node<DiffuseBsdfNode>();
   }
@@ -556,34 +538,31 @@ static ShaderNode *add_node(Scene *scene,
       case BL::ShaderNodeSubsurfaceScattering::falloff_BURLEY:
         subsurface->set_method(CLOSURE_BSSRDF_BURLEY_ID);
         break;
-      case BL::ShaderNodeSubsurfaceScattering::falloff_RANDOM_WALK_FIXED_RADIUS:
-        subsurface->set_method(CLOSURE_BSSRDF_RANDOM_WALK_FIXED_RADIUS_ID);
-        break;
       case BL::ShaderNodeSubsurfaceScattering::falloff_RANDOM_WALK:
         subsurface->set_method(CLOSURE_BSSRDF_RANDOM_WALK_ID);
+        break;
+      case BL::ShaderNodeSubsurfaceScattering::falloff_RANDOM_WALK_SKIN:
+        subsurface->set_method(CLOSURE_BSSRDF_RANDOM_WALK_SKIN_ID);
         break;
     }
 
     node = subsurface;
   }
-  else if (b_node.is_a(&RNA_ShaderNodeBsdfGlossy)) {
-    BL::ShaderNodeBsdfGlossy b_glossy_node(b_node);
+  else if (b_node.is_a(&RNA_ShaderNodeBsdfAnisotropic)) {
+    BL::ShaderNodeBsdfAnisotropic b_glossy_node(b_node);
     GlossyBsdfNode *glossy = graph->create_node<GlossyBsdfNode>();
 
     switch (b_glossy_node.distribution()) {
-      case BL::ShaderNodeBsdfGlossy::distribution_SHARP:
-        glossy->set_distribution(CLOSURE_BSDF_REFLECTION_ID);
-        break;
-      case BL::ShaderNodeBsdfGlossy::distribution_BECKMANN:
+      case BL::ShaderNodeBsdfAnisotropic::distribution_BECKMANN:
         glossy->set_distribution(CLOSURE_BSDF_MICROFACET_BECKMANN_ID);
         break;
-      case BL::ShaderNodeBsdfGlossy::distribution_GGX:
+      case BL::ShaderNodeBsdfAnisotropic::distribution_GGX:
         glossy->set_distribution(CLOSURE_BSDF_MICROFACET_GGX_ID);
         break;
-      case BL::ShaderNodeBsdfGlossy::distribution_ASHIKHMIN_SHIRLEY:
+      case BL::ShaderNodeBsdfAnisotropic::distribution_ASHIKHMIN_SHIRLEY:
         glossy->set_distribution(CLOSURE_BSDF_ASHIKHMIN_SHIRLEY_ID);
         break;
-      case BL::ShaderNodeBsdfGlossy::distribution_MULTI_GGX:
+      case BL::ShaderNodeBsdfAnisotropic::distribution_MULTI_GGX:
         glossy->set_distribution(CLOSURE_BSDF_MICROFACET_MULTI_GGX_ID);
         break;
     }
@@ -593,9 +572,6 @@ static ShaderNode *add_node(Scene *scene,
     BL::ShaderNodeBsdfGlass b_glass_node(b_node);
     GlassBsdfNode *glass = graph->create_node<GlassBsdfNode>();
     switch (b_glass_node.distribution()) {
-      case BL::ShaderNodeBsdfGlass::distribution_SHARP:
-        glass->set_distribution(CLOSURE_BSDF_SHARP_GLASS_ID);
-        break;
       case BL::ShaderNodeBsdfGlass::distribution_BECKMANN:
         glass->set_distribution(CLOSURE_BSDF_MICROFACET_BECKMANN_GLASS_ID);
         break;
@@ -612,9 +588,6 @@ static ShaderNode *add_node(Scene *scene,
     BL::ShaderNodeBsdfRefraction b_refraction_node(b_node);
     RefractionBsdfNode *refraction = graph->create_node<RefractionBsdfNode>();
     switch (b_refraction_node.distribution()) {
-      case BL::ShaderNodeBsdfRefraction::distribution_SHARP:
-        refraction->set_distribution(CLOSURE_BSDF_REFRACTION_ID);
-        break;
       case BL::ShaderNodeBsdfRefraction::distribution_BECKMANN:
         refraction->set_distribution(CLOSURE_BSDF_MICROFACET_BECKMANN_REFRACTION_ID);
         break;
@@ -653,10 +626,14 @@ static ShaderNode *add_node(Scene *scene,
   else if (b_node.is_a(&RNA_ShaderNodeBsdfHairPrincipled)) {
     BL::ShaderNodeBsdfHairPrincipled b_principled_hair_node(b_node);
     PrincipledHairBsdfNode *principled_hair = graph->create_node<PrincipledHairBsdfNode>();
+    principled_hair->set_model((NodePrincipledHairModel)get_enum(b_principled_hair_node.ptr,
+                                                                 "model",
+                                                                 NODE_PRINCIPLED_HAIR_MODEL_NUM,
+                                                                 NODE_PRINCIPLED_HAIR_HUANG));
     principled_hair->set_parametrization(
         (NodePrincipledHairParametrization)get_enum(b_principled_hair_node.ptr,
                                                     "parametrization",
-                                                    NODE_PRINCIPLED_HAIR_NUM,
+                                                    NODE_PRINCIPLED_HAIR_PARAMETRIZATION_NUM,
                                                     NODE_PRINCIPLED_HAIR_REFLECTANCE));
     node = principled_hair;
   }
@@ -675,11 +652,11 @@ static ShaderNode *add_node(Scene *scene,
       case BL::ShaderNodeBsdfPrincipled::subsurface_method_BURLEY:
         principled->set_subsurface_method(CLOSURE_BSSRDF_BURLEY_ID);
         break;
-      case BL::ShaderNodeBsdfPrincipled::subsurface_method_RANDOM_WALK_FIXED_RADIUS:
-        principled->set_subsurface_method(CLOSURE_BSSRDF_RANDOM_WALK_FIXED_RADIUS_ID);
-        break;
       case BL::ShaderNodeBsdfPrincipled::subsurface_method_RANDOM_WALK:
         principled->set_subsurface_method(CLOSURE_BSSRDF_RANDOM_WALK_ID);
+        break;
+      case BL::ShaderNodeBsdfPrincipled::subsurface_method_RANDOM_WALK_SKIN:
+        principled->set_subsurface_method(CLOSURE_BSSRDF_RANDOM_WALK_SKIN_ID);
         break;
     }
     node = principled;
@@ -690,8 +667,18 @@ static ShaderNode *add_node(Scene *scene,
   else if (b_node.is_a(&RNA_ShaderNodeBsdfTransparent)) {
     node = graph->create_node<TransparentBsdfNode>();
   }
-  else if (b_node.is_a(&RNA_ShaderNodeBsdfVelvet)) {
-    node = graph->create_node<VelvetBsdfNode>();
+  else if (b_node.is_a(&RNA_ShaderNodeBsdfSheen)) {
+    BL::ShaderNodeBsdfSheen b_sheen_node(b_node);
+    SheenBsdfNode *sheen = graph->create_node<SheenBsdfNode>();
+    switch (b_sheen_node.distribution()) {
+      case BL::ShaderNodeBsdfSheen::distribution_ASHIKHMIN:
+        sheen->set_distribution(CLOSURE_BSDF_ASHIKHMIN_VELVET_ID);
+        break;
+      case BL::ShaderNodeBsdfSheen::distribution_MICROFIBER:
+        sheen->set_distribution(CLOSURE_BSDF_SHEEN_ID);
+        break;
+    }
+    node = sheen;
   }
   else if (b_node.is_a(&RNA_ShaderNodeEmission)) {
     node = graph->create_node<EmissionNode>();
@@ -903,6 +890,7 @@ static ShaderNode *add_node(Scene *scene,
     voronoi->set_dimensions(b_voronoi_node.voronoi_dimensions());
     voronoi->set_feature((NodeVoronoiFeature)b_voronoi_node.feature());
     voronoi->set_metric((NodeVoronoiDistanceMetric)b_voronoi_node.distance());
+    voronoi->set_use_normalize(b_voronoi_node.normalize());
     BL::TexMapping b_texture_mapping(b_voronoi_node.texture_mapping());
     get_tex_mapping(voronoi, b_texture_mapping);
     node = voronoi;
@@ -948,6 +936,7 @@ static ShaderNode *add_node(Scene *scene,
     BL::ShaderNodeTexNoise b_noise_node(b_node);
     NoiseTextureNode *noise = graph->create_node<NoiseTextureNode>();
     noise->set_dimensions(b_noise_node.noise_dimensions());
+    noise->set_use_normalize(b_noise_node.normalize());
     BL::TexMapping b_texture_mapping(b_noise_node.texture_mapping());
     get_tex_mapping(noise, b_texture_mapping);
     node = noise;
@@ -1097,8 +1086,9 @@ static ShaderNode *add_node(Scene *scene,
 
 static bool node_use_modified_socket_name(ShaderNode *node)
 {
-  if (node->special_type == SHADER_SPECIAL_TYPE_OSL)
+  if (node->special_type == SHADER_SPECIAL_TYPE_OSL) {
     return false;
+  }
 
   return true;
 }
@@ -1246,7 +1236,8 @@ static void add_nodes(Scene *scene,
       }
     }
     else if (b_node.is_a(&RNA_ShaderNodeGroup) || b_node.is_a(&RNA_NodeCustomGroup) ||
-             b_node.is_a(&RNA_ShaderNodeCustomGroup)) {
+             b_node.is_a(&RNA_ShaderNodeCustomGroup))
+    {
 
       BL::ShaderNodeTree b_group_ntree(PointerRNA_NULL);
       if (b_node.is_a(&RNA_ShaderNodeGroup))
@@ -1382,7 +1373,8 @@ static void add_nodes(Scene *scene,
     /* Ignore invalid links to avoid unwanted cycles created in graph.
      * Also ignore links with unavailable sockets. */
     if (!(b_link.is_valid() && b_link.from_socket().enabled() && b_link.to_socket().enabled()) ||
-        b_link.is_muted()) {
+        b_link.is_muted())
+    {
       continue;
     }
     /* get blender link data */
@@ -1531,7 +1523,8 @@ void BlenderSync::sync_materials(BL::Depsgraph &b_depsgraph, bool update_all)
 
     /* test if we need to sync */
     if (shader_map.add_or_update(&shader, b_mat) || update_all ||
-        scene_attr_needs_recalc(shader, b_depsgraph)) {
+        scene_attr_needs_recalc(shader, b_depsgraph))
+    {
       ShaderGraph *graph = new ShaderGraph();
 
       shader->name = b_mat.name().c_str();
@@ -1558,6 +1551,7 @@ void BlenderSync::sync_materials(BL::Depsgraph &b_depsgraph, bool update_all)
       PointerRNA cmat = RNA_pointer_get(&b_mat.ptr, "cycles");
       shader->set_emission_sampling_method(get_emission_sampling(cmat));
       shader->set_use_transparent_shadow(get_boolean(cmat, "use_transparent_shadow"));
+      shader->set_use_bump_map_correction(get_boolean(cmat, "use_bump_map_correction"));
       shader->set_heterogeneous_volume(!get_boolean(cmat, "homogeneous_volume"));
       shader->set_volume_sampling_method(get_volume_sampling(cmat));
       shader->set_volume_interpolation_method(get_volume_interpolation(cmat));
@@ -1614,12 +1608,14 @@ void BlenderSync::sync_world(BL::Depsgraph &b_depsgraph, BL::SpaceView3D &b_v3d,
 
   if (world_recalc || update_all || b_world.ptr.data != world_map ||
       viewport_parameters.shader_modified(new_viewport_parameters) ||
-      scene_attr_needs_recalc(shader, b_depsgraph)) {
+      scene_attr_needs_recalc(shader, b_depsgraph))
+  {
     ShaderGraph *graph = new ShaderGraph();
 
     /* create nodes */
     if (new_viewport_parameters.use_scene_world && b_world && b_world.use_nodes() &&
-        b_world.node_tree()) {
+        b_world.node_tree())
+    {
       BL::ShaderNodeTree b_ntree(b_world.node_tree());
 
       add_nodes(scene, b_engine, b_data, b_depsgraph, b_scene, graph, b_ntree);
@@ -1781,7 +1777,8 @@ void BlenderSync::sync_lights(BL::Depsgraph &b_depsgraph, bool update_all)
 
     /* test if we need to sync */
     if (shader_map.add_or_update(&shader, b_light) || update_all ||
-        scene_attr_needs_recalc(shader, b_depsgraph)) {
+        scene_attr_needs_recalc(shader, b_depsgraph))
+    {
       ShaderGraph *graph = new ShaderGraph();
 
       /* create nodes */

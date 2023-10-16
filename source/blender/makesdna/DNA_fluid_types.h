@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2006 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup DNA
@@ -8,10 +9,6 @@
 #pragma once
 
 #include "DNA_listBase.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * #FluidDomainSettings.flags
@@ -687,10 +684,12 @@ typedef struct FluidDomainSettings {
   int viewsettings;
   char _pad12[4]; /* Unused. */
 
-  /* Pointcache options. */
-  /* Smoke uses only one cache from now on (index [0]), but keeping the array for now for reading
-   * old files. */
-  struct PointCache *point_cache[2]; /* Definition is in DNA_object_force_types.h. */
+  /**
+   * Point-cache options.
+   * Smoke uses only one cache from now on (index [0]),
+   * but keeping the array for now for reading old files.
+   */
+  struct PointCache *point_cache[2];
   struct ListBase ptcaches[2];
   int cache_comp;
   int cache_high_comp;
@@ -833,7 +832,7 @@ typedef struct FluidEffectorSettings {
 
   /* -- User-accessible fields (from here on). -- */
 
-  float surface_distance; /* Thickness of mesh surface, used in obstacle sdf. */
+  float surface_distance; /* Thickness of mesh surface, used in obstacle SDF. */
   int flags;
   int subframes;
   short type;
@@ -844,7 +843,3 @@ typedef struct FluidEffectorSettings {
   short guide_mode;
   char _pad2[2];
 } FluidEffectorSettings;
-
-#ifdef __cplusplus
-}
-#endif

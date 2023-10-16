@@ -1,10 +1,11 @@
+# SPDX-FileCopyrightText: 2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 set(INC
   ../include
   ../uvedit
   ../../blenkernel
-  ../../blenlib
   ../../blentranslation
   ../../bmesh
   ../../depsgraph
@@ -13,17 +14,17 @@ set(INC
   ../../geometry
   ../../gpu
   ../../imbuf
-  ../../makesdna
   ../../makesrna
   ../../nodes
   ../../render
   ../../windowmanager
-  ../../../../intern/atomic
   ../../../../intern/clog
   ../../../../intern/eigen
-  ../../../../intern/guardedalloc
   # RNA_prototypes.h
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
+)
+
+set(INC_SYS
 )
 
 set(SRC
@@ -41,25 +42,29 @@ set(SRC
   curves_sculpt_slide.cc
   curves_sculpt_smooth.cc
   curves_sculpt_snake_hook.cc
+  grease_pencil_draw_ops.cc
+  grease_pencil_erase.cc
+  grease_pencil_paint.cc
   paint_canvas.cc
   paint_cursor.cc
-  paint_curve.c
-  paint_curve_undo.c
+  paint_curve.cc
+  paint_curve_undo.cc
   paint_hide.cc
   paint_image.cc
-  paint_image_2d.c
+  paint_image_2d.cc
   paint_image_2d_curve_mask.cc
   paint_image_ops_paint.cc
   paint_image_proj.cc
   paint_mask.cc
   paint_ops.cc
   paint_stroke.cc
-  paint_utils.c
+  paint_utils.cc
   paint_vertex.cc
   paint_vertex_color_ops.cc
-  paint_vertex_proj.c
+  paint_vertex_proj.cc
   paint_vertex_weight_ops.cc
-  paint_vertex_weight_utils.c
+  paint_vertex_weight_utils.cc
+  paint_weight.cc
   sculpt.cc
   sculpt_automasking.cc
   sculpt_boundary.cc
@@ -73,7 +78,6 @@ set(SRC
   sculpt_filter_mask.cc
   sculpt_filter_mesh.cc
   sculpt_geodesic.cc
-  sculpt_mask_expand.cc
   sculpt_mask_init.cc
   sculpt_multiplane_scrape.cc
   sculpt_ops.cc
@@ -83,17 +87,21 @@ set(SRC
   sculpt_smooth.cc
   sculpt_transform.cc
   sculpt_undo.cc
-  sculpt_uv.c
+  sculpt_uv.cc
 
-  curves_sculpt_intern.h
   curves_sculpt_intern.hh
-  paint_intern.h
+  grease_pencil_intern.hh
+  paint_intern.hh
   sculpt_intern.hh
 )
 
 set(LIB
   bf_blenkernel
-  bf_blenlib
+  PRIVATE bf::animrig
+  PRIVATE bf::blenlib
+  PRIVATE bf::dna
+  PRIVATE bf::intern::atomic
+  PRIVATE bf::intern::guardedalloc
 )
 
 if(WITH_TBB)

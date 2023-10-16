@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "BKE_curves.hh"
 
@@ -8,15 +10,15 @@ namespace blender::nodes::node_geo_curve_topology_curve_of_point_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Int>(N_("Point Index"))
+  b.add_input<decl::Int>("Point Index")
       .implicit_field(implicit_field_inputs::index)
-      .description(N_("The control point to retrieve data from"));
-  b.add_output<decl::Int>(N_("Curve Index"))
+      .description("The control point to retrieve data from");
+  b.add_output<decl::Int>("Curve Index")
       .field_source_reference_all()
-      .description(N_("The curve the control point is part of"));
-  b.add_output<decl::Int>(N_("Index in Curve"))
+      .description("The curve the control point is part of");
+  b.add_output<decl::Int>("Index in Curve")
       .field_source_reference_all()
-      .description(N_("How far along the control point is along its curve"));
+      .description("How far along the control point is along its curve");
 }
 
 class CurveOfPointInput final : public bke::CurvesFieldInput {
@@ -28,7 +30,7 @@ class CurveOfPointInput final : public bke::CurvesFieldInput {
 
   GVArray get_varray_for_context(const bke::CurvesGeometry &curves,
                                  const eAttrDomain domain,
-                                 const IndexMask /*mask*/) const final
+                                 const IndexMask & /*mask*/) const final
   {
     if (domain != ATTR_DOMAIN_POINT) {
       return {};
@@ -43,10 +45,7 @@ class CurveOfPointInput final : public bke::CurvesFieldInput {
 
   bool is_equal_to(const fn::FieldNode &other) const override
   {
-    if (dynamic_cast<const CurveOfPointInput *>(&other)) {
-      return true;
-    }
-    return false;
+    return dynamic_cast<const CurveOfPointInput *>(&other) != nullptr;
   }
 
   std::optional<eAttrDomain> preferred_domain(const bke::CurvesGeometry & /*curves*/) const final
@@ -64,7 +63,7 @@ class PointIndexInCurveInput final : public bke::CurvesFieldInput {
 
   GVArray get_varray_for_context(const bke::CurvesGeometry &curves,
                                  const eAttrDomain domain,
-                                 const IndexMask /*mask*/) const final
+                                 const IndexMask & /*mask*/) const final
   {
     if (domain != ATTR_DOMAIN_POINT) {
       return {};
@@ -86,10 +85,7 @@ class PointIndexInCurveInput final : public bke::CurvesFieldInput {
 
   bool is_equal_to(const fn::FieldNode &other) const final
   {
-    if (dynamic_cast<const PointIndexInCurveInput *>(&other)) {
-      return true;
-    }
-    return false;
+    return dynamic_cast<const PointIndexInCurveInput *>(&other) != nullptr;
   }
 
   std::optional<eAttrDomain> preferred_domain(const bke::CurvesGeometry & /*curves*/)
@@ -104,28 +100,27 @@ static void node_geo_exec(GeoNodeExecParams params)
   if (params.output_is_required("Curve Index")) {
     params.set_output(
         "Curve Index",
-        Field<int>(std::make_shared<FieldAtIndexInput>(
+        Field<int>(std::make_shared<EvaluateAtIndexInput>(
             point_index, Field<int>(std::make_shared<CurveOfPointInput>()), ATTR_DOMAIN_POINT)));
   }
   if (params.output_is_required("Index in Curve")) {
     params.set_output("Index in Curve",
-                      Field<int>(std::make_shared<FieldAtIndexInput>(
+                      Field<int>(std::make_shared<EvaluateAtIndexInput>(
                           point_index,
                           Field<int>(std::make_shared<PointIndexInCurveInput>()),
                           ATTR_DOMAIN_POINT)));
   }
 }
 
-}  // namespace blender::nodes::node_geo_curve_topology_curve_of_point_cc
-
-void register_node_type_geo_curve_topology_curve_of_point()
+static void node_register()
 {
-  namespace file_ns = blender::nodes::node_geo_curve_topology_curve_of_point_cc;
-
   static bNodeType ntype;
   geo_node_type_base(
       &ntype, GEO_NODE_CURVE_TOPOLOGY_CURVE_OF_POINT, "Curve of Point", NODE_CLASS_INPUT);
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.declare = file_ns::node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.declare = node_declare;
   nodeRegisterType(&ntype);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_curve_topology_curve_of_point_cc

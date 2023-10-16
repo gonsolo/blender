@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -15,10 +17,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define TODO_LAYER_OVERRIDE  /* CollectionOverride */
-#define TODO_LAYER_OPERATORS /* collection mamanger and property panel operators */
-#define TODO_LAYER           /* generic todo */
 
 struct Base;
 struct BlendDataReader;
@@ -274,9 +272,9 @@ void BKE_view_layer_blend_write(struct BlendWriter *writer,
                                 const struct Scene *scene,
                                 struct ViewLayer *view_layer);
 void BKE_view_layer_blend_read_data(struct BlendDataReader *reader, struct ViewLayer *view_layer);
-void BKE_view_layer_blend_read_lib(struct BlendLibReader *reader,
-                                   struct Library *lib,
-                                   struct ViewLayer *view_layer);
+void BKE_view_layer_blend_read_after_liblink(struct BlendLibReader *reader,
+                                             struct ID *self_id,
+                                             struct ViewLayer *view_layer);
 
 /* iterators */
 
@@ -447,7 +445,8 @@ void BKE_view_layer_visible_bases_iterator_end(BLI_Iterator *iter);
     Base *_base; \
     BKE_view_layer_synced_ensure(scene, view_layer); \
     for (_base = (Base *)BKE_view_layer_object_bases_get(view_layer)->first; _base; \
-         _base = _base->next) { \
+         _base = _base->next) \
+    { \
       _instance = _base->object;
 
 #define FOREACH_OBJECT_END \
@@ -494,7 +493,7 @@ void BKE_view_layer_visible_bases_iterator_end(BLI_Iterator *iter);
   } \
   ((void)0)
 
-/* layer_utils.c */
+/* `layer_utils.cc` */
 
 struct ObjectsInViewLayerParams {
   uint no_dup_data : 1;
@@ -624,8 +623,8 @@ void BKE_view_layer_rename_lightgroup(struct Scene *scene,
                                       ViewLayerLightgroup *lightgroup,
                                       const char *name);
 
-void BKE_lightgroup_membership_get(struct LightgroupMembership *lgm, char *name);
-int BKE_lightgroup_membership_length(struct LightgroupMembership *lgm);
+int BKE_lightgroup_membership_get(const struct LightgroupMembership *lgm, char *name);
+int BKE_lightgroup_membership_length(const struct LightgroupMembership *lgm);
 void BKE_lightgroup_membership_set(struct LightgroupMembership **lgm, const char *name);
 
 #ifdef __cplusplus

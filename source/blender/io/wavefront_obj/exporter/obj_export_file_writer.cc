@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup obj
@@ -6,6 +8,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <sstream>
 
 #include "BKE_attribute.hh"
 #include "BKE_blender_version.h"
@@ -172,7 +175,11 @@ void OBJWriter::write_mtllib_name(const StringRefNull mtl_filepath) const
   /* Split .MTL file path into parent directory and filename. */
   char mtl_file_name[FILE_MAXFILE];
   char mtl_dir_name[FILE_MAXDIR];
-  BLI_split_dirfile(mtl_filepath.data(), mtl_dir_name, mtl_file_name, FILE_MAXDIR, FILE_MAXFILE);
+  BLI_path_split_dir_file(mtl_filepath.data(),
+                          mtl_dir_name,
+                          sizeof(mtl_dir_name),
+                          mtl_file_name,
+                          sizeof(mtl_file_name));
   FormatHandler fh;
   fh.write_obj_mtllib(mtl_file_name);
   fh.write_to_file(outfile_);
@@ -314,14 +321,14 @@ OBJWriter::func_vert_uv_normal_indices OBJWriter::get_poly_element_writer(
   return &OBJWriter::write_vert_indices;
 }
 
-static int get_smooth_group(const OBJMesh &mesh, const OBJExportParams &params, int poly_idx)
+static int get_smooth_group(const OBJMesh &mesh, const OBJExportParams &params, int face_idx)
 {
-  if (poly_idx < 0) {
+  if (face_idx < 0) {
     return NEGATIVE_INIT;
   }
   int group = SMOOTH_GROUP_DISABLED;
-  if (mesh.is_ith_poly_smooth(poly_idx)) {
-    group = !params.export_smooth_groups ? SMOOTH_GROUP_DEFAULT : mesh.ith_smooth_group(poly_idx);
+  if (mesh.is_ith_poly_smooth(face_idx)) {
+    group = !params.export_smooth_groups ? SMOOTH_GROUP_DEFAULT : mesh.ith_smooth_group(face_idx);
   }
   return group;
 }
@@ -334,19 +341,19 @@ void OBJWriter::write_poly_elements(FormatHandler &fh,
   const func_vert_uv_normal_indices poly_element_writer = get_poly_element_writer(
       obj_mesh_data.tot_uv_vertices());
 
-  const int tot_polygons = obj_mesh_data.tot_polygons();
+  const int tot_faces = obj_mesh_data.tot_faces();
   const int tot_deform_groups = obj_mesh_data.tot_deform_groups();
   threading::EnumerableThreadSpecific<Vector<float>> group_weights;
   const bke::AttributeAccessor attributes = obj_mesh_data.get_mesh()->attributes();
   const VArray<int> material_indices = *attributes.lookup_or_default<int>(
       "material_index", ATTR_DOMAIN_FACE, 0);
 
-  obj_parallel_chunked_output(fh, tot_polygons, [&](FormatHandler &buf, int idx) {
+  obj_parallel_chunked_output(fh, tot_faces, [&](FormatHandler &buf, int idx) {
     /* Polygon order for writing into the file is not necessarily the same
      * as order in the mesh; it will be sorted by material indices. Remap current
      * and previous indices here according to the order. */
-    int prev_i = obj_mesh_data.remap_poly_index(idx - 1);
-    int i = obj_mesh_data.remap_poly_index(idx);
+    int prev_i = obj_mesh_data.remap_face_index(idx - 1);
+    int i = obj_mesh_data.remap_face_index(idx);
 
     Span<int> poly_vertex_indices = obj_mesh_data.calc_poly_vertex_indices(i);
     Span<int> poly_uv_indices = obj_mesh_data.calc_poly_uv_indices(i);
@@ -398,7 +405,7 @@ void OBJWriter::write_poly_elements(FormatHandler &fh,
       }
     }
 
-    /* Write polygon elements. */
+    /* Write face elements. */
     (this->*poly_element_writer)(buf,
                                  offsets,
                                  poly_vertex_indices,
@@ -519,7 +526,10 @@ static std::string float3_to_string(const float3 &numbers)
 MTLWriter::MTLWriter(const char *obj_filepath) noexcept(false)
 {
   mtl_filepath_ = obj_filepath;
-  const bool ok = BLI_path_extension_replace(mtl_filepath_.data(), FILE_MAX, ".mtl");
+  /* It only makes sense to replace this extension if it's at least as long as the existing one. */
+  BLI_assert(strlen(BLI_path_extension(obj_filepath)) == 4);
+  const bool ok = BLI_path_extension_replace(
+      mtl_filepath_.data(), mtl_filepath_.size() + 1, ".mtl");
   if (!ok) {
     throw std::system_error(ENAMETOOLONG, std::system_category(), "");
   }
@@ -607,8 +617,8 @@ void MTLWriter::write_bsdf_properties(const MTLMaterial &mtl, bool write_pbr)
     if (mtl.aniso_rot >= 0.0f) {
       fmt_handler_.write_mtl_float("anisor", mtl.aniso_rot);
     }
-    if (mtl.transmit_color.x > 0.0f || mtl.transmit_color.y > 0.0f ||
-        mtl.transmit_color.z > 0.0f) {
+    if (mtl.transmit_color.x > 0.0f || mtl.transmit_color.y > 0.0f || mtl.transmit_color.z > 0.0f)
+    {
       fmt_handler_.write_mtl_float3(
           "Tf", mtl.transmit_color.x, mtl.transmit_color.y, mtl.transmit_color.z);
     }
@@ -664,9 +674,9 @@ void MTLWriter::write_materials(const char *blen_filepath,
   }
 
   char blen_filedir[PATH_MAX];
-  BLI_split_dir_part(blen_filepath, blen_filedir, PATH_MAX);
+  BLI_path_split_dir_part(blen_filepath, blen_filedir, PATH_MAX);
   BLI_path_slash_native(blen_filedir);
-  BLI_path_normalize(nullptr, blen_filedir);
+  BLI_path_normalize(blen_filedir);
 
   std::sort(mtlmaterials_.begin(),
             mtlmaterials_.end(),

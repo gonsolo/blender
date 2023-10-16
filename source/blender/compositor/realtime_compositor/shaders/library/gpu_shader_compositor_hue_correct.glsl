@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 #pragma BLENDER_REQUIRE(gpu_shader_common_color_utils.glsl)
 
 /* Curve maps are stored in sampler objects that are evaluated in the [0, 1] range, so normalize
@@ -34,6 +38,7 @@ void node_composite_hue_correct(float factor,
   hsv.y = clamp(hsv.y, 0.0, 1.0);
 
   hsv_to_rgb(hsv, result);
+  result.rgb = max(result.rgb, vec3(0.0));
 
   result = mix(color, result, factor);
 }

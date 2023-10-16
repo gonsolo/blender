@@ -1,16 +1,19 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
  */
 
 #include "BLI_assert.h"
+#include "BLI_math_angle_types.hh"
 #include "BLI_math_matrix.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
+#include "COM_algorithm_transform.hh"
 #include "COM_node_operation.hh"
 
 #include "node_composite_util.hh"
@@ -21,16 +24,16 @@ namespace blender::nodes::node_composite_rotate_cc {
 
 static void cmp_node_rotate_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image"))
+  b.add_input<decl::Color>("Image")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_input<decl::Float>(N_("Degr"))
+  b.add_input<decl::Float>("Degr")
       .default_value(0.0f)
       .min(-10000.0f)
       .max(10000.0f)
       .subtype(PROP_ANGLE)
       .compositor_expects_single_value();
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_output<decl::Color>("Image");
 }
 
 static void node_composit_init_rotate(bNodeTree * /*ntree*/, bNode *node)
@@ -52,15 +55,12 @@ class RotateOperation : public NodeOperation {
   void execute() override
   {
     Result &input = get_input("Image");
-    Result &result = get_result("Image");
-    input.pass_through(result);
+    Result &output = get_result("Image");
 
     const math::AngleRadian rotation = get_input("Degr").get_float_value_default(0.0f);
-
     const float3x3 transformation = math::from_rotation<float3x3>(rotation);
 
-    result.transform(transformation);
-    result.get_realization_options().interpolation = get_interpolation();
+    transform(context(), input, output, transformation, get_interpolation());
   }
 
   Interpolation get_interpolation()

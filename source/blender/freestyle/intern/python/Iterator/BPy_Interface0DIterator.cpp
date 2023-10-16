@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -22,7 +24,7 @@ using namespace Freestyle;
 PyDoc_STRVAR(Interface0DIterator_doc,
              "Class hierarchy: :class:`Iterator` > :class:`Interface0DIterator`\n"
              "\n"
-             "Class defining an iterator over Interface0D elements.  An instance of\n"
+             "Class defining an iterator over Interface0D elements. An instance of\n"
              "this iterator is always obtained from a 1D element.\n"
              "\n"
              ".. method:: __init__(brother)\n"
@@ -60,21 +62,24 @@ static int Interface0DIterator_init(BPy_Interface0DIterator *self, PyObject *arg
   PyObject *brother, *inter;
 
   if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "O&", (char **)kwlist_1, convert_nested_it, &nested_it)) {
+          args, kwds, "O&", (char **)kwlist_1, convert_nested_it, &nested_it))
+  {
     self->if0D_it = new Interface0DIterator(nested_it->copy());
     self->at_start = true;
     self->reversed = false;
   }
   else if ((void)PyErr_Clear(),
            PyArg_ParseTupleAndKeywords(
-               args, kwds, "O!", (char **)kwlist_2, &Interface1D_Type, &inter)) {
+               args, kwds, "O!", (char **)kwlist_2, &Interface1D_Type, &inter))
+  {
     self->if0D_it = new Interface0DIterator(((BPy_Interface1D *)inter)->if1D->verticesBegin());
     self->at_start = true;
     self->reversed = false;
   }
   else if ((void)PyErr_Clear(),
            PyArg_ParseTupleAndKeywords(
-               args, kwds, "O!", (char **)kwlist_3, &Interface0DIterator_Type, &brother)) {
+               args, kwds, "O!", (char **)kwlist_3, &Interface0DIterator_Type, &brother))
+  {
     self->if0D_it = new Interface0DIterator(*(((BPy_Interface0DIterator *)brother)->if0D_it));
     self->at_start = ((BPy_Interface0DIterator *)brother)->at_start;
     self->reversed = ((BPy_Interface0DIterator *)brother)->reversed;
@@ -126,7 +131,7 @@ static PyObject *Interface0DIterator_iternext(BPy_Interface0DIterator *self)
 /*----------------------Interface0DIterator get/setters ----------------------------*/
 
 PyDoc_STRVAR(Interface0DIterator_object_doc,
-             "The 0D object currently pointed to by this iterator.  Note that the object\n"
+             "The 0D object currently pointed to by this iterator. Note that the object\n"
              "may be an instance of an Interface0D subclass. For example if the iterator\n"
              "has been created from the `vertices_begin()` method of the :class:`Stroke`\n"
              "class, the .object property refers to a :class:`StrokeVertex` object.\n"
@@ -192,7 +197,7 @@ static PyGetSetDef BPy_Interface0DIterator_getseters[] = {
 /*-----------------------BPy_Interface0DIterator type definition ------------------------------*/
 
 PyTypeObject Interface0DIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "Interface0DIterator",
     /*tp_basicsize*/ sizeof(BPy_Interface0DIterator),
     /*tp_itemsize*/ 0,

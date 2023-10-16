@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2022 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup draw
@@ -81,7 +82,8 @@ void Manager::sync_layer_attributes()
 
   for (uint32_t id : id_list) {
     if (layer_attributes_buf[count].sync(
-            DST.draw_ctx.scene, DST.draw_ctx.view_layer, layer_attributes.lookup(id))) {
+            DST.draw_ctx.scene, DST.draw_ctx.view_layer, layer_attributes.lookup(id)))
+    {
       /* Check if the buffer is full. */
       if (++count == size) {
         break;

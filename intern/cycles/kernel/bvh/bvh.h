@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #pragma once
 
@@ -17,6 +18,8 @@
 #  include "kernel/device/metal/bvh.h"
 #elif defined(__KERNEL_OPTIX__)
 #  include "kernel/device/optix/bvh.h"
+#elif defined(__HIPRT__)
+#  include "kernel/device/hiprt/bvh.h"
 #else
 #  define __BVH2__
 #endif

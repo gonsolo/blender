@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -23,7 +24,9 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_listbase.h"
-#include "BLI_math.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_vector.h"
 #include "BLI_memarena.h"
 #include "BLI_utildefines.h"
 
@@ -382,8 +385,8 @@ static void testvertexnearedge(ScanFillContext *sf_ctx)
       /* find the edge which has vertex eve,
        * NOTE: we _know_ this will crash if 'ed1' becomes NULL
        * but this will never happen. */
-      for (ed1 = sf_ctx->filledgebase.first; !(ed1->v1 == eve || ed1->v2 == eve);
-           ed1 = ed1->next) {
+      for (ed1 = sf_ctx->filledgebase.first; !(ed1->v1 == eve || ed1->v2 == eve); ed1 = ed1->next)
+      {
         /* do nothing */
       }
 
@@ -510,7 +513,11 @@ static uint scanfill(ScanFillContext *sf_ctx, PolyFill *pf, const int flag)
         sc->vert = eve;
         sc->edge_first = sc->edge_last = NULL;
         /* NOTE: debug print only will work for curve poly-fill, union is in use for mesh. */
-        /* if (even->tmp.v == NULL) eve->tmp.u = verts; */
+#if 0
+        if (even->tmp.v == NULL) {
+          eve->tmp.u = verts;
+        }
+#endif
         sc++;
       }
     }
@@ -610,9 +617,13 @@ static uint scanfill(ScanFillContext *sf_ctx, PolyFill *pf, const int flag)
       ed1 = sc->edge_first;
       ed2 = ed1->next;
 
-      /* commented out... the ESC here delivers corrupted memory
+      /* Commented out: the ESC here delivers corrupted memory
        * (and doesn't work during grab). */
-      /* if (callLocalInterruptCallBack()) break; */
+#if 0
+      if (callLocalInterruptCallBack()){
+        break;
+      }
+#endif
       if (totface >= maxface) {
         // printf("Fill error: endless loop. Escaped at vert %d,  tot: %d.\n", a, verts);
         a = verts;
@@ -911,7 +922,8 @@ uint BLI_scanfill_calc_ex(ScanFillContext *sf_ctx, const int flag, const float n
 
           toggle++;
           for (eed = (toggle & 1) ? sf_ctx->filledgebase.first : sf_ctx->filledgebase.last; eed;
-               eed = (toggle & 1) ? eed->next : eed->prev) {
+               eed = (toggle & 1) ? eed->next : eed->prev)
+          {
             if (eed->v1->poly_nr == SF_POLY_UNSET && eed->v2->poly_nr == poly) {
               eed->v1->poly_nr = poly;
               eed->poly_nr = poly;
@@ -983,7 +995,8 @@ uint BLI_scanfill_calc_ex(ScanFillContext *sf_ctx, const int flag, const float n
 
       toggle++;
       for (eed = (toggle & 1) ? sf_ctx->filledgebase.first : sf_ctx->filledgebase.last; eed;
-           eed = eed_next) {
+           eed = eed_next)
+      {
         eed_next = (toggle & 1) ? eed->next : eed->prev;
         if (eed->v1->edge_count == 1) {
           eed->v2->edge_count--;
@@ -1083,15 +1096,17 @@ uint BLI_scanfill_calc_ex(ScanFillContext *sf_ctx, const int flag, const float n
     for (a = 0; a < poly; a++, pf++) {
       for (c = (ushort)(a + 1); c < poly; c++) {
 
-        /* if 'a' inside 'c': join (bbox too)
-         * Careful: 'a' can also be inside another poly.
-         */
+        /* If 'a' inside 'c': join (bounding-box too)
+         * Careful: 'a' can also be inside another poly. */
         if (boundisect(pf, pflist + c)) {
           *pc = c;
           pc++;
         }
-        /* only for optimize! */
-        /* else if (pf->max_xy[0] < (pflist+c)->min[cox]) break; */
+#if 0
+        else if (pf->max_xy[0] < (pflist + c)->min[cox]) { /* Only for optimize! */
+          break;
+        }
+#endif
       }
       while (pc != polycache) {
         pc--;

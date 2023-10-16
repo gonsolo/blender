@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -170,12 +172,12 @@ class BitVector {
     return move_assign_container(*this, std::move(other));
   }
 
-  operator BitSpan() const
+  operator BoundedBitSpan() const
   {
     return {data_, IndexRange(size_in_bits_)};
   }
 
-  operator MutableBitSpan()
+  operator MutableBoundedBitSpan()
   {
     return {data_, IndexRange(size_in_bits_)};
   }
@@ -193,10 +195,20 @@ class BitVector {
     return size_in_bits_ == 0;
   }
 
+  BitInt *data()
+  {
+    return data_;
+  }
+
+  const BitInt *data() const
+  {
+    return data_;
+  }
+
   /**
    * Get a read-only reference to a specific bit.
    */
-  BitRef operator[](const int64_t index) const
+  [[nodiscard]] BitRef operator[](const int64_t index) const
   {
     BLI_assert(index >= 0);
     BLI_assert(index < size_in_bits_);
@@ -206,7 +218,7 @@ class BitVector {
   /**
    * Get a mutable reference to a specific bit.
    */
-  MutableBitRef operator[](const int64_t index)
+  [[nodiscard]] MutableBitRef operator[](const int64_t index)
   {
     BLI_assert(index >= 0);
     BLI_assert(index < size_in_bits_);
@@ -356,6 +368,18 @@ class BitVector {
     return this->required_ints_for_bits(size_in_bits_);
   }
 };
+
+template<int64_t InlineBufferCapacity, typename Allocator>
+inline BoundedBitSpan to_best_bit_span(const BitVector<InlineBufferCapacity, Allocator> &data)
+{
+  return data;
+}
+
+template<int64_t InlineBufferCapacity, typename Allocator>
+inline MutableBoundedBitSpan to_best_bit_span(BitVector<InlineBufferCapacity, Allocator> &data)
+{
+  return data;
+}
 
 }  // namespace blender::bits
 

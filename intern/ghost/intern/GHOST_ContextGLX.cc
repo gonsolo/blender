@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2014 Blender Foundation */
+/* SPDX-FileCopyrightText: 2014 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup GHOST
@@ -113,7 +114,8 @@ GHOST_TSuccess GHOST_ContextGLX::initializeDrawingContext()
         (glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB(
              (const GLubyte *)"glXCreateContextAttribsARB")) == nullptr ||
         (glXCreatePbuffer = (PFNGLXCREATEPBUFFERPROC)glXGetProcAddressARB(
-             (const GLubyte *)"glXCreatePbuffer")) == nullptr) {
+             (const GLubyte *)"glXCreatePbuffer")) == nullptr)
+    {
       extStart = (GLubyte *)"";
     }
   }

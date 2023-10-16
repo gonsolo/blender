@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -24,7 +26,7 @@ PyDoc_STRVAR(
     "Class hierarchy: :class:`Iterator` > :class:`AdjacencyIterator`\n"
     "\n"
     "Class for representing adjacency iterators used in the chaining\n"
-    "process.  An AdjacencyIterator is created in the increment() and\n"
+    "process. An AdjacencyIterator is created in the increment() and\n"
     "decrement() methods of a :class:`ChainingIterator` and passed to the\n"
     "traverse() method of the ChainingIterator.\n"
     "\n"
@@ -54,7 +56,8 @@ static int AdjacencyIterator_init(BPy_AdjacencyIterator *self, PyObject *args, P
   PyObject *obj1 = nullptr, *obj2 = nullptr, *obj3 = nullptr;
 
   if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "|O!", (char **)kwlist_1, &AdjacencyIterator_Type, &obj1)) {
+          args, kwds, "|O!", (char **)kwlist_1, &AdjacencyIterator_Type, &obj1))
+  {
     if (!obj1) {
       self->a_it = new AdjacencyIterator();
       self->at_start = true;
@@ -75,7 +78,8 @@ static int AdjacencyIterator_init(BPy_AdjacencyIterator *self, PyObject *args, P
                                        &PyBool_Type,
                                        &obj2,
                                        &PyBool_Type,
-                                       &obj3)) {
+                                       &obj3))
+  {
     bool restrictToSelection = (!obj2) ? true : bool_from_PyBool(obj2);
     bool restrictToUnvisited = (!obj3) ? true : bool_from_PyBool(obj3);
     self->a_it = new AdjacencyIterator(
@@ -169,7 +173,7 @@ static PyGetSetDef BPy_AdjacencyIterator_getseters[] = {
 /*-----------------------BPy_AdjacencyIterator type definition ------------------------------*/
 
 PyTypeObject AdjacencyIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "AdjacencyIterator",
     /*tp_basicsize*/ sizeof(BPy_AdjacencyIterator),
     /*tp_itemsize*/ 0,

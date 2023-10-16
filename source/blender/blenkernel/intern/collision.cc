@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright Blender Foundation */
+/* SPDX-FileCopyrightText: Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bke
@@ -16,14 +17,14 @@
 #include "DNA_scene_types.h"
 
 #include "BLI_blenlib.h"
-#include "BLI_edgehash.h"
 #include "BLI_linklist.h"
-#include "BLI_math.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_vector.h"
 #include "BLI_task.h"
 #include "BLI_threads.h"
 #include "BLI_utildefines.h"
 
-#include "BKE_cloth.h"
+#include "BKE_cloth.hh"
 #include "BKE_collection.h"
 #include "BKE_effect.h"
 #include "BKE_layer.h"
@@ -33,9 +34,9 @@
 #include "BKE_collision.h"
 #include "BLI_kdopbvh.h"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_physics.h"
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_physics.hh"
+#include "DEG_depsgraph_query.hh"
 
 #ifdef WITH_ELTOPO
 #  include "eltopo-capi.h"
@@ -289,7 +290,8 @@ static float compute_collision_point_tri_tri(const float a1[3],
       for (int j = 0; j < 3; j++) {
         if (isect_line_plane_v3(tmp_co1, a[j], a[next_ind(j)], b[i], dir) &&
             point_in_slice_seg(tmp_co1, a[j], a[next_ind(j)]) &&
-            point_in_slice_seg(tmp_co1, b[i], b[next_ind(i)])) {
+            point_in_slice_seg(tmp_co1, b[i], b[next_ind(i)]))
+        {
           closest_to_line_v3(tmp_co2, tmp_co1, b[i], b[next_ind(i)]);
           sub_v3_v3v3(tmp_vec, tmp_co1, tmp_co2);
           tmp = len_v3(tmp_vec);
@@ -476,7 +478,8 @@ static float compute_collision_point_edge_tri(const float a1[3],
 
       if (isect_line_plane_v3(tmp_co1, a[0], a[1], b[i], dir) &&
           point_in_slice_seg(tmp_co1, a[0], a[1]) &&
-          point_in_slice_seg(tmp_co1, b[i], b[next_ind(i)])) {
+          point_in_slice_seg(tmp_co1, b[i], b[next_ind(i)]))
+      {
         closest_to_line_v3(tmp_co2, tmp_co1, b[i], b[next_ind(i)]);
         sub_v3_v3v3(tmp_vec, tmp_co1, tmp_co2);
         tmp = len_v3(tmp_vec);
@@ -1075,7 +1078,7 @@ static bool cloth_bvh_selfcollision_is_active(const ClothModifierData *clmd,
       }
 
       if (sewing_active) {
-        if (BLI_edgeset_haskey(cloth->sew_edge_graph, tri_a->tri[i], tri_b->tri[j])) {
+        if (cloth->sew_edge_graph.contains({tri_a->tri[i], tri_b->tri[j]})) {
           return false;
         }
       }
@@ -1685,8 +1688,8 @@ int cloth_bvh_collision(
           collisions = (CollPair *)MEM_mallocN(sizeof(CollPair) * coll_count_self,
                                                "collision array");
 
-          if (cloth_bvh_selfcollisions_nearcheck(
-                  clmd, collisions, coll_count_self, overlap_self)) {
+          if (cloth_bvh_selfcollisions_nearcheck(clmd, collisions, coll_count_self, overlap_self))
+          {
             ret += cloth_bvh_selfcollisions_resolve(clmd, collisions, coll_count_self, dt);
             ret2 += ret;
           }

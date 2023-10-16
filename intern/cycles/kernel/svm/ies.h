@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #pragma once
 
@@ -43,10 +44,10 @@ ccl_device_inline float kernel_ies_interp(KernelGlobals kg, int slot, float h_an
 #define IES_LOOKUP_ANGLE_V(v) kernel_data_fetch(ies, ofs + h_num + (v))
 
   /* Check whether the angle is within the bounds of the IES texture. */
-  if (v_angle >= IES_LOOKUP_ANGLE_V(v_num - 1)) {
+  if (v_angle < IES_LOOKUP_ANGLE_V(0) || v_angle >= IES_LOOKUP_ANGLE_V(v_num - 1)) {
     return 0.0f;
   }
-  kernel_assert(v_angle >= IES_LOOKUP_ANGLE_V(0));
+
   kernel_assert(h_angle >= IES_LOOKUP_ANGLE_H(0));
   kernel_assert(h_angle <= IES_LOOKUP_ANGLE_H(h_num - 1));
 
@@ -54,10 +55,12 @@ ccl_device_inline float kernel_ies_interp(KernelGlobals kg, int slot, float h_an
   int h_i, v_i;
   /* TODO(lukas): Consider using bisection.
    * Probably not worth it for the vast majority of IES files. */
-  for (h_i = 0; IES_LOOKUP_ANGLE_H(h_i + 1) < h_angle; h_i++)
+  for (h_i = 0; IES_LOOKUP_ANGLE_H(h_i + 1) < h_angle; h_i++) {
     ;
-  for (v_i = 0; IES_LOOKUP_ANGLE_V(v_i + 1) < v_angle; v_i++)
+  }
+  for (v_i = 0; IES_LOOKUP_ANGLE_V(v_i + 1) < v_angle; v_i++) {
     ;
+  }
 
   float h_frac = inverse_lerp(IES_LOOKUP_ANGLE_H(h_i), IES_LOOKUP_ANGLE_H(h_i + 1), h_angle);
   float v_frac = inverse_lerp(IES_LOOKUP_ANGLE_V(v_i), IES_LOOKUP_ANGLE_V(v_i + 1), v_angle);

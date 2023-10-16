@@ -1,14 +1,12 @@
+# SPDX-FileCopyrightText: 2006 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2006 Blender Foundation
 
 set(INC
   .
   ..
   ../..
   ../../../blenkernel
-  ../../../blenlib
-  ../../../makesdna
-  ../../../../../intern/guardedalloc
 )
 
 set(INC_SYS
@@ -21,14 +19,17 @@ set(SRC
   logImageCore.h
   logmemfile.h
 
-  cineon_dpx.c
-  cineonlib.c
-  dpxlib.c
-  logImageCore.c
-  logmemfile.c
+  cineon_dpx.cc
+  cineonlib.cc
+  dpxlib.cc
+  logImageCore.cc
+  logmemfile.cc
 )
 
 set(LIB
+  PRIVATE bf::blenlib
+  PRIVATE bf::dna
+  PRIVATE bf::intern::guardedalloc
 )
 
 if(WITH_IMAGE_CINEON)

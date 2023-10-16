@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2012 Blender Foundation */
+/* SPDX-FileCopyrightText: 2012 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup pybmesh
@@ -203,8 +204,8 @@ int bpy_bm_generic_valid_check_source(BMesh *bm_source,
 #define BPY_BM_CHECK_SOURCE_OBJ(bm, errmsg, ...) \
   { \
     void *_args[] = {__VA_ARGS__}; \
-    if (UNLIKELY(bpy_bm_generic_valid_check_source(bm, errmsg, _args, ARRAY_SIZE(_args)) == \
-                 -1)) { \
+    if (UNLIKELY(bpy_bm_generic_valid_check_source(bm, errmsg, _args, ARRAY_SIZE(_args)) == -1)) \
+    { \
       return NULL; \
     } \
   } \
@@ -212,8 +213,8 @@ int bpy_bm_generic_valid_check_source(BMesh *bm_source,
 #define BPY_BM_CHECK_SOURCE_INT(bm, errmsg, ...) \
   { \
     void *_args[] = {__VA_ARGS__}; \
-    if (UNLIKELY(bpy_bm_generic_valid_check_source(bm, errmsg, _args, ARRAY_SIZE(_args)) == \
-                 -1)) { \
+    if (UNLIKELY(bpy_bm_generic_valid_check_source(bm, errmsg, _args, ARRAY_SIZE(_args)) == -1)) \
+    { \
       return -1; \
     } \
   } \

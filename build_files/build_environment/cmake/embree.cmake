@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2017-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Note the utility apps may use png/tiff/gif system libraries, but the
@@ -14,6 +16,7 @@ set(EMBREE_EXTRA_ARGS
   -DEMBREE_BACKFACE_CULLING=OFF
   -DEMBREE_BACKFACE_CULLING_CURVES=ON
   -DEMBREE_BACKFACE_CULLING_SPHERES=ON
+  -DEMBREE_NO_SPLASH=ON
   -DEMBREE_TASKING_SYSTEM=TBB
   -DEMBREE_TBB_ROOT=${LIBDIR}/tbb
   -DTBB_ROOT=${LIBDIR}/tbb

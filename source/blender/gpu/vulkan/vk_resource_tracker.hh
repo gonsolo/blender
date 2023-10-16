@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2023 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -157,6 +158,14 @@ template<typename Resource> class VKResourceTracker : NonCopyable {
    * Callback to create a new resource. Can be called by the `tracked_resource_for` method.
    */
   virtual std::unique_ptr<Resource> create_resource(VKContext &context) = 0;
+
+  /**
+   * Does this instance have an active resource.
+   */
+  bool has_active_resource()
+  {
+    return !tracked_resources_.is_empty();
+  }
 
   /**
    * Return the active resource of the tracker.

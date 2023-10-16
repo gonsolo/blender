@@ -1,19 +1,21 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
+#include "node_util.hh"
 
 #include "BLI_hash.h"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_output_aov_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Color")).default_value({0.0f, 0.0f, 0.0f, 1.0f});
-  b.add_input<decl::Float>(N_("Value")).default_value(0.0f).min(0.0f).max(1.0f);
+  b.add_input<decl::Color>("Color").default_value({0.0f, 0.0f, 0.0f, 1.0f});
+  b.add_input<decl::Float>("Value").default_value(0.0f).min(0.0f).max(1.0f);
 }
 
 static void node_shader_buts_output_aov(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)

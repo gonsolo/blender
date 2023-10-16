@@ -1,10 +1,12 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2019 Blender Foundation */
+/* SPDX-FileCopyrightText: 2019 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 #include "usd.h"
 
 #include "usd_hierarchy_iterator.h"
 #include "usd_writer_abstract.h"
 #include "usd_writer_camera.h"
+#include "usd_writer_curves.h"
 #include "usd_writer_hair.h"
 #include "usd_writer_light.h"
 #include "usd_writer_mesh.h"
@@ -12,6 +14,7 @@
 #include "usd_writer_transform.h"
 #include "usd_writer_volume.h"
 
+#include <memory>
 #include <string>
 
 #include <pxr/base/tf/stringUtils.h>
@@ -21,7 +24,7 @@
 #include "BLI_assert.h"
 #include "BLI_utildefines.h"
 
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph_query.hh"
 
 #include "DNA_ID.h"
 #include "DNA_layer_types.h"
@@ -61,24 +64,24 @@ void USDHierarchyIterator::set_export_frame(float frame_nr)
   export_time_ = pxr::UsdTimeCode(frame_nr);
 }
 
-std::string USDHierarchyIterator::get_export_file_path() const
+USDExporterContext USDHierarchyIterator::create_usd_export_context(const HierarchyContext *context)
 {
+  pxr::SdfPath path;
+  if (params_.root_prim_path[0] != '\0') {
+    path = pxr::SdfPath(params_.root_prim_path + context->export_path);
+  }
+  else {
+    path = pxr::SdfPath(context->export_path);
+  }
+
   /* Returns the same path that was passed to `stage_` object during it's creation (via
    * `pxr::UsdStage::CreateNew` function). */
   const pxr::SdfLayerHandle root_layer = stage_->GetRootLayer();
-  const std::string usd_export_file_path = root_layer->GetRealPath();
-  return usd_export_file_path;
-}
+  const std::string export_file_path = root_layer->GetRealPath();
+  auto get_time_code = [this]() { return this->export_time_; };
 
-const pxr::UsdTimeCode &USDHierarchyIterator::get_export_time_code() const
-{
-  return export_time_;
-}
-
-USDExporterContext USDHierarchyIterator::create_usd_export_context(const HierarchyContext *context)
-{
   return USDExporterContext{
-      bmain_, depsgraph_, stage_, pxr::SdfPath(context->export_path), this, params_};
+      bmain_, depsgraph_, stage_, path, get_time_code, params_, export_file_path};
 }
 
 AbstractHierarchyWriter *USDHierarchyIterator::create_transform_writer(
@@ -105,12 +108,14 @@ AbstractHierarchyWriter *USDHierarchyIterator::create_data_writer(const Hierarch
     case OB_MBALL:
       data_writer = new USDMetaballWriter(usd_export_context);
       break;
+    case OB_CURVES_LEGACY:
+    case OB_CURVES:
+      data_writer = new USDCurvesWriter(usd_export_context);
+      break;
     case OB_VOLUME:
       data_writer = new USDVolumeWriter(usd_export_context);
       break;
-
     case OB_EMPTY:
-    case OB_CURVES_LEGACY:
     case OB_SURF:
     case OB_FONT:
     case OB_SPEAKER:
@@ -118,8 +123,8 @@ AbstractHierarchyWriter *USDHierarchyIterator::create_data_writer(const Hierarch
     case OB_LATTICE:
     case OB_ARMATURE:
     case OB_GPENCIL_LEGACY:
+    case OB_GREASE_PENCIL:
     case OB_POINTCLOUD:
-    case OB_CURVES:
       return nullptr;
     case OB_TYPE_MAX:
       BLI_assert_msg(0, "OB_TYPE_MAX should not be used");

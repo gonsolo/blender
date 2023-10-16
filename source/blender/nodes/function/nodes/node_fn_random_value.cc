@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 // #include "BLI_hash.h"
 #include "BLI_noise.hh"
@@ -7,8 +9,8 @@
 
 #include "NOD_socket_search_link.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_fn_random_value_cc {
 
@@ -16,35 +18,35 @@ NODE_STORAGE_FUNCS(NodeRandomValue)
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Vector>(N_("Min")).supports_field();
-  b.add_input<decl::Vector>(N_("Max")).default_value({1.0f, 1.0f, 1.0f}).supports_field();
-  b.add_input<decl::Float>(N_("Min"), "Min_001").supports_field();
-  b.add_input<decl::Float>(N_("Max"), "Max_001").default_value(1.0f).supports_field();
-  b.add_input<decl::Int>(N_("Min"), "Min_002").min(-100000).max(100000).supports_field();
-  b.add_input<decl::Int>(N_("Max"), "Max_002")
+  b.add_input<decl::Vector>("Min").supports_field();
+  b.add_input<decl::Vector>("Max").default_value({1.0f, 1.0f, 1.0f}).supports_field();
+  b.add_input<decl::Float>("Min", "Min_001").supports_field();
+  b.add_input<decl::Float>("Max", "Max_001").default_value(1.0f).supports_field();
+  b.add_input<decl::Int>("Min", "Min_002").min(-100000).max(100000).supports_field();
+  b.add_input<decl::Int>("Max", "Max_002")
       .default_value(100)
       .min(-100000)
       .max(100000)
       .supports_field();
-  b.add_input<decl::Float>(N_("Probability"))
+  b.add_input<decl::Float>("Probability")
       .min(0.0f)
       .max(1.0f)
       .default_value(0.5f)
       .subtype(PROP_FACTOR)
       .supports_field()
       .make_available([](bNode &node) { node_storage(node).data_type = CD_PROP_BOOL; });
-  b.add_input<decl::Int>(N_("ID")).implicit_field(implicit_field_inputs::id_or_index);
-  b.add_input<decl::Int>(N_("Seed")).default_value(0).min(-10000).max(10000).supports_field();
+  b.add_input<decl::Int>("ID").implicit_field(implicit_field_inputs::id_or_index);
+  b.add_input<decl::Int>("Seed").default_value(0).min(-10000).max(10000).supports_field();
 
-  b.add_output<decl::Vector>(N_("Value")).dependent_field();
-  b.add_output<decl::Float>(N_("Value"), "Value_001").dependent_field();
-  b.add_output<decl::Int>(N_("Value"), "Value_002").dependent_field();
-  b.add_output<decl::Bool>(N_("Value"), "Value_003").dependent_field();
+  b.add_output<decl::Vector>("Value").dependent_field();
+  b.add_output<decl::Float>("Value", "Value_001").dependent_field();
+  b.add_output<decl::Int>("Value", "Value_002").dependent_field();
+  b.add_output<decl::Bool>("Value", "Value_003").dependent_field();
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
-  uiItemR(layout, ptr, "data_type", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "data_type", UI_ITEM_NONE, "", ICON_NONE);
 }
 
 static void fn_node_random_value_init(bNodeTree * /*tree*/, bNode *node)
@@ -72,18 +74,18 @@ static void fn_node_random_value_update(bNodeTree *ntree, bNode *node)
   bNodeSocket *sock_out_int = sock_out_float->next;
   bNodeSocket *sock_out_bool = sock_out_int->next;
 
-  nodeSetSocketAvailability(ntree, sock_min_vector, data_type == CD_PROP_FLOAT3);
-  nodeSetSocketAvailability(ntree, sock_max_vector, data_type == CD_PROP_FLOAT3);
-  nodeSetSocketAvailability(ntree, sock_min_float, data_type == CD_PROP_FLOAT);
-  nodeSetSocketAvailability(ntree, sock_max_float, data_type == CD_PROP_FLOAT);
-  nodeSetSocketAvailability(ntree, sock_min_int, data_type == CD_PROP_INT32);
-  nodeSetSocketAvailability(ntree, sock_max_int, data_type == CD_PROP_INT32);
-  nodeSetSocketAvailability(ntree, sock_probability, data_type == CD_PROP_BOOL);
+  bke::nodeSetSocketAvailability(ntree, sock_min_vector, data_type == CD_PROP_FLOAT3);
+  bke::nodeSetSocketAvailability(ntree, sock_max_vector, data_type == CD_PROP_FLOAT3);
+  bke::nodeSetSocketAvailability(ntree, sock_min_float, data_type == CD_PROP_FLOAT);
+  bke::nodeSetSocketAvailability(ntree, sock_max_float, data_type == CD_PROP_FLOAT);
+  bke::nodeSetSocketAvailability(ntree, sock_min_int, data_type == CD_PROP_INT32);
+  bke::nodeSetSocketAvailability(ntree, sock_max_int, data_type == CD_PROP_INT32);
+  bke::nodeSetSocketAvailability(ntree, sock_probability, data_type == CD_PROP_BOOL);
 
-  nodeSetSocketAvailability(ntree, sock_out_vector, data_type == CD_PROP_FLOAT3);
-  nodeSetSocketAvailability(ntree, sock_out_float, data_type == CD_PROP_FLOAT);
-  nodeSetSocketAvailability(ntree, sock_out_int, data_type == CD_PROP_INT32);
-  nodeSetSocketAvailability(ntree, sock_out_bool, data_type == CD_PROP_BOOL);
+  bke::nodeSetSocketAvailability(ntree, sock_out_vector, data_type == CD_PROP_FLOAT3);
+  bke::nodeSetSocketAvailability(ntree, sock_out_float, data_type == CD_PROP_FLOAT);
+  bke::nodeSetSocketAvailability(ntree, sock_out_int, data_type == CD_PROP_INT32);
+  bke::nodeSetSocketAvailability(ntree, sock_out_bool, data_type == CD_PROP_BOOL);
 }
 
 static std::optional<eCustomDataType> node_type_from_other_socket(const bNodeSocket &socket)
@@ -105,7 +107,7 @@ static std::optional<eCustomDataType> node_type_from_other_socket(const bNodeSoc
 
 static void node_gather_link_search_ops(GatherLinkSearchOpParams &params)
 {
-  const NodeDeclaration &declaration = *params.node_type().fixed_declaration;
+  const NodeDeclaration &declaration = *params.node_type().static_declaration;
   const std::optional<eCustomDataType> type = node_type_from_other_socket(params.other_socket());
   if (!type) {
     return;
@@ -194,22 +196,21 @@ static void node_build_multi_function(NodeMultiFunctionBuilder &builder)
   }
 }
 
-}  // namespace blender::nodes::node_fn_random_value_cc
-
-void register_node_type_fn_random_value()
+static void node_register()
 {
-  namespace file_ns = blender::nodes::node_fn_random_value_cc;
-
   static bNodeType ntype;
 
   fn_node_type_base(&ntype, FN_NODE_RANDOM_VALUE, "Random Value", NODE_CLASS_CONVERTER);
-  ntype.initfunc = file_ns::fn_node_random_value_init;
-  ntype.updatefunc = file_ns::fn_node_random_value_update;
-  ntype.draw_buttons = file_ns::node_layout;
-  ntype.declare = file_ns::node_declare;
-  ntype.build_multi_function = file_ns::node_build_multi_function;
-  ntype.gather_link_search_ops = file_ns::node_gather_link_search_ops;
+  ntype.initfunc = fn_node_random_value_init;
+  ntype.updatefunc = fn_node_random_value_update;
+  ntype.draw_buttons = node_layout;
+  ntype.declare = node_declare;
+  ntype.build_multi_function = node_build_multi_function;
+  ntype.gather_link_search_ops = node_gather_link_search_ops;
   node_type_storage(
       &ntype, "NodeRandomValue", node_free_standard_storage, node_copy_standard_storage);
   nodeRegisterType(&ntype);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_fn_random_value_cc

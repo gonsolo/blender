@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
@@ -10,10 +11,10 @@
 #include "BKE_global.h"
 #include "BKE_image.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "GPU_shader.h"
 #include "GPU_state.h"
@@ -30,9 +31,8 @@ namespace blender::nodes::node_composite_viewer_cc {
 
 static void cmp_node_viewer_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image")).default_value({0.0f, 0.0f, 0.0f, 1.0f});
-  b.add_input<decl::Float>(N_("Alpha")).default_value(1.0f).min(0.0f).max(1.0f);
-  b.add_input<decl::Float>(N_("Z")).default_value(1.0f).min(0.0f).max(1.0f);
+  b.add_input<decl::Color>("Image").default_value({0.0f, 0.0f, 0.0f, 1.0f});
+  b.add_input<decl::Float>("Alpha").default_value(1.0f).min(0.0f).max(1.0f);
 }
 
 static void node_composit_init_viewer(bNodeTree * /*ntree*/, bNode *node)
@@ -104,7 +104,8 @@ class ViewerOperation : public NodeOperation {
       color.w = alpha.get_float_value();
     }
 
-    GPU_texture_clear(context().get_output_texture(), GPU_DATA_FLOAT, color);
+    const int2 viewer_size = compute_domain().size;
+    GPU_texture_clear(context().get_viewer_output_texture(viewer_size), GPU_DATA_FLOAT, color);
   }
 
   /* Executes when the alpha channel of the image is ignored. */
@@ -122,12 +123,12 @@ class ViewerOperation : public NodeOperation {
     const Result &image = get_input("Image");
     image.bind_as_texture(shader, "input_tx");
 
-    GPUTexture *output_texture = context().get_output_texture();
+    const int2 viewer_size = compute_domain().size;
+    GPUTexture *output_texture = context().get_viewer_output_texture(viewer_size);
     const int image_unit = GPU_shader_get_sampler_binding(shader, "output_img");
     GPU_texture_image_bind(output_texture, image_unit);
 
-    const int2 compositing_region_size = context().get_compositing_region_size();
-    compute_dispatch_threads_at_least(shader, compositing_region_size);
+    compute_dispatch_threads_at_least(shader, viewer_size);
 
     image.unbind_as_texture();
     GPU_texture_image_unbind(output_texture);
@@ -150,12 +151,12 @@ class ViewerOperation : public NodeOperation {
     const Result &image = get_input("Image");
     image.bind_as_texture(shader, "input_tx");
 
-    GPUTexture *output_texture = context().get_output_texture();
+    const int2 viewer_size = compute_domain().size;
+    GPUTexture *output_texture = context().get_viewer_output_texture(viewer_size);
     const int image_unit = GPU_shader_get_sampler_binding(shader, "output_img");
     GPU_texture_image_bind(output_texture, image_unit);
 
-    const int2 compositing_region_size = context().get_compositing_region_size();
-    compute_dispatch_threads_at_least(shader, compositing_region_size);
+    compute_dispatch_threads_at_least(shader, viewer_size);
 
     image.unbind_as_texture();
     GPU_texture_image_unbind(output_texture);
@@ -180,12 +181,12 @@ class ViewerOperation : public NodeOperation {
     const Result &alpha = get_input("Alpha");
     alpha.bind_as_texture(shader, "alpha_tx");
 
-    GPUTexture *output_texture = context().get_output_texture();
+    const int2 viewer_size = compute_domain().size;
+    GPUTexture *output_texture = context().get_viewer_output_texture(viewer_size);
     const int image_unit = GPU_shader_get_sampler_binding(shader, "output_img");
     GPU_texture_image_bind(output_texture, image_unit);
 
-    const int2 compositing_region_size = context().get_compositing_region_size();
-    compute_dispatch_threads_at_least(shader, compositing_region_size);
+    compute_dispatch_threads_at_least(shader, viewer_size);
 
     image.unbind_as_texture();
     alpha.unbind_as_texture();
@@ -201,11 +202,17 @@ class ViewerOperation : public NodeOperation {
     return bnode().custom2 & CMP_NODE_OUTPUT_IGNORE_ALPHA;
   }
 
-  /* The operation domain has the same size as the compositing region without any transformations
-   * applied. */
   Domain compute_domain() override
   {
-    return Domain(context().get_compositing_region_size());
+    /* The context can use the composite output and thus has a dedicated viewer of an arbitrary
+     * size, so use the input directly. Otherwise, no dedicated viewer exist so the input should be
+     * in the domain of the compositing region. */
+    if (context().use_composite_output()) {
+      return NodeOperation::compute_domain();
+    }
+    else {
+      return Domain(context().get_compositing_region_size());
+    }
   }
 };
 

@@ -1,4 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include <memory>
 
 #include "BLI_smaa_textures.h"
 
@@ -8,6 +12,10 @@
 #include "COM_smaa_precomputed_textures.hh"
 
 namespace blender::realtime_compositor {
+
+/* ------------------------------------------------------------------------------------------------
+ * SMAA Precomputed Textures.
+ */
 
 SMAAPrecomputedTextures::SMAAPrecomputedTextures()
 {
@@ -59,6 +67,34 @@ void SMAAPrecomputedTextures::bind_area_texture(GPUShader *shader, const char *s
 void SMAAPrecomputedTextures::unbind_area_texture() const
 {
   GPU_texture_unbind(area_texture_);
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * SMAA Precomputed Textures Container.
+ */
+
+void SMAAPrecomputedTexturesContainer::reset()
+{
+  /* First, delete the textures if they are no longer needed. */
+  if (textures_ && !textures_->needed) {
+    textures_.reset();
+  }
+
+  /* Second, if they were not deleted, reset their needed status to false to ready them to track
+   * their needed status for the next evaluation. */
+  if (textures_) {
+    textures_->needed = false;
+  }
+}
+
+SMAAPrecomputedTextures &SMAAPrecomputedTexturesContainer::get()
+{
+  if (!textures_) {
+    textures_ = std::make_unique<SMAAPrecomputedTextures>();
+  }
+
+  textures_->needed = true;
+  return *textures_;
 }
 
 }  // namespace blender::realtime_compositor

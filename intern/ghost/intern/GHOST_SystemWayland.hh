@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2020-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup GHOST
@@ -37,6 +39,14 @@ bool ghost_wl_output_own(const struct wl_output *wl_output);
 void ghost_wl_output_tag(struct wl_output *wl_output);
 struct GWL_Output *ghost_wl_output_user_data(struct wl_output *wl_output);
 
+/**
+ * Enter/exit handlers may be called with a null window surface (when the window just closed),
+ * so add a version of the function that checks this.
+ *
+ * All of the functions could in fact however paranoid null checks make the expected
+ * state difficult to reason about, so only use this in cases the surface may be null.
+ */
+bool ghost_wl_surface_own_with_null_check(const struct wl_surface *wl_surface);
 bool ghost_wl_surface_own(const struct wl_surface *wl_surface);
 void ghost_wl_surface_tag(struct wl_surface *wl_surface);
 GHOST_WindowWayland *ghost_wl_surface_user_data(struct wl_surface *wl_surface);
@@ -79,10 +89,19 @@ void ghost_wl_dynload_libraries_exit();
 #endif
 
 struct GWL_Output {
+
+  /** Wayland core types. */
+  struct {
+    wl_output *output = nullptr;
+  } wl;
+
+  /** XDG native types. */
+  struct {
+    struct zxdg_output_v1 *output = nullptr;
+  } xdg;
+
   GHOST_SystemWayland *system = nullptr;
 
-  struct wl_output *wl_output = nullptr;
-  struct zxdg_output_v1 *xdg_output = nullptr;
   /** Dimensions in pixels. */
   int32_t size_native[2] = {0, 0};
   /** Dimensions in millimeter. */
@@ -149,7 +168,7 @@ class GHOST_SystemWayland : public GHOST_System {
 
   void getAllDisplayDimensions(uint32_t &width, uint32_t &height) const override;
 
-  GHOST_IContext *createOffscreenContext(GHOST_GLSettings glSettings) override;
+  GHOST_IContext *createOffscreenContext(GHOST_GPUSettings gpuSettings) override;
 
   GHOST_TSuccess disposeContext(GHOST_IContext *context) override;
 
@@ -159,7 +178,7 @@ class GHOST_SystemWayland : public GHOST_System {
                               uint32_t width,
                               uint32_t height,
                               GHOST_TWindowState state,
-                              GHOST_GLSettings glSettings,
+                              GHOST_GPUSettings gpuSettings,
                               const bool exclusive,
                               const bool is_dialog,
                               const GHOST_IWindow *parentWindow) override;
@@ -172,8 +191,8 @@ class GHOST_SystemWayland : public GHOST_System {
 
   GHOST_TSuccess cursor_shape_check(GHOST_TStandardCursor cursorShape);
 
-  GHOST_TSuccess cursor_shape_custom_set(uint8_t *bitmap,
-                                         uint8_t *mask,
+  GHOST_TSuccess cursor_shape_custom_set(const uint8_t *bitmap,
+                                         const uint8_t *mask,
                                          int sizex,
                                          int sizey,
                                          int hotX,
@@ -198,26 +217,26 @@ class GHOST_SystemWayland : public GHOST_System {
 
   /* WAYLAND direct-data access. */
 
-  struct wl_display *wl_display();
-  struct wl_compositor *wl_compositor();
-  struct zwp_primary_selection_device_manager_v1 *wp_primary_selection_manager();
-  struct xdg_activation_v1 *xdg_activation_manager();
-  struct zwp_pointer_gestures_v1 *wp_pointer_gestures();
-  struct wp_fractional_scale_manager_v1 *wp_fractional_scale_manager();
-  struct wp_viewporter *wp_viewporter();
+  struct wl_display *wl_display_get();
+  struct wl_compositor *wl_compositor_get();
+  struct zwp_primary_selection_device_manager_v1 *wp_primary_selection_manager_get();
+  struct xdg_activation_v1 *xdg_activation_manager_get();
+  struct zwp_pointer_gestures_v1 *wp_pointer_gestures_get();
+  struct wp_fractional_scale_manager_v1 *wp_fractional_scale_manager_get();
+  struct wp_viewporter *wp_viewporter_get();
 
 #ifdef WITH_GHOST_WAYLAND_LIBDECOR
-  libdecor *libdecor_context();
+  libdecor *libdecor_context_get();
 #endif
-  struct xdg_wm_base *xdg_decor_shell();
-  struct zxdg_decoration_manager_v1 *xdg_decor_manager();
+  struct xdg_wm_base *xdg_decor_shell_get();
+  struct zxdg_decoration_manager_v1 *xdg_decor_manager_get();
   /* End `xdg_decor`. */
 
-  const std::vector<GWL_Output *> &outputs() const;
+  const std::vector<GWL_Output *> &outputs_get() const;
 
-  struct wl_shm *wl_shm() const;
+  struct wl_shm *wl_shm_get() const;
 
-  static const char *xdg_app_id();
+  static const char *xdg_app_id_get();
 
   /* WAYLAND utility functions. */
 
@@ -246,7 +265,7 @@ class GHOST_SystemWayland : public GHOST_System {
   void output_scale_update(GWL_Output *output);
 
   /**
-   * Clear all references to this surface to prevent accessing NULL pointers.
+   * Clear all references to this surface to prevent accessing nullptr pointers.
    *
    * \return true when any references were removed.
    */

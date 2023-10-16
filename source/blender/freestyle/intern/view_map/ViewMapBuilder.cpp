@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2008-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -91,7 +93,8 @@ static void findOccludee(FEdge *fe,
 
         for (vector<WVertex *>::iterator fv = faceVertices.begin(), fvend = faceVertices.end();
              fv != fvend;
-             ++fv) {
+             ++fv)
+        {
           if ((*fv)->isBoundary()) {
             continue;
           }
@@ -121,7 +124,8 @@ static void findOccludee(FEdge *fe,
         //-------------------------------------------------------------
         // first let us compute the plane equation.
         if (GeomUtils::COINCIDENT ==
-            GeomUtils::intersectRayPlane(origin, edgeDir, p->getNormal(), d, t, epsilon)) {
+            GeomUtils::intersectRayPlane(origin, edgeDir, p->getNormal(), d, t, epsilon))
+        {
 #if LOGGING
           if (_global.debug & G_DEBUG_FREESTYLE) {
             cout << "\t\tRejecting occluder for target coincidence." << endl;
@@ -275,7 +279,8 @@ static int computeVisibility(ViewMap *viewMap,
     for (vector<WOEdge *>::const_iterator woe = oface->getEdgeList().begin(),
                                           woend = oface->getEdgeList().end();
          woe != woend;
-         woe++) {
+         woe++)
+    {
       points.push_back(Vec3r((*woe)->GetaVertex()->GetVertex()));
     }
     Polygon3r p1(points, oface->GetNormal());
@@ -310,7 +315,8 @@ static int computeVisibility(ViewMap *viewMap,
 
       for (vector<WVertex *>::iterator fv = faceVertices.begin(), fvend = faceVertices.end();
            fv != fvend;
-           ++fv) {
+           ++fv)
+      {
         if ((*fv)->isBoundary()) {
           continue;
         }
@@ -348,7 +354,8 @@ static int computeVisibility(ViewMap *viewMap,
       //-------------------------------------------------------------
       // first let us compute the plane equation.
       if (GeomUtils::COINCIDENT ==
-          GeomUtils::intersectRayPlane(origin, edgeDir, p->getNormal(), d, t, epsilon)) {
+          GeomUtils::intersectRayPlane(origin, edgeDir, p->getNormal(), d, t, epsilon))
+      {
 #if LOGGING
         if (_global.debug & G_DEBUG_FREESTYLE) {
           cout << "\t\tRejecting occluder for target coincidence." << endl;
@@ -544,7 +551,7 @@ static void computeCumulativeVisibility(ViewMap *ioViewMap,
         findOccludee<G, I>(fe, grid, epsilon, *ve, &wFace);
 #if LOGGING
         if (_global.debug & G_DEBUG_FREESTYLE) {
-          cout << "\tFEdge: occludee only (" << (wFace != NULL ? "found" : "not found") << ")"
+          cout << "\tFEdge: occludee only (" << (wFace != nullptr ? "found" : "not found") << ")"
                << endl;
         }
 #endif
@@ -596,7 +603,8 @@ static void computeCumulativeVisibility(ViewMap *ioViewMap,
     // its contents. Is there a reason why ViewEdge::_Occluders cannot be converted to a set<>?
     for (set<ViewShape *>::iterator o = foundOccluders.begin(), oend = foundOccluders.end();
          o != oend;
-         ++o) {
+         ++o)
+    {
       (*ve)->AddOccluder(*o);
     }
 #if LOGGING
@@ -742,7 +750,7 @@ static void computeDetailedVisibility(ViewMap *ioViewMap,
         findOccludee<G, I>(fe, grid, epsilon, *ve, &wFace);
 #if LOGGING
         if (_global.debug & G_DEBUG_FREESTYLE) {
-          cout << "\tFEdge: occludee only (" << (wFace != NULL ? "found" : "not found") << ")"
+          cout << "\tFEdge: occludee only (" << (wFace != nullptr ? "found" : "not found") << ")"
                << endl;
         }
 #endif
@@ -787,7 +795,8 @@ static void computeDetailedVisibility(ViewMap *ioViewMap,
     // out its contents. Is there a reason why ViewEdge::_Occluders cannot be converted to a set<>?
     for (set<ViewShape *>::iterator o = foundOccluders.begin(), oend = foundOccluders.end();
          o != oend;
-         ++o) {
+         ++o)
+    {
       (*ve)->AddOccluder(*o);
     }
 #if LOGGING
@@ -926,7 +935,8 @@ static void computeFastVisibility(ViewMap *ioViewMap, G &grid, real epsilon)
     // occluders --
     for (set<ViewShape *>::iterator o = foundOccluders.begin(), oend = foundOccluders.end();
          o != oend;
-         ++o) {
+         ++o)
+    {
       (*ve)->AddOccluder(*o);
     }
 
@@ -1621,7 +1631,7 @@ void ViewMapBuilder::ComputeRayCastingVisibility(ViewMap *ioViewMap, real epsilo
         FindOccludee(fe, _Grid, epsilon, &aFace, timestamp++);
 #if LOGGING
         if (_global.debug & G_DEBUG_FREESTYLE) {
-          cout << "\tFEdge: occludee only (" << (aFace != NULL ? "found" : "not found") << ")"
+          cout << "\tFEdge: occludee only (" << (aFace != nullptr ? "found" : "not found") << ")"
                << endl;
         }
 #endif
@@ -1658,8 +1668,8 @@ void ViewMapBuilder::ComputeRayCastingVisibility(ViewMap *ioViewMap, real epsilo
     // qi --
     (*ve)->setQI(maxIndex);
     // occluders --
-    for (set<ViewShape *>::iterator o = occluders.begin(), oend = occluders.end(); o != oend;
-         ++o) {
+    for (set<ViewShape *>::iterator o = occluders.begin(), oend = occluders.end(); o != oend; ++o)
+    {
       (*ve)->AddOccluder(*o);
     }
 #if LOGGING
@@ -1936,7 +1946,8 @@ void ViewMapBuilder::FindOccludee(FEdge *fe,
 
         for (vector<WVertex *>::iterator fv = faceVertices.begin(), fvend = faceVertices.end();
              fv != fvend;
-             ++fv) {
+             ++fv)
+        {
           if ((*fv)->isBoundary()) {
             continue;
           }
@@ -2051,7 +2062,8 @@ int ViewMapBuilder::ComputeRayCastingVisibility(FEdge *fe,
 
   if ((center.x() < gridOrigin.x()) || (center.y() < gridOrigin.y()) ||
       (center.z() < gridOrigin.z()) || (center.x() > gridExtremity.x()) ||
-      (center.y() > gridExtremity.y()) || (center.z() > gridExtremity.z())) {
+      (center.y() > gridExtremity.y()) || (center.z() > gridExtremity.z()))
+  {
     cerr << "Warning: point is out of the grid for fedge " << fe->getId() << endl;
     // return 0;
   }
@@ -2063,9 +2075,10 @@ int ViewMapBuilder::ComputeRayCastingVisibility(FEdge *fe,
   SilhouetteGeomEngine::retrieveViewport(viewport);
   if ((A.x() < viewport[0]) || (A.x() > viewport[2]) || (A.y() < viewport[1]) ||
       (A.y() > viewport[3]) || (B.x() < viewport[0]) || (B.x() > viewport[2]) ||
-      (B.y() < viewport[1]) || (B.y() > viewport[3])) {
+      (B.y() < viewport[1]) || (B.y() > viewport[3]))
+  {
     cerr << "Warning: point is out of the grid for fedge " << fe->getId() << endl;
-    //return 0;
+    // return 0;
   }
 #endif
 
@@ -2148,7 +2161,8 @@ int ViewMapBuilder::ComputeRayCastingVisibility(FEdge *fe,
 
       for (vector<WVertex *>::iterator fv = faceVertices.begin(), fvend = faceVertices.end();
            fv != fvend;
-           ++fv) {
+           ++fv)
+      {
         if ((*fv)->isBoundary()) {
           continue;
         }
@@ -2246,7 +2260,8 @@ void ViewMapBuilder::ComputeIntersections(ViewMap *ioViewMap,
     ViewMap::viewvertices_container &vvertices = ioViewMap->ViewVertices();
     for (ViewMap::viewvertices_container::iterator vv = vvertices.begin(), vvend = vvertices.end();
          vv != vvend;
-         ++vv) {
+         ++vv)
+    {
       if ((*vv)->getNature() == Nature::T_VERTEX) {
         TVertex *tvertex = (TVertex *)(*vv);
         cout << "TVertex " << tvertex->getId() << " has :" << endl;
@@ -2316,7 +2331,8 @@ struct silhouette_binary_rule : public binary_rule<segment, segment> {
     FEdge *f2 = s2.edge();
 
     if (!(((f1)->getNature() & Nature::SILHOUETTE) || ((f1)->getNature() & Nature::BORDER)) &&
-        !(((f2)->getNature() & Nature::SILHOUETTE) || ((f2)->getNature() & Nature::BORDER))) {
+        !(((f2)->getNature() & Nature::SILHOUETTE) || ((f2)->getNature() & Nature::BORDER)))
+    {
       return false;
     }
 
@@ -2335,7 +2351,8 @@ void ViewMapBuilder::ComputeSweepLineIntersections(ViewMap *ioViewMap, real epsi
     ViewMap::fedges_container &fedges = ioViewMap->FEdges();
     for (ViewMap::fedges_container::const_iterator f = fedges.begin(), end = fedges.end();
          f != end;
-         ++f) {
+         ++f)
+    {
       cout << (*f)->aMaterialIndex() << "-" << (*f)->bMaterialIndex() << endl;
     }
   }
@@ -2372,7 +2389,8 @@ void ViewMapBuilder::ComputeSweepLineIntersections(ViewMap *ioViewMap, real epsi
 
   vector<segment *> vsegments;
   for (vector<SVertex *>::iterator sv = svertices.begin(), svend = svertices.end(); sv != svend;
-       sv++) {
+       sv++)
+  {
     if (_pRenderMonitor && _pRenderMonitor->testBreak()) {
       break;
     }
@@ -2381,7 +2399,8 @@ void ViewMapBuilder::ComputeSweepLineIntersections(ViewMap *ioViewMap, real epsi
 
     for (vector<FEdge *>::const_iterator sve = vedges.begin(), sveend = vedges.end();
          sve != sveend;
-         sve++) {
+         sve++)
+    {
       vsegments.push_back((segment *)((*sve)->userdata));
     }
 
@@ -2473,8 +2492,8 @@ void ViewMapBuilder::ComputeSweepLineIntersections(ViewMap *ioViewMap, real epsi
         printf("tb %.12e\n", tb);
         printf("a1 %e, %e -- a2 %e, %e\n", a1[0], a1[1], a2[0], a2[1]);
         printf("b1 %e, %e -- b2 %e, %e\n", b1[0], b1[1], b2[0], b2[1]);
-        //printf("line([%e, %e], [%e, %e]);\n", a1[0], a2[0], a1[1], a2[1]);
-        //printf("line([%e, %e], [%e, %e]);\n", b1[0], b2[0], b1[1], b2[1]);
+        // printf("line([%e, %e], [%e, %e]);\n", a1[0], a2[0], a1[1], a2[1]);
+        // printf("line([%e, %e], [%e, %e]);\n", b1[0], b2[0], b1[1], b2[1]);
         if ((Ta < -epsilon) || (Ta > 1 + epsilon)) {
           printf("Ta %.12e\n", Ta);
         }

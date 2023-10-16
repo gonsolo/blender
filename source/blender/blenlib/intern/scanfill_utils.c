@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -14,7 +16,8 @@
 
 #include "BLI_ghash.h"
 #include "BLI_listbase.h"
-#include "BLI_math.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_vector.h"
 #include "BLI_utildefines.h"
 
 #include "BLI_scanfill.h" /* own include */
@@ -173,15 +176,18 @@ static bool scanfill_preprocess_self_isect(ScanFillContext *sf_ctx,
       ScanFillEdge *eed_other;
 
       for (eed_other = eed->next; eed_other;
-           eed_other = (eed_other == pi->edge_last) ? NULL : eed_other->next) {
+           eed_other = (eed_other == pi->edge_last) ? NULL : eed_other->next)
+      {
         if (!ELEM(eed->v1, eed_other->v1, eed_other->v2) &&
-            !ELEM(eed->v2, eed_other->v1, eed_other->v2) && (eed != eed_other)) {
+            !ELEM(eed->v2, eed_other->v1, eed_other->v2) && (eed != eed_other))
+        {
           /* check isect */
           float pt[2];
           BLI_assert(eed != eed_other);
 
           if (isect_seg_seg_v2_point(
-                  eed->v1->co, eed->v2->co, eed_other->v1->co, eed_other->v2->co, pt) == 1) {
+                  eed->v1->co, eed->v2->co, eed_other->v1->co, eed_other->v2->co, pt) == 1)
+          {
             ScanFillIsect *isect;
 
             if (UNLIKELY(isect_hash == NULL)) {
@@ -388,7 +394,8 @@ bool BLI_scanfill_calc_self_isect(ScanFillContext *sf_ctx,
       BLI_assert(eed->poly_nr == eed->v2->poly_nr);
 
       if ((poly_info[poly_nr].edge_last != NULL) &&
-          (poly_info[poly_nr].edge_last->poly_nr != eed->poly_nr)) {
+          (poly_info[poly_nr].edge_last->poly_nr != eed->poly_nr))
+      {
         poly_nr++;
       }
 

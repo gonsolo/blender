@@ -1,5 +1,6 @@
+# SPDX-FileCopyrightText: 2006 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2006 Blender Foundation
 
 # add_subdirectory(atomic)  # header only
 add_subdirectory(atomic)
@@ -67,7 +68,7 @@ if(UNIX AND NOT APPLE)
   add_subdirectory(libc_compat)
 endif()
 
-if (WITH_RENDERDOC)
+if(WITH_RENDERDOC)
   add_subdirectory(renderdoc_dynload)
 endif()
 

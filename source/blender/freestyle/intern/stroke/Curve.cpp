@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2010-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -57,7 +59,8 @@ CurvePoint::CurvePoint(CurvePoint *iA, CurvePoint *iB, float t3)
   float t1 = iA->t2d();
   float t2 = iB->t2d();
   if ((iA->A() == iB->A()) && (iA->B() == iB->B()) && (iA->A() != nullptr) &&
-      (iA->B() != nullptr) && (iB->A() != nullptr) && (iB->B() != nullptr)) {
+      (iA->B() != nullptr) && (iB->A() != nullptr) && (iB->B() != nullptr))
+  {
     __A = iA->A();
     __B = iB->B();
     _t2d = t1 + t2 * t3 - t1 * t3;
@@ -120,15 +123,18 @@ CurvePoint::CurvePoint(CurvePoint *iA, CurvePoint *iB, float t3)
     }
   }
   else if (iA->A() != nullptr && iB->A() != nullptr &&
-           (iA->A()->point3d() - iB->A()->point3d()).norm() < 1.0e-6) {
+           (iA->A()->point3d() - iB->A()->point3d()).norm() < 1.0e-6)
+  {
     goto iA_A_eq_iB_A;
   }
   else if (iA->B() != nullptr && iB->B() != nullptr &&
-           (iA->B()->point3d() - iB->B()->point3d()).norm() < 1.0e-6) {
+           (iA->B()->point3d() - iB->B()->point3d()).norm() < 1.0e-6)
+  {
     goto iA_B_eq_iB_B;
   }
   else if (iA->B() != nullptr && iB->A() != nullptr &&
-           (iA->B()->point3d() - iB->A()->point3d()).norm() < 1.0e-6) {
+           (iA->B()->point3d() - iB->A()->point3d()).norm() < 1.0e-6)
+  {
     goto iA_B_eq_iB_A;
   }
 
@@ -195,7 +201,8 @@ FEdge *CurvePoint::getFEdge(Interface0D &inter)
     return nullptr;
   }
   if (((__A == iVertexB->__A) && (__B == iVertexB->__B)) ||
-      ((__A == iVertexB->__B) && (__B == iVertexB->__A))) {
+      ((__A == iVertexB->__B) && (__B == iVertexB->__A)))
+  {
     return __A->getFEdge(*__B);
   }
   if (__B == nullptr) {
@@ -329,7 +336,7 @@ float CurvePoint::shape_importance() const
   return __A->shape_importance();
 }
 
-const unsigned CurvePoint::qi() const
+const uint CurvePoint::qi() const
 {
   if (__A == 0) {
     return __B->qi();
@@ -446,7 +453,7 @@ float CurvePoint::local_depth_variance() const
 
 real CurvePoint::local_average_density(float sigma) const
 {
-  //return local_average_density<CurvePoint >(this);
+  // return local_average_density<CurvePoint >(this);
   return density_function<CurvePoint>(this);
 }
 
@@ -889,7 +896,7 @@ float Curve::local_depth_variance(int iCombination) const
 #  if 0
   local_depth_variance_functor<Point> functor;
   float result;
-  Evaluate<float, local_depth_variance_functor<Point> >(&functor, iCombination, result);
+  Evaluate<float, local_depth_variance_functor<Point>>(&functor, iCombination, result);
   return result;
 #  endif
 }
@@ -900,7 +907,7 @@ real Curve::local_average_density(float sigma, int iCombination) const
 #  if 0
   density_functor<Point> functor;
   real result;
-  Evaluate<real, density_functor<Point> >(&functor, iCombination, result);
+  Evaluate<real, density_functor<Point>>(&functor, iCombination, result);
   return result;
 #  endif
 }
@@ -964,12 +971,12 @@ void Curve::computeCurvatureAndOrientation()
   (*v0)->setCurvatureFredo((*v2)->curvatureFredo());
   (*v0)->setDirectionFredo((*v2)->point2d() - (*v0)->point2d());
 
-  //closed curve case one day...
+  // closed curve case one day...
 
   //
   return;
 
-  //numerical degeneracy verification... we'll see later
+  // numerical degeneracy verification... we'll see later
   const_vertex_iterator vLastReliable = vertices_begin();
 
   v = vertices_begin();
@@ -1002,7 +1009,7 @@ void Curve::computeCurvatureAndOrientation()
       cerr << "/";
     }
     else {
-      if (!isReliable) {  //previous points were not reliable
+      if (!isReliable) {  // previous points were not reliable
         const_vertex_iterator vfix = vLastReliable;
         ++vfix;
         for (; vfix != v; ++vfix) {

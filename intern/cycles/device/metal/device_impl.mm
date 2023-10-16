@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2021-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2021-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifdef WITH_METAL
 
@@ -24,7 +25,8 @@ std::map<int, MetalDevice *> MetalDevice::active_device_ids;
 
 /* Thread-safe device access for async work. Calling code must pass an appropriately scoped lock
  * to existing_devices_mutex to safeguard against destruction of the returned instance. */
-MetalDevice *MetalDevice::get_device_by_ID(int ID, thread_scoped_lock &existing_devices_mutex_lock)
+MetalDevice *MetalDevice::get_device_by_ID(int ID,
+                                           thread_scoped_lock & /*existing_devices_mutex_lock*/)
 {
   auto it = active_device_ids.find(ID);
   if (it != active_device_ids.end()) {
@@ -51,11 +53,11 @@ void MetalDevice::set_error(const string &error)
 
   Device::set_error(error);
 
-  if (first_error) {
+  if (!has_error) {
     fprintf(stderr, "\nRefer to the Cycles GPU rendering documentation for possible solutions:\n");
     fprintf(stderr,
             "https://docs.blender.org/manual/en/latest/render/cycles/gpu_rendering.html\n\n");
-    first_error = false;
+    has_error = true;
   }
 }
 
@@ -79,7 +81,7 @@ MetalDevice::MetalDevice(const DeviceInfo &info, Stats &stats, Profiler &profile
   mtlDevice = usable_devices[mtlDevId];
   device_vendor = MetalInfo::get_device_vendor(mtlDevice);
   assert(device_vendor != METAL_GPU_UNKNOWN);
-  metal_printf("Creating new Cycles device for Metal: %s\n", info.description.c_str());
+  metal_printf("Creating new Cycles Metal device: %s\n", info.description.c_str());
 
   /* determine default storage mode based on whether UMA is supported */
 
@@ -100,16 +102,15 @@ MetalDevice::MetalDevice(const DeviceInfo &info, Stats &stats, Profiler &profile
     }
     case METAL_GPU_AMD: {
       max_threads_per_threadgroup = 128;
-      use_metalrt = info.use_hardware_raytracing;
       break;
     }
     case METAL_GPU_APPLE: {
       max_threads_per_threadgroup = 512;
-      use_metalrt = info.use_hardware_raytracing;
       break;
     }
   }
 
+  use_metalrt = info.use_hardware_raytracing;
   if (auto metalrt = getenv("CYCLES_METALRT")) {
     use_metalrt = (atoi(metalrt) != 0);
   }
@@ -119,7 +120,7 @@ MetalDevice::MetalDevice(const DeviceInfo &info, Stats &stats, Profiler &profile
   }
 
   if (device_vendor == METAL_GPU_APPLE) {
-    /* Set kernel_specialization_level based on user prefs. */
+    /* Set kernel_specialization_level based on user preferences. */
     switch (info.kernel_optimization_level) {
       case KERNEL_OPTIMIZATION_LEVEL_OFF:
         kernel_specialization_level = PSO_GENERIC;
@@ -215,6 +216,8 @@ MetalDevice::MetalDevice(const DeviceInfo &info, Stats &stats, Profiler &profile
         arg_desc_ift.index = index++;
         [ancillary_desc addObject:[arg_desc_ift copy]]; /* ift_shadow */
         arg_desc_ift.index = index++;
+        [ancillary_desc addObject:[arg_desc_ift copy]]; /* ift_volume */
+        arg_desc_ift.index = index++;
         [ancillary_desc addObject:[arg_desc_ift copy]]; /* ift_local */
         arg_desc_ift.index = index++;
         [ancillary_desc addObject:[arg_desc_ift copy]]; /* ift_local_prim */
@@ -288,12 +291,12 @@ MetalDevice::~MetalDevice()
   texture_info.free();
 }
 
-bool MetalDevice::support_device(const uint kernel_features /*requested_features*/)
+bool MetalDevice::support_device(const uint /*kernel_features*/)
 {
   return true;
 }
 
-bool MetalDevice::check_peer_access(Device *peer_device)
+bool MetalDevice::check_peer_access(Device * /*peer_device*/)
 {
   assert(0);
   /* does peer access make sense? */
@@ -346,7 +349,11 @@ string MetalDevice::preprocess_source(MetalPipelineType pso_type,
     case METAL_GPU_APPLE:
       global_defines += "#define __KERNEL_METAL_APPLE__\n";
 #  ifdef WITH_NANOVDB
-      global_defines += "#define WITH_NANOVDB\n";
+      /* Compiling in NanoVDB results in a marginal drop in render performance,
+       * so disable it for specialized PSOs when no textures are using it. */
+      if ((pso_type == PSO_GENERIC || using_nanovdb) && DebugFlags().metal.use_nanovdb) {
+        global_defines += "#define WITH_NANOVDB\n";
+      }
 #  endif
       break;
   }
@@ -546,9 +553,14 @@ void MetalDevice::compile_and_load(int device_id, MetalPipelineType pso_type)
 #  endif
 
   options.fastMathEnabled = YES;
-  if (@available(macOS 12.0, *)) {
+  if (@available(macos 12.0, *)) {
     options.languageVersion = MTLLanguageVersion2_4;
   }
+#  if defined(MAC_OS_VERSION_14_0)
+  if (@available(macos 14.0, *)) {
+    options.languageVersion = MTLLanguageVersion3_1;
+  }
+#  endif
 
   if (getenv("CYCLES_METAL_PROFILING") || getenv("CYCLES_METAL_DEBUG")) {
     path_write_text(path_cache_get(string_printf("%s.metal", kernel_type_as_string(pso_type))),
@@ -911,7 +923,9 @@ void MetalDevice::mem_free(device_memory &mem)
   }
 }
 
-device_ptr MetalDevice::mem_alloc_sub_ptr(device_memory &mem, size_t offset, size_t /*size*/)
+device_ptr MetalDevice::mem_alloc_sub_ptr(device_memory & /*mem*/,
+                                          size_t /*offset*/,
+                                          size_t /*size*/)
 {
   /* METAL_WIP - revive if necessary */
   assert(0);
@@ -1033,8 +1047,7 @@ void MetalDevice::const_copy_to(const char *name, void *host, size_t size)
         offsetof(KernelParamsMetal, integrator_state), host, size, pointer_block_size);
   }
 #  define KERNEL_DATA_ARRAY(data_type, tex_name) \
-    else if (strcmp(name, #tex_name) == 0) \
-    { \
+    else if (strcmp(name, #tex_name) == 0) { \
       update_launch_pointers(offsetof(KernelParamsMetal, tex_name), host, size, size); \
     }
 #  include "kernel/data_arrays.h"
@@ -1079,6 +1092,14 @@ void MetalDevice::tex_alloc_as_buffer(device_texture &mem)
   texture_info[slot].data = *(uint64_t *)((uint64_t)buffer_bindings_1d.contents + offset);
   texture_slot_map[slot] = nil;
   need_texture_info = true;
+
+  if (mem.info.data_type == IMAGE_DATA_TYPE_NANOVDB_FLOAT ||
+      mem.info.data_type == IMAGE_DATA_TYPE_NANOVDB_FLOAT3 ||
+      mem.info.data_type == IMAGE_DATA_TYPE_NANOVDB_FPN ||
+      mem.info.data_type == IMAGE_DATA_TYPE_NANOVDB_FP16)
+  {
+    using_nanovdb = true;
+  }
 }
 
 void MetalDevice::tex_alloc(device_texture &mem)
@@ -1097,9 +1118,8 @@ void MetalDevice::tex_alloc(device_texture &mem)
   }
   MTLStorageMode storage_mode = MTLStorageModeManaged;
   if (@available(macos 10.15, *)) {
-    if ([mtlDevice hasUnifiedMemory] &&
-        device_vendor !=
-            METAL_GPU_INTEL) { /* Intel GPUs don't support MTLStorageModeShared for MTLTextures */
+    /* Intel GPUs don't support MTLStorageModeShared for MTLTextures. */
+    if ([mtlDevice hasUnifiedMemory] && device_vendor != METAL_GPU_INTEL) {
       storage_mode = MTLStorageModeShared;
     }
   }
@@ -1369,24 +1389,14 @@ void MetalDevice::build_bvh(BVH *bvh, Progress &progress, bool refit)
         stats.mem_alloc(blas_buffer.allocatedSize);
 
         for (uint64_t i = 0; i < count; ++i) {
-          [mtlBlasArgEncoder setArgumentBuffer:blas_buffer
-                                        offset:i * mtlBlasArgEncoder.encodedLength];
-          [mtlBlasArgEncoder setAccelerationStructure:bvhMetalRT->blas_array[i] atIndex:0];
+          if (bvhMetalRT->blas_array[i]) {
+            [mtlBlasArgEncoder setArgumentBuffer:blas_buffer
+                                          offset:i * mtlBlasArgEncoder.encodedLength];
+            [mtlBlasArgEncoder setAccelerationStructure:bvhMetalRT->blas_array[i] atIndex:0];
+          }
         }
-
-        count = bvhMetalRT->blas_lookup.size();
-        bufferSize = sizeof(uint32_t) * count;
-        blas_lookup_buffer = [mtlDevice newBufferWithLength:bufferSize
-                                                    options:default_storage_mode];
-        stats.mem_alloc(blas_lookup_buffer.allocatedSize);
-
-        memcpy([blas_lookup_buffer contents],
-               bvhMetalRT -> blas_lookup.data(),
-               blas_lookup_buffer.allocatedSize);
-
         if (default_storage_mode == MTLResourceStorageModeManaged) {
           [blas_buffer didModifyRange:NSMakeRange(0, blas_buffer.length)];
-          [blas_lookup_buffer didModifyRange:NSMakeRange(0, blas_lookup_buffer.length)];
         }
       }
     }

@@ -1,9 +1,15 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "BKE_curves.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "BLI_math_geom.h"
+
+#include "NOD_rna_define.hh"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "node_geometry_util.hh"
 
@@ -20,40 +26,40 @@ static void node_declare(NodeDeclarationBuilder &b)
     node_storage(node).mode = GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_RADIUS;
   };
 
-  b.add_input<decl::Int>(N_("Resolution"))
+  b.add_input<decl::Int>("Resolution")
       .default_value(32)
       .min(3)
       .max(512)
-      .description(N_("Number of points on the circle"));
-  b.add_input<decl::Vector>(N_("Point 1"))
+      .description("Number of points on the circle");
+  b.add_input<decl::Vector>("Point 1")
       .default_value({-1.0f, 0.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
       .description(
-          N_("One of the three points on the circle. The point order determines the circle's "
-             "direction"))
+          "One of the three points on the circle. The point order determines the circle's "
+          "direction")
       .make_available(endable_points);
-  b.add_input<decl::Vector>(N_("Point 2"))
+  b.add_input<decl::Vector>("Point 2")
       .default_value({0.0f, 1.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
       .description(
-          N_("One of the three points on the circle. The point order determines the circle's "
-             "direction"))
+          "One of the three points on the circle. The point order determines the circle's "
+          "direction")
       .make_available(endable_points);
-  b.add_input<decl::Vector>(N_("Point 3"))
+  b.add_input<decl::Vector>("Point 3")
       .default_value({1.0f, 0.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
       .description(
-          N_("One of the three points on the circle. The point order determines the circle's "
-             "direction"))
+          "One of the three points on the circle. The point order determines the circle's "
+          "direction")
       .make_available(endable_points);
-  b.add_input<decl::Float>(N_("Radius"))
+  b.add_input<decl::Float>("Radius")
       .default_value(1.0f)
       .min(0.0f)
       .subtype(PROP_DISTANCE)
-      .description(N_("Distance of the points from the origin"))
+      .description("Distance of the points from the origin")
       .make_available(enable_radius);
-  b.add_output<decl::Geometry>(N_("Curve"));
-  b.add_output<decl::Vector>(N_("Center")).make_available(endable_points);
+  b.add_output<decl::Geometry>("Curve");
+  b.add_output<decl::Vector>("Center").make_available(endable_points);
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
@@ -82,15 +88,15 @@ static void node_update(bNodeTree *ntree, bNode *node)
 
   bNodeSocket *center_socket = static_cast<bNodeSocket *>(node->outputs.first)->next;
 
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, start_socket, mode == GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_POINTS);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, middle_socket, mode == GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_POINTS);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, end_socket, mode == GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_POINTS);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, center_socket, mode == GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_POINTS);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, radius_socket, mode == GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_RADIUS);
 }
 
@@ -201,30 +207,56 @@ static void node_geo_exec(GeoNodeExecParams params)
   }
 
   if (curves) {
-    params.set_output("Curve", GeometrySet::create_with_curves(curves));
+    params.set_output("Curve", GeometrySet::from_curves(curves));
   }
   else {
     params.set_default_remaining_outputs();
   }
 }
 
-}  // namespace blender::nodes::node_geo_curve_primitive_circle_cc
-
-void register_node_type_geo_curve_primitive_circle()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_geo_curve_primitive_circle_cc;
+  static const EnumPropertyItem mode_items[] = {
+      {GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_POINTS,
+       "POINTS",
+       ICON_NONE,
+       "Points",
+       "Define the radius and location with three points"},
+      {GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_RADIUS,
+       "RADIUS",
+       ICON_NONE,
+       "Radius",
+       "Define the radius with a float"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
 
+  RNA_def_node_enum(srna,
+                    "mode",
+                    "Mode",
+                    "Method used to determine radius and placement",
+                    mode_items,
+                    NOD_storage_enum_accessors(mode),
+                    GEO_NODE_CURVE_PRIMITIVE_CIRCLE_TYPE_RADIUS);
+}
+
+static void node_register()
+{
   static bNodeType ntype;
   geo_node_type_base(&ntype, GEO_NODE_CURVE_PRIMITIVE_CIRCLE, "Curve Circle", NODE_CLASS_GEOMETRY);
 
-  ntype.initfunc = file_ns::node_init;
-  ntype.updatefunc = file_ns::node_update;
+  ntype.initfunc = node_init;
+  ntype.updatefunc = node_update;
   node_type_storage(&ntype,
                     "NodeGeometryCurvePrimitiveCircle",
                     node_free_standard_storage,
                     node_copy_standard_storage);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.draw_buttons = file_ns::node_layout;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_curve_primitive_circle_cc

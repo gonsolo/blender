@@ -1,10 +1,12 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup texnodes
  */
 
+#include "BLI_math_vector.h"
 #include "node_texture_util.hh"
 #include <cmath>
 
@@ -53,7 +55,7 @@ void register_node_type_tex_scale()
   static bNodeType ntype;
 
   tex_node_type_base(&ntype, TEX_NODE_SCALE, "Scale", NODE_CLASS_DISTORT);
-  node_type_socket_templates(&ntype, inputs, outputs);
+  blender::bke::node_type_socket_templates(&ntype, inputs, outputs);
   ntype.exec_fn = exec;
 
   nodeRegisterType(&ntype);

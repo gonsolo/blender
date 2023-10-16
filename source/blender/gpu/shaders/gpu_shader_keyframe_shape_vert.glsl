@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2017-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 const float line_falloff = 1.0;
 const float circle_scale = sqrt(2.0 / 3.1416);
@@ -32,7 +35,8 @@ void main()
   finalFlags = flags;
 
   if (!test(GPU_KEYFRAME_SHAPE_DIAMOND | GPU_KEYFRAME_SHAPE_CIRCLE |
-            GPU_KEYFRAME_SHAPE_CLIPPED_VERTICAL | GPU_KEYFRAME_SHAPE_CLIPPED_HORIZONTAL)) {
+            GPU_KEYFRAME_SHAPE_CLIPPED_VERTICAL | GPU_KEYFRAME_SHAPE_CLIPPED_HORIZONTAL))
+  {
     finalFlags |= GPU_KEYFRAME_SHAPE_DIAMOND;
   }
 

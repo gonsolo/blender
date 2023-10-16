@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include <gtest/gtest.h>
 
@@ -18,7 +20,7 @@ class obj_mtl_parser_test : public testing::Test {
     BKE_tempdir_init(nullptr);
     std::string tmp_dir = BKE_tempdir_base();
     std::string tmp_file_name = "mtl_test.mtl";
-    std::string tmp_file_path = tmp_dir + "/" + tmp_file_name;
+    std::string tmp_file_path = tmp_dir + SEP_STR + tmp_file_name;
     FILE *tmp_file = BLI_fopen(tmp_file_path.c_str(), "wb");
     fputs(text, tmp_file);
     fclose(tmp_file);
@@ -29,7 +31,8 @@ class obj_mtl_parser_test : public testing::Test {
   }
   void check(const char *file, const MTLMaterial *expect, size_t expect_count)
   {
-    std::string obj_dir = blender::tests::flags_test_asset_dir() + "/io_tests/obj/";
+    std::string obj_dir = blender::tests::flags_test_asset_dir() +
+                          (SEP_STR "io_tests" SEP_STR "obj" SEP_STR);
     check_impl(file, obj_dir, expect, expect_count);
   }
   void check_impl(StringRefNull mtl_file_path,
@@ -313,7 +316,7 @@ TEST_F(obj_mtl_parser_test, materials_pbr)
   mat[0].illum_mode = 3;
   mat[0].roughness = 0.4f;
   mat[0].metallic = 0.9f;
-  mat[0].sheen = 0.3f;
+  mat[0].sheen = 0.06f;
   mat[0].cc_thickness = 0.393182f;
   mat[0].cc_roughness = 0.05f;
   mat[0].aniso = 0.2f;

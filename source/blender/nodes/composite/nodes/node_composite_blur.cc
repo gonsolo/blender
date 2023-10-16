@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
@@ -10,10 +11,10 @@
 #include "BLI_math_vector.hh"
 #include "BLI_math_vector_types.hh"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "GPU_shader.h"
 #include "GPU_state.h"
@@ -34,15 +35,15 @@ NODE_STORAGE_FUNCS(NodeBlurData)
 
 static void cmp_node_blur_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image"))
+  b.add_input<decl::Color>("Image")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_input<decl::Float>(N_("Size"))
+  b.add_input<decl::Float>("Size")
       .default_value(1.0f)
       .min(0.0f)
       .max(1.0f)
       .compositor_domain_priority(1);
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_output<decl::Color>("Image");
 }
 
 static void node_composit_init_blur(bNodeTree * /*ntree*/, bNode *node)
@@ -136,7 +137,7 @@ class BlurOperation : public NodeOperation {
 
     const float2 blur_radius = compute_blur_radius();
 
-    const SymmetricBlurWeights &weights = context().cache_manager().get_symmetric_blur_weights(
+    const SymmetricBlurWeights &weights = context().cache_manager().symmetric_blur_weights.get(
         node_storage(bnode()).filtertype, blur_radius);
     weights.bind_as_texture(shader, "weights_tx");
 
@@ -171,7 +172,7 @@ class BlurOperation : public NodeOperation {
 
     const float2 blur_radius = compute_blur_radius();
 
-    const SymmetricBlurWeights &weights = context().cache_manager().get_symmetric_blur_weights(
+    const SymmetricBlurWeights &weights = context().cache_manager().symmetric_blur_weights.get(
         node_storage(bnode()).filtertype, blur_radius);
     weights.bind_as_texture(shader, "weights_tx");
 

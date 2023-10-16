@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -18,7 +20,7 @@
 #include "BLI_index_range.hh"
 #include "BLI_utildefines.h"
 
-#include <ostream>
+#include <iosfwd>
 
 namespace blender::bits {
 
@@ -214,17 +216,26 @@ class MutableBitRef {
         /* Optionally set it again. The -1 turns a 1 into `0x00...` and a 0 into `0xff...`. */
         | (mask_ & ~(value_int - 1));
   }
+
+  MutableBitRef &operator|=(const bool value)
+  {
+    if (value) {
+      this->set();
+    }
+    return *this;
+  }
+
+  MutableBitRef &operator&=(const bool value)
+  {
+    if (!value) {
+      this->reset();
+    }
+    return *this;
+  }
 };
 
-inline std::ostream &operator<<(std::ostream &stream, const BitRef &bit)
-{
-  return stream << (bit ? "1" : "0");
-}
-
-inline std::ostream &operator<<(std::ostream &stream, const MutableBitRef &bit)
-{
-  return stream << BitRef(bit);
-}
+std::ostream &operator<<(std::ostream &stream, const BitRef &bit);
+std::ostream &operator<<(std::ostream &stream, const MutableBitRef &bit);
 
 }  // namespace blender::bits
 

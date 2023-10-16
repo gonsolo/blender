@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2009 Blender Foundation, Joshua Leung. All rights reserved. */
+/* SPDX-FileCopyrightText: 2009 Blender Authors, Joshua Leung. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -22,7 +23,6 @@ struct AnimData;
 struct AnimationEvalContext;
 struct BezTriple;
 struct BlendDataReader;
-struct BlendExpander;
 struct BlendLibReader;
 struct BlendWriter;
 struct LibraryForeachIDData;
@@ -32,14 +32,6 @@ struct PropertyRNA;
 struct StructRNA;
 struct bAction;
 struct bContext;
-
-/* ************** Keyframe Tools ***************** */
-
-typedef struct CfraElem {
-  struct CfraElem *next, *prev;
-  float cfra;
-  int sel;
-} CfraElem;
 
 /* ************** F-Curve Modifiers *************** */
 
@@ -55,7 +47,7 @@ typedef struct CfraElem {
  * as you'll have to edit quite a few (#FMODIFIER_NUM_TYPES) of these structs.
  */
 typedef struct FModifierTypeInfo {
-  /* admin/ident */
+  /* Admin/identity. */
   /** #FMODIFIER_TYPE_* */
   short type;
   /** size in bytes of the struct. */
@@ -67,7 +59,7 @@ typedef struct FModifierTypeInfo {
   /** name of modifier in interface. */
   char name[64];
   /** name of struct for SDNA. */
-  char structName[64];
+  char struct_name[64];
   /** Size of buffer that can be reused between time and value evaluation. */
   uint storage_size;
 
@@ -240,6 +232,16 @@ void BKE_fcurves_free(ListBase *list);
  */
 void BKE_fcurves_copy(ListBase *dst, ListBase *src);
 
+/* Set fcurve modifier name and ensure uniqueness.
+ * Pass new name string when it's been edited otherwise pass empty string. */
+void BKE_fmodifier_name_set(struct FModifier *fcm, const char *name);
+
+/**
+ * Callback used by lib_query to walk over all ID usages
+ * (mimics `foreach_id` callback of #IDTypeInfo structure).
+ */
+void BKE_fmodifiers_foreach_id(struct ListBase *fmodifiers, struct LibraryForeachIDData *data);
+
 /**
  * Callback used by lib_query to walk over all ID usages
  * (mimics `foreach_id` callback of #IDTypeInfo structure).
@@ -344,7 +346,7 @@ int BKE_fcurve_bezt_binarysearch_index(const struct BezTriple array[],
                                        int arraylen,
                                        bool *r_replace);
 
-/* fcurve_cache.c */
+/* `fcurve_cache.cc` */
 
 /**
  * Cached f-curve look-ups, use when this needs to be done many times.
@@ -416,6 +418,7 @@ int BKE_fcurve_active_keyframe_index(const struct FCurve *fcu);
  * Move the indexed keyframe to the given value,
  * and move the handles with it to ensure the slope remains the same.
  */
+void BKE_fcurve_keyframe_move_time_with_handles(BezTriple *keyframe, const float new_time);
 void BKE_fcurve_keyframe_move_value_with_handles(struct BezTriple *keyframe, float new_value);
 
 /* .............. */
@@ -473,6 +476,14 @@ bool BKE_fcurve_bezt_subdivide_handles(struct BezTriple *bezt,
                                        float *r_pdelta);
 
 /**
+ * Resize the FCurve 'bezt' array to fit the given length.
+ *
+ * \param new_totvert: new number of elements in the FCurve's `bezt` array.
+ * Constraint: `0 <= new_totvert <= fcu->totvert`
+ */
+void BKE_fcurve_bezt_shrink(struct FCurve *fcu, int new_totvert);
+
+/**
  * Delete a keyframe from an F-curve at a specific index.
  */
 void BKE_fcurve_delete_key(struct FCurve *fcu, int index);
@@ -498,6 +509,21 @@ void BKE_fcurve_delete_keys_all(struct FCurve *fcu);
 void BKE_fcurve_merge_duplicate_keys(struct FCurve *fcu,
                                      const int sel_flag,
                                      const bool use_handle);
+
+/**
+ * Ensure the FCurve is a proper function, such that every X-coordinate of the
+ * timeline has only one value of the FCurve. In other words, removes duplicate
+ * keyframes.
+ *
+ * Contrary to #BKE_fcurve_merge_duplicate_keys, which is intended for
+ * interactive use, and where selection matters, this is a simpler deduplication
+ * where the last duplicate "wins".
+ *
+ * Assumes the keys are sorted (see #sort_time_fcurve).
+ *
+ * After deduplication, call `BKE_fcurve_handles_recalc(fcu);`
+ */
+void BKE_fcurve_deduplicate_keys(struct FCurve *fcu);
 
 /* -------- Curve Sanity -------- */
 
@@ -609,17 +635,9 @@ void BKE_fmodifiers_blend_write(struct BlendWriter *writer, struct ListBase *fmo
 void BKE_fmodifiers_blend_read_data(struct BlendDataReader *reader,
                                     ListBase *fmodifiers,
                                     struct FCurve *curve);
-void BKE_fmodifiers_blend_read_lib(struct BlendLibReader *reader,
-                                   struct ID *id,
-                                   struct ListBase *fmodifiers);
-void BKE_fmodifiers_blend_read_expand(struct BlendExpander *expander, struct ListBase *fmodifiers);
 
 void BKE_fcurve_blend_write(struct BlendWriter *writer, struct ListBase *fcurves);
 void BKE_fcurve_blend_read_data(struct BlendDataReader *reader, struct ListBase *fcurves);
-void BKE_fcurve_blend_read_lib(struct BlendLibReader *reader,
-                               struct ID *id,
-                               struct ListBase *fcurves);
-void BKE_fcurve_blend_read_expand(struct BlendExpander *expander, struct ListBase *fcurves);
 
 #ifdef __cplusplus
 }

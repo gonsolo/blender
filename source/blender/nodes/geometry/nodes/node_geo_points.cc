@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "BKE_pointcloud.h"
 #include "DNA_pointcloud_types.h"
@@ -11,21 +13,19 @@ namespace blender::nodes::node_geo_points_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Int>(N_("Count"))
-      .default_value(1)
-      .description(N_("The number of points to create"))
-      .min(0);
-  b.add_input<decl::Vector>(N_("Position"))
-      .supports_field()
+  b.add_input<decl::Int>("Count").default_value(1).min(0).description(
+      "The number of points to create");
+  b.add_input<decl::Vector>("Position")
       .default_value(float3(0.0f))
-      .description(N_("The positions of the new points"));
-  b.add_input<decl::Float>(N_("Radius"))
+      .supports_field()
+      .description("The positions of the new points");
+  b.add_input<decl::Float>("Radius")
       .min(0.0f)
       .default_value(0.1f)
-      .supports_field()
       .subtype(PROP_DISTANCE)
-      .description(N_("The radii of the new points"));
-  b.add_output<decl::Geometry>(N_("Geometry"));
+      .supports_field()
+      .description("The radii of the new points");
+  b.add_output<decl::Geometry>("Geometry");
 }
 
 class PointsFieldContext : public FieldContext {
@@ -41,7 +41,7 @@ class PointsFieldContext : public FieldContext {
   }
 
   GVArray get_varray_for_input(const FieldInput &field_input,
-                               const IndexMask mask,
+                               const IndexMask &mask,
                                ResourceScope & /*scope*/) const
   {
     const bke::IDAttributeFieldInput *id_field_input =
@@ -81,17 +81,17 @@ static void node_geo_exec(GeoNodeExecParams params)
   evaluator.evaluate();
 
   output_radii.finish();
-  params.set_output("Geometry", GeometrySet::create_with_pointcloud(points));
+  params.set_output("Geometry", GeometrySet::from_pointcloud(points));
 }
 
-}  // namespace blender::nodes::node_geo_points_cc
-
-void register_node_type_geo_points()
+static void node_register()
 {
-  namespace file_ns = blender::nodes::node_geo_points_cc;
   static bNodeType ntype;
   geo_node_type_base(&ntype, GEO_NODE_POINTS, "Points", NODE_CLASS_GEOMETRY);
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.declare = file_ns::node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.declare = node_declare;
   nodeRegisterType(&ntype);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_points_cc

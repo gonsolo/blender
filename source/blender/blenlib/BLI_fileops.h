@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -38,32 +39,56 @@ extern "C" {
  * (most likely doesn't exist or no access).
  */
 int BLI_exists(const char *path) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
-int BLI_copy(const char *file, const char *to) ATTR_NONNULL();
+
 /**
+ * \return 0 on success.
+ */
+int BLI_copy(const char *path_src, const char *path_dst) ATTR_NONNULL();
+/**
+ * When `path_src` points to a directory, moves all its contents into `path_dst`,
+ * else rename `path_src` itself to `path_dst`.
+ * \return 0 on success.
+ */
+int BLI_path_move(const char *path_src, const char *path_dst) ATTR_NONNULL();
+
+/**
+ * Rename a file or directory.
+ *
  * \return zero on success (matching 'rename' behavior).
  */
-int BLI_rename(const char *from, const char *to) ATTR_NONNULL();
+int BLI_rename(const char *from, const char *to);
+
+/**
+ * Rename a file or directory.
+ *
+ * \warning It's up to the caller to ensure `from` & `to` don't point to the same file
+ * as this will result in `to` being deleted to make room for `from`
+ * (which will then also be deleted).
+ *
+ * See #BLI_path_move to move directories.
+ *
+ * \param from: The path to rename from (return failure if it does not exist).
+ * \param to: The destination path.
+ * This will be deleted if it already exists, unless it's a directory which will fail.
+ * \return zero on success (matching 'rename' behavior).
+ */
+int BLI_rename_overwrite(const char *from, const char *to) ATTR_NONNULL();
 /**
  * Deletes the specified file or directory (depending on dir), optionally
  * doing recursive delete of directory contents.
  *
  * \return zero on success (matching 'remove' behavior).
  */
-int BLI_delete(const char *file, bool dir, bool recursive) ATTR_NONNULL();
+int BLI_delete(const char *path, bool dir, bool recursive) ATTR_NONNULL();
 /**
  * Soft deletes the specified file or directory (depending on dir) by moving the files to the
  * recycling bin, optionally doing recursive delete of directory contents.
  *
  * \return zero on success (matching 'remove' behavior).
  */
-int BLI_delete_soft(const char *file, const char **error_message) ATTR_NONNULL();
-/**
- * When `path` points to a directory, moves all its contents into `to`,
- * else rename `path` itself to `to`.
- */
-int BLI_path_move(const char *path, const char *to) ATTR_NONNULL();
+int BLI_delete_soft(const char *filepath, const char **error_message) ATTR_NONNULL();
 #if 0 /* Unused */
-int BLI_create_symlink(const char *path, const char *to) ATTR_NONNULL();
+int BLI_create_symlink(const char *path, const char *path_dst) ATTR_NONNULL();
 #endif
 
 /* Keep in sync with the definition of struct `direntry` in `BLI_fileops_types.h`. */
@@ -149,7 +174,7 @@ struct direntry;
 
 /**
  * Does the specified path point to a directory?
- * \note Would be better in `fileops.c` except that it needs `stat.h` so add here.
+ * \note Would be better in `fileops.cc` except that it needs `stat.h` so add here.
  */
 bool BLI_is_dir(const char *path) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
 /**
@@ -161,7 +186,7 @@ bool BLI_is_file(const char *path) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
  */
 bool BLI_dir_create_recursive(const char *dir) ATTR_NONNULL();
 /**
- * Returns the number of free bytes on the volume containing the specified pathname.
+ * Returns the number of free bytes on the volume containing the specified path.
  *
  * \note Not actually used anywhere.
  */
@@ -180,8 +205,8 @@ eFileAttributes BLI_file_attributes(const char *path);
  * Usage of this function is strongly discouraged as it is not thread safe. It will likely cause
  * issues if there is an operation on another thread that does not expect the current working
  * directory to change. This has been added to support USDZ export, which has a problematic
- * "feature" described in this issue https://projects.blender.org/blender/blender/issues/99807. It
- * will be removed if it is possible to resolve that issue upstream in the USD library.
+ * "feature" described in this issue #99807. It will be removed if it is possible to resolve
+ * that issue upstream in the USD library.
  *
  * \return true on success, false otherwise.
  */
@@ -266,6 +291,14 @@ int BLI_open(const char *filepath, int oflag, int pmode) ATTR_WARN_UNUSED_RESULT
 int BLI_access(const char *filepath, int mode) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
 
 /**
+ * A version of `read` with the following differences:
+ * - continues reading until failure or the requested size is met.
+ * - Reads `size_t` bytes instead of `int` on WIN32.
+ * \return the number of bytes read.
+ */
+int64_t BLI_read(int fd, void *buf, size_t nbytes);
+
+/**
  * Returns true if the file with the specified name can be written.
  * This implementation uses access(2), which makes the check according
  * to the real UID and GID of the process, not its effective UID and GID.
@@ -276,7 +309,14 @@ bool BLI_file_is_writable(const char *filepath) ATTR_WARN_UNUSED_RESULT ATTR_NON
  * Creates the file with nothing in it, or updates its last-modified date if it already exists.
  * Returns true if successful (like the unix touch command).
  */
-bool BLI_file_touch(const char *file) ATTR_NONNULL();
+bool BLI_file_touch(const char *filepath) ATTR_NONNULL(1);
+/**
+ * Ensures that the parent directory of `filepath` exists.
+ *
+ * \return true on success (i.e. given path now exists on file-system), false otherwise.
+ */
+bool BLI_file_ensure_parent_dir_exists(const char *filepath) ATTR_NONNULL(1);
+
 bool BLI_file_alias_target(const char *filepath, char *r_targetpath) ATTR_WARN_UNUSED_RESULT;
 
 bool BLI_file_magic_is_gzip(const char header[4]);
@@ -291,11 +331,11 @@ size_t BLI_file_unzstd_to_mem_at_pos(void *buf, size_t len, FILE *file, size_t f
 bool BLI_file_magic_is_zstd(const char header[4]);
 
 /**
- * Returns the file size of an opened file descriptor.
+ * Returns the file size of an opened file descriptor or `size_t(-1)` on failure.
  */
 size_t BLI_file_descriptor_size(int file) ATTR_WARN_UNUSED_RESULT;
 /**
- * Returns the size of a file.
+ * Returns the size of a file or `size_t(-1)` on failure..
  */
 size_t BLI_file_size(const char *path) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
 

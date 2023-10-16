@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
@@ -7,8 +8,8 @@
 
 #include "node_shader_util.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 /* **************** BUMP ******************** */
 
@@ -16,24 +17,20 @@ namespace blender::nodes::node_shader_bump_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Float>(N_("Strength"))
+  b.add_input<decl::Float>("Strength")
       .default_value(1.0f)
       .min(0.0f)
       .max(1.0f)
       .subtype(PROP_FACTOR);
-  b.add_input<decl::Float>(N_("Distance")).default_value(1.0f).min(0.0f).max(1000.0f);
-  b.add_input<decl::Float>(N_("Height"))
-      .default_value(1.0f)
-      .min(-1000.0f)
-      .max(1000.0f)
-      .hide_value();
-  b.add_input<decl::Vector>(N_("Normal")).min(-1.0f).max(1.0f).hide_value();
-  b.add_output<decl::Vector>(N_("Normal"));
+  b.add_input<decl::Float>("Distance").default_value(1.0f).min(0.0f).max(1000.0f);
+  b.add_input<decl::Float>("Height").default_value(1.0f).min(-1000.0f).max(1000.0f).hide_value();
+  b.add_input<decl::Vector>("Normal").min(-1.0f).max(1.0f).hide_value();
+  b.add_output<decl::Vector>("Normal");
 }
 
 static void node_shader_buts_bump(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
-  uiItemR(layout, ptr, "invert", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, 0);
+  uiItemR(layout, ptr, "invert", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, ICON_NONE);
 }
 
 static int gpu_shader_bump(GPUMaterial *mat,
@@ -74,6 +71,34 @@ static int gpu_shader_bump(GPUMaterial *mat,
   return GPU_stack_link(mat, node, "node_bump", in, out, dheight, GPU_constant(&invert));
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  NodeItem height = get_input_link("Height", NodeItem::Type::Float);
+  NodeItem normal = get_input_link("Normal", NodeItem::Type::Vector3);
+
+  if (!height) {
+    if (!normal) {
+      return create_node(
+          "normal", NodeItem::Type::Vector3, {{"space", val(std::string("world"))}});
+    }
+    return normal;
+  }
+
+  NodeItem strength = get_input_value("Strength", NodeItem::Type::Float);
+  NodeItem distance = get_input_value("Distance", NodeItem::Type::Float);
+  NodeItem height_normal = create_node(
+      "heighttonormal", NodeItem::Type::Vector3, {{"in", height}, {"scale", strength}});
+
+  return create_node("normalmap",
+                     NodeItem::Type::Vector3,
+                     {{"in", height_normal},
+                      {"scale", node_->custom1 ? distance * val(-1.0f) : distance},
+                      {"normal", normal}});
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_bump_cc
 
 /* node type definition */
@@ -87,6 +112,7 @@ void register_node_type_sh_bump()
   ntype.declare = file_ns::node_declare;
   ntype.draw_buttons = file_ns::node_shader_buts_bump;
   ntype.gpu_fn = file_ns::gpu_shader_bump;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

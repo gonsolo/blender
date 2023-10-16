@@ -1,9 +1,14 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
  */
+
+#include <sstream>
+
+#include "GPU_capabilities.h"
 
 #include "vk_shader.hh"
 
@@ -331,7 +336,7 @@ static void print_resource(std::ostream &os,
                            const VKDescriptorSet::Location location,
                            const ShaderCreateInfo::Resource &res)
 {
-  os << "layout(binding = " << static_cast<uint32_t>(location);
+  os << "layout(binding = " << uint32_t(location);
   if (res.bind_type == ShaderCreateInfo::Resource::BindType::IMAGE) {
     os << ", " << to_string(res.image.format);
   }
@@ -396,6 +401,40 @@ inline int get_location_count(const Type &type)
   return 1;
 }
 
+static void print_interface_as_attributes(std::ostream &os,
+                                          const std::string &prefix,
+                                          const StageInterfaceInfo &iface,
+                                          int &location)
+{
+  for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
+    os << "layout(location=" << location << ") " << prefix << " " << to_string(inout.interp) << " "
+       << to_string(inout.type) << " " << inout.name << ";\n";
+    location += get_location_count(inout.type);
+  }
+}
+
+static void print_interface_as_struct(std::ostream &os,
+                                      const std::string &prefix,
+                                      const StageInterfaceInfo &iface,
+                                      int &location,
+                                      const StringRefNull &suffix)
+{
+  std::string struct_name = prefix + iface.name;
+  Interpolation qualifier = iface.inouts[0].interp;
+
+  os << "struct " << struct_name << " {\n";
+  for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
+    os << "  " << to_string(inout.type) << " " << inout.name << ";\n";
+  }
+  os << "};\n";
+  os << "layout(location=" << location << ") " << prefix << " " << to_string(qualifier) << " "
+     << struct_name << " " << iface.instance_name << suffix << ";\n";
+
+  for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
+    location += get_location_count(inout.type);
+  }
+}
+
 static void print_interface(std::ostream &os,
                             const std::string &prefix,
                             const StageInterfaceInfo &iface,
@@ -403,44 +442,10 @@ static void print_interface(std::ostream &os,
                             const StringRefNull &suffix = "")
 {
   if (iface.instance_name.is_empty()) {
-    for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
-      os << "layout(location=" << location << ") " << prefix << " " << to_string(inout.interp)
-         << " " << to_string(inout.type) << " " << inout.name << ";\n";
-      location += get_location_count(inout.type);
-    }
+    print_interface_as_attributes(os, prefix, iface, location);
   }
   else {
-    std::string struct_name = prefix + iface.name;
-    std::string iface_attribute;
-    if (iface.instance_name.is_empty()) {
-      iface_attribute = "iface_";
-    }
-    else {
-      iface_attribute = iface.instance_name;
-    }
-    std::string flat = "";
-    if (prefix == "in") {
-      flat = "flat ";
-    }
-    const bool add_defines = iface.instance_name.is_empty();
-
-    os << "struct " << struct_name << " {\n";
-    for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
-      os << "  " << to_string(inout.type) << " " << inout.name << ";\n";
-    }
-    os << "};\n";
-    os << "layout(location=" << location << ") " << prefix << " " << flat << struct_name << " "
-       << iface_attribute << suffix << ";\n";
-
-    if (add_defines) {
-      for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
-        os << "#define " << inout.name << " (" << iface_attribute << "." << inout.name << ")\n";
-      }
-    }
-
-    for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
-      location += get_location_count(inout.type);
-    }
+    print_interface_as_struct(os, prefix, iface, location, suffix);
   }
 }
 
@@ -489,15 +494,31 @@ static char *glsl_patch_get()
     return patch;
   }
 
+  const VKWorkarounds &workarounds = VKBackend::get().device_get().workarounds_get();
+
   size_t slen = 0;
   /* Version need to go first. */
   STR_CONCAT(patch, slen, "#version 450\n");
+
+  if (GPU_shader_draw_parameters_support()) {
+    STR_CONCAT(patch, slen, "#extension GL_ARB_shader_draw_parameters : enable\n");
+    STR_CONCAT(patch, slen, "#define GPU_ARB_shader_draw_parameters\n");
+    STR_CONCAT(patch, slen, "#define gpu_BaseInstance (gl_BaseInstanceARB)\n");
+  }
+
   STR_CONCAT(patch, slen, "#define gl_VertexID gl_VertexIndex\n");
-  STR_CONCAT(patch, slen, "#define gpu_BaseInstance (0)\n");
   STR_CONCAT(patch, slen, "#define gpu_InstanceIndex (gl_InstanceIndex)\n");
   STR_CONCAT(patch, slen, "#define GPU_ARB_texture_cube_map_array\n");
+  STR_CONCAT(patch, slen, "#define gl_InstanceID (gpu_InstanceIndex - gpu_BaseInstance)\n");
 
-  STR_CONCAT(patch, slen, "#define gl_InstanceID gpu_InstanceIndex\n");
+  /* TODO(fclem): This creates a validation error and should be already part of Vulkan 1.2. */
+  STR_CONCAT(patch, slen, "#extension GL_ARB_shader_viewport_layer_array: enable\n");
+  if (!workarounds.shader_output_layer) {
+    STR_CONCAT(patch, slen, "#define gpu_Layer gl_Layer\n");
+  }
+  if (!workarounds.shader_output_viewport_index) {
+    STR_CONCAT(patch, slen, "#define gpu_ViewportIndex gl_ViewportIndex\n");
+  }
 
   STR_CONCAT(patch, slen, "#define DFDX_SIGN 1.0\n");
   STR_CONCAT(patch, slen, "#define DFDY_SIGN 1.0\n");
@@ -525,6 +546,7 @@ Vector<uint32_t> VKShader::compile_glsl_to_spirv(Span<const char *> sources,
   shaderc::Compiler &compiler = backend.get_shaderc_compiler();
   shaderc::CompileOptions options;
   options.SetOptimizationLevel(shaderc_optimization_level_performance);
+  options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
   if (G.debug & G_DEBUG_GPU_RENDERDOC) {
     options.SetOptimizationLevel(shaderc_optimization_level_zero);
     options.SetGenerateDebugInfo();
@@ -561,11 +583,13 @@ void VKShader::build_shader_module(Span<uint32_t> spirv_module, VkShaderModule *
   create_info.codeSize = spirv_module.size() * sizeof(uint32_t);
   create_info.pCode = spirv_module.data();
 
-  VKContext &context = *static_cast<VKContext *>(VKContext::get());
-
+  const VKDevice &device = VKBackend::get().device_get();
   VkResult result = vkCreateShaderModule(
-      context.device_get(), &create_info, vk_allocation_callbacks, r_shader_module);
-  if (result != VK_SUCCESS) {
+      device.device_get(), &create_info, vk_allocation_callbacks, r_shader_module);
+  if (result == VK_SUCCESS) {
+    debug::object_label(*r_shader_module, name);
+  }
+  else {
     compilation_failed_ = true;
     *r_shader_module = VK_NULL_HANDLE;
   }
@@ -579,30 +603,29 @@ VKShader::VKShader(const char *name) : Shader(name)
 VKShader::~VKShader()
 {
   VK_ALLOCATION_CALLBACKS
-
-  VkDevice device = context_->device_get();
+  const VKDevice &device = VKBackend::get().device_get();
   if (vertex_module_ != VK_NULL_HANDLE) {
-    vkDestroyShaderModule(device, vertex_module_, vk_allocation_callbacks);
+    vkDestroyShaderModule(device.device_get(), vertex_module_, vk_allocation_callbacks);
     vertex_module_ = VK_NULL_HANDLE;
   }
   if (geometry_module_ != VK_NULL_HANDLE) {
-    vkDestroyShaderModule(device, geometry_module_, vk_allocation_callbacks);
+    vkDestroyShaderModule(device.device_get(), geometry_module_, vk_allocation_callbacks);
     geometry_module_ = VK_NULL_HANDLE;
   }
   if (fragment_module_ != VK_NULL_HANDLE) {
-    vkDestroyShaderModule(device, fragment_module_, vk_allocation_callbacks);
+    vkDestroyShaderModule(device.device_get(), fragment_module_, vk_allocation_callbacks);
     fragment_module_ = VK_NULL_HANDLE;
   }
   if (compute_module_ != VK_NULL_HANDLE) {
-    vkDestroyShaderModule(device, compute_module_, vk_allocation_callbacks);
+    vkDestroyShaderModule(device.device_get(), compute_module_, vk_allocation_callbacks);
     compute_module_ = VK_NULL_HANDLE;
   }
   if (pipeline_layout_ != VK_NULL_HANDLE) {
-    vkDestroyPipelineLayout(device, pipeline_layout_, vk_allocation_callbacks);
+    vkDestroyPipelineLayout(device.device_get(), pipeline_layout_, vk_allocation_callbacks);
     pipeline_layout_ = VK_NULL_HANDLE;
   }
   if (layout_ != VK_NULL_HANDLE) {
-    vkDestroyDescriptorSetLayout(device, layout_, vk_allocation_callbacks);
+    vkDestroyDescriptorSetLayout(device.device_get(), layout_, vk_allocation_callbacks);
     layout_ = VK_NULL_HANDLE;
   }
 }
@@ -642,7 +665,10 @@ void VKShader::compute_shader_from_glsl(MutableSpan<const char *> sources)
   build_shader_module(sources, shaderc_compute_shader, &compute_module_);
 }
 
-void VKShader::warm_cache(int /*limit*/) {}
+void VKShader::warm_cache(int /*limit*/)
+{
+  NOT_YET_IMPLEMENTED
+}
 
 bool VKShader::finalize(const shader::ShaderCreateInfo *info)
 {
@@ -650,14 +676,22 @@ bool VKShader::finalize(const shader::ShaderCreateInfo *info)
     return false;
   }
 
+  if (do_geometry_shader_injection(info)) {
+    std::string source = workaround_geometry_shader_source_create(*info);
+    Vector<const char *> sources;
+    sources.append("version");
+    sources.append(source.c_str());
+    geometry_shader_from_glsl(sources);
+  }
+
   VKShaderInterface *vk_interface = new VKShaderInterface();
   vk_interface->init(*info);
 
-  VkDevice vk_device = context_->device_get();
-  if (!finalize_descriptor_set_layouts(vk_device, *vk_interface, *info)) {
+  const VKDevice &device = VKBackend::get().device_get();
+  if (!finalize_descriptor_set_layouts(device.device_get(), *vk_interface, *info)) {
     return false;
   }
-  if (!finalize_pipeline_layout(vk_device, *vk_interface)) {
+  if (!finalize_pipeline_layout(device.device_get(), *vk_interface)) {
     return false;
   }
 
@@ -668,20 +702,18 @@ bool VKShader::finalize(const shader::ShaderCreateInfo *info)
     BLI_assert((fragment_module_ != VK_NULL_HANDLE && info->tf_type_ == GPU_SHADER_TFB_NONE) ||
                (fragment_module_ == VK_NULL_HANDLE && info->tf_type_ != GPU_SHADER_TFB_NONE));
     BLI_assert(compute_module_ == VK_NULL_HANDLE);
-    result = finalize_graphics_pipeline(vk_device);
+    pipeline_ = VKPipeline::create_graphics_pipeline(layout_,
+                                                     vk_interface->push_constants_layout_get());
+    result = true;
   }
   else {
     BLI_assert(vertex_module_ == VK_NULL_HANDLE);
     BLI_assert(geometry_module_ == VK_NULL_HANDLE);
     BLI_assert(fragment_module_ == VK_NULL_HANDLE);
     BLI_assert(compute_module_ != VK_NULL_HANDLE);
-    compute_pipeline_ = VKPipeline::create_compute_pipeline(
-        *context_,
-        compute_module_,
-        layout_,
-        pipeline_layout_,
-        vk_interface->push_constants_layout_get());
-    result = compute_pipeline_.is_valid();
+    pipeline_ = VKPipeline::create_compute_pipeline(
+        compute_module_, layout_, pipeline_layout_, vk_interface->push_constants_layout_get());
+    result = pipeline_.is_valid();
   }
 
   if (result) {
@@ -691,36 +723,6 @@ bool VKShader::finalize(const shader::ShaderCreateInfo *info)
     delete vk_interface;
   }
   return result;
-}
-
-bool VKShader::finalize_graphics_pipeline(VkDevice /*vk_device */)
-{
-  Vector<VkPipelineShaderStageCreateInfo> pipeline_stages;
-  VkPipelineShaderStageCreateInfo vertex_stage_info = {};
-  vertex_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vertex_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vertex_stage_info.module = vertex_module_;
-  vertex_stage_info.pName = "main";
-  pipeline_stages.append(vertex_stage_info);
-
-  if (geometry_module_ != VK_NULL_HANDLE) {
-    VkPipelineShaderStageCreateInfo geo_stage_info = {};
-    geo_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    geo_stage_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-    geo_stage_info.module = geometry_module_;
-    geo_stage_info.pName = "main";
-    pipeline_stages.append(geo_stage_info);
-  }
-  if (fragment_module_ != VK_NULL_HANDLE) {
-    VkPipelineShaderStageCreateInfo fragment_stage_info = {};
-    fragment_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragment_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragment_stage_info.module = fragment_module_;
-    fragment_stage_info.pName = "main";
-    pipeline_stages.append(fragment_stage_info);
-  }
-
-  return true;
 }
 
 bool VKShader::finalize_pipeline_layout(VkDevice vk_device,
@@ -748,7 +750,8 @@ bool VKShader::finalize_pipeline_layout(VkDevice vk_device,
   }
 
   if (vkCreatePipelineLayout(
-          vk_device, &pipeline_info, vk_allocation_callbacks, &pipeline_layout_) != VK_SUCCESS) {
+          vk_device, &pipeline_info, vk_allocation_callbacks, &pipeline_layout_) != VK_SUCCESS)
+  {
     return false;
   };
 
@@ -942,9 +945,11 @@ bool VKShader::finalize_descriptor_set_layouts(VkDevice vk_device,
   VkDescriptorSetLayoutCreateInfo layout_info = create_descriptor_set_layout(
       shader_interface, all_resources, bindings);
   if (vkCreateDescriptorSetLayout(vk_device, &layout_info, vk_allocation_callbacks, &layout_) !=
-      VK_SUCCESS) {
+      VK_SUCCESS)
+  {
     return false;
   };
+  debug::object_label(layout_, name_get());
 
   return true;
 }
@@ -952,44 +957,52 @@ bool VKShader::finalize_descriptor_set_layouts(VkDevice vk_device,
 void VKShader::transform_feedback_names_set(Span<const char *> /*name_list*/,
                                             eGPUShaderTFBType /*geom_type*/)
 {
+  NOT_YET_IMPLEMENTED
 }
 
 bool VKShader::transform_feedback_enable(GPUVertBuf *)
 {
+  NOT_YET_IMPLEMENTED
   return false;
 }
 
-void VKShader::transform_feedback_disable() {}
+void VKShader::transform_feedback_disable()
+{
+  NOT_YET_IMPLEMENTED
+}
+
+void VKShader::update_graphics_pipeline(VKContext &context,
+                                        const GPUPrimType prim_type,
+                                        const VKVertexAttributeObject &vertex_attribute_object)
+{
+  BLI_assert(is_graphics_shader());
+  pipeline_get().finalize(context,
+                          vertex_module_,
+                          geometry_module_,
+                          fragment_module_,
+                          pipeline_layout_,
+                          prim_type,
+                          vertex_attribute_object);
+}
 
 void VKShader::bind()
 {
-  VKContext *context = VKContext::get();
-
-  if (is_compute_shader()) {
-    context->command_buffer_get().bind(compute_pipeline_, VK_PIPELINE_BIND_POINT_COMPUTE);
-  }
-  else {
-    BLI_assert_unreachable();
-  }
+  /* Intentionally empty. Binding of the pipeline are done just before drawing/dispatching.
+   * See #VKPipeline.update_and_bind */
 }
 
-void VKShader::unbind()
-{
-  if (is_compute_shader()) {
-  }
-  else {
-    BLI_assert_unreachable();
-  }
-}
+void VKShader::unbind() {}
 
 void VKShader::uniform_float(int location, int comp_len, int array_size, const float *data)
 {
-  pipeline_get().push_constants_get().push_constant_set(location, comp_len, array_size, data);
+  VKPushConstants &push_constants = pipeline_get().push_constants_get();
+  push_constants.push_constant_set(location, comp_len, array_size, data);
 }
 
 void VKShader::uniform_int(int location, int comp_len, int array_size, const int *data)
 {
-  pipeline_get().push_constants_get().push_constant_set(location, comp_len, array_size, data);
+  VKPushConstants &push_constants = pipeline_get().push_constants_get();
+  push_constants.push_constant_set(location, comp_len, array_size, data);
 }
 
 std::string VKShader::resources_declare(const shader::ShaderCreateInfo &info) const
@@ -1015,7 +1028,7 @@ std::string VKShader::resources_declare(const shader::ShaderCreateInfo &info) co
   if (push_constants_storage != VKPushConstants::StorageType::NONE) {
     ss << "\n/* Push Constants. */\n";
     if (push_constants_storage == VKPushConstants::StorageType::PUSH_CONSTANTS) {
-      ss << "layout(push_constant) uniform constants\n";
+      ss << "layout(push_constant, std430) uniform constants\n";
     }
     else if (push_constants_storage == VKPushConstants::StorageType::UNIFORM_BUFFER) {
       ss << "layout(binding = " << push_constants_layout.descriptor_set_location_get()
@@ -1043,6 +1056,7 @@ std::string VKShader::vertex_interface_declare(const shader::ShaderCreateInfo &i
 {
   std::stringstream ss;
   std::string post_main;
+  const VKWorkarounds &workarounds = VKBackend::get().device_get().workarounds_get();
 
   ss << "\n/* Inputs. */\n";
   for (const ShaderCreateInfo::VertIn &attr : info.vertex_inputs_) {
@@ -1053,6 +1067,13 @@ std::string VKShader::vertex_interface_declare(const shader::ShaderCreateInfo &i
   int location = 0;
   for (const StageInterfaceInfo *iface : info.vertex_out_interfaces_) {
     print_interface(ss, "out", *iface, location);
+  }
+  if (workarounds.shader_output_layer && bool(info.builtins_ & BuiltinBits::LAYER)) {
+    ss << "layout(location=" << (location++) << ") out int gpu_Layer;\n ";
+  }
+  if (workarounds.shader_output_viewport_index &&
+      bool(info.builtins_ & BuiltinBits::VIEWPORT_INDEX)) {
+    ss << "layout(location=" << (location++) << ") out int gpu_ViewportIndex;\n";
   }
   if (bool(info.builtins_ & BuiltinBits::BARYCENTRIC_COORD)) {
     /* Need this for stable barycentric. */
@@ -1074,6 +1095,7 @@ std::string VKShader::fragment_interface_declare(const shader::ShaderCreateInfo 
 {
   std::stringstream ss;
   std::string pre_main;
+  const VKWorkarounds &workarounds = VKBackend::get().device_get().workarounds_get();
 
   ss << "\n/* Interfaces. */\n";
   const Vector<StageInterfaceInfo *> &in_interfaces = info.geometry_source_.is_empty() ?
@@ -1083,6 +1105,14 @@ std::string VKShader::fragment_interface_declare(const shader::ShaderCreateInfo 
   for (const StageInterfaceInfo *iface : in_interfaces) {
     print_interface(ss, "in", *iface, location);
   }
+  if (workarounds.shader_output_layer && bool(info.builtins_ & BuiltinBits::LAYER)) {
+    ss << "#define gpu_Layer gl_Layer\n";
+  }
+  if (workarounds.shader_output_viewport_index &&
+      bool(info.builtins_ & BuiltinBits::VIEWPORT_INDEX)) {
+    ss << "#define gpu_ViewportIndex gl_ViewportIndex\n";
+  }
+
   if (bool(info.builtins_ & BuiltinBits::BARYCENTRIC_COORD)) {
     std::cout << "native" << std::endl;
     /* NOTE(fclem): This won't work with geometry shader. Hopefully, we don't need geometry
@@ -1114,6 +1144,19 @@ std::string VKShader::fragment_interface_declare(const shader::ShaderCreateInfo 
     ss << "layout(early_fragment_tests) in;\n";
   }
   ss << "layout(" << to_string(info.depth_write_) << ") out float gl_FragDepth;\n";
+
+  ss << "\n/* Sub-pass Inputs. */\n";
+  for (const ShaderCreateInfo::SubpassIn &input : info.subpass_inputs_) {
+    /* Declare global for input. */
+    ss << to_string(input.type) << " " << input.name << ";\n";
+
+    std::stringstream ss_pre;
+    /* Populate the global before main. */
+    ss_pre << "  " << input.name << " = " << to_string(input.type) << "(0);\n";
+
+    pre_main += ss_pre.str();
+  }
+
   ss << "\n/* Outputs. */\n";
   for (const ShaderCreateInfo::FragOut &output : info.fragment_outputs_) {
     ss << "layout(location = " << output.index;
@@ -1183,6 +1226,7 @@ std::string VKShader::geometry_layout_declare(const shader::ShaderCreateInfo &in
   }
   ss << "\n";
 
+  location = 0;
   for (const StageInterfaceInfo *iface : info.geometry_out_interfaces_) {
     bool has_matching_input_iface = find_interface_by_name(info.vertex_out_interfaces_,
                                                            iface->instance_name) != nullptr;
@@ -1210,6 +1254,102 @@ std::string VKShader::compute_layout_declare(const shader::ShaderCreateInfo &inf
   return ss.str();
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Passthrough geometry shader emulation
+ *
+ * \{ */
+
+std::string VKShader::workaround_geometry_shader_source_create(
+    const shader::ShaderCreateInfo &info)
+{
+  std::stringstream ss;
+  const VKWorkarounds &workarounds = VKBackend::get().device_get().workarounds_get();
+
+  const bool do_layer_workaround = workarounds.shader_output_layer &&
+                                   bool(info.builtins_ & BuiltinBits::LAYER);
+  const bool do_viewport_workaround = workarounds.shader_output_viewport_index &&
+                                      bool(info.builtins_ & BuiltinBits::VIEWPORT_INDEX);
+  const bool do_barycentric_workaround = bool(info.builtins_ & BuiltinBits::BARYCENTRIC_COORD);
+
+  shader::ShaderCreateInfo info_modified = info;
+  info_modified.geometry_out_interfaces_ = info_modified.vertex_out_interfaces_;
+  /**
+   * NOTE(@fclem): Assuming we will render TRIANGLES. This will not work with other primitive
+   * types. In this case, it might not trigger an error on some implementations.
+   */
+  info_modified.geometry_layout(PrimitiveIn::TRIANGLES, PrimitiveOut::TRIANGLE_STRIP, 3);
+
+  ss << geometry_layout_declare(info_modified);
+  ss << geometry_interface_declare(info_modified);
+  int location = 0;
+  for (const StageInterfaceInfo *iface : info.vertex_out_interfaces_) {
+    for (const StageInterfaceInfo::InOut &inout : iface->inouts) {
+      location += get_location_count(inout.type);
+    }
+  }
+
+  if (do_layer_workaround) {
+    ss << "layout(location=" << (location++) << ") in int gpu_Layer[];\n";
+  }
+  if (do_viewport_workaround) {
+    ss << "layout(location=" << (location++) << ") in int gpu_ViewportIndex[];\n";
+  }
+  if (do_barycentric_workaround) {
+    ss << "flat out vec4 gpu_pos[3];\n";
+    ss << "smooth out vec3 gpu_BaryCoord;\n";
+    ss << "noperspective out vec3 gpu_BaryCoordNoPersp;\n";
+  }
+  ss << "\n";
+
+  ss << "void main()\n";
+  ss << "{\n";
+  if (do_layer_workaround) {
+    ss << "  gl_Layer = gpu_Layer[0];\n";
+  }
+  if (do_viewport_workaround) {
+    ss << "  gl_ViewportIndex = gpu_ViewportIndex[0];\n";
+  }
+  if (do_barycentric_workaround) {
+    ss << "  gpu_pos[0] = gl_in[0].gl_Position;\n";
+    ss << "  gpu_pos[1] = gl_in[1].gl_Position;\n";
+    ss << "  gpu_pos[2] = gl_in[2].gl_Position;\n";
+  }
+  for (auto i : IndexRange(3)) {
+    for (StageInterfaceInfo *iface : info_modified.vertex_out_interfaces_) {
+      for (auto &inout : iface->inouts) {
+        ss << "  " << iface->instance_name << "_out." << inout.name;
+        ss << " = " << iface->instance_name << "_in[" << i << "]." << inout.name << ";\n";
+      }
+    }
+    if (do_barycentric_workaround) {
+      ss << "  gpu_BaryCoordNoPersp = gpu_BaryCoord =";
+      ss << " vec3(" << int(i == 0) << ", " << int(i == 1) << ", " << int(i == 2) << ");\n";
+    }
+    ss << "  gl_Position = gl_in[" << i << "].gl_Position;\n";
+    ss << "  EmitVertex();\n";
+  }
+  ss << "}\n";
+  return ss.str();
+}
+
+bool VKShader::do_geometry_shader_injection(const shader::ShaderCreateInfo *info)
+{
+  const VKWorkarounds &workarounds = VKBackend::get().device_get().workarounds_get();
+  BuiltinBits builtins = info->builtins_;
+  if (bool(builtins & BuiltinBits::BARYCENTRIC_COORD)) {
+    return true;
+  }
+  if (workarounds.shader_output_layer && bool(builtins & BuiltinBits::LAYER)) {
+    return true;
+  }
+  if (workarounds.shader_output_viewport_index && bool(builtins & BuiltinBits::VIEWPORT_INDEX)) {
+    return true;
+  }
+  return false;
+}
+
+/** \} */
+
 int VKShader::program_handle_get() const
 {
   return -1;
@@ -1217,7 +1357,7 @@ int VKShader::program_handle_get() const
 
 VKPipeline &VKShader::pipeline_get()
 {
-  return compute_pipeline_;
+  return pipeline_;
 }
 
 const VKShaderInterface &VKShader::interface_get() const

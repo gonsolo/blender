@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2009 by Nicholas Bishop. All rights reserved. */
+/* SPDX-FileCopyrightText: 2009 by Nicholas Bishop. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edsculpt
@@ -11,7 +12,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_listbase.h"
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
 #include "BLI_rand.h"
 #include "BLI_utildefines.h"
 
@@ -22,27 +23,27 @@
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
-#include "BKE_brush.h"
+#include "BKE_brush.hh"
 #include "BKE_colortools.h"
 #include "BKE_context.h"
 #include "BKE_curve.h"
 #include "BKE_image.h"
-#include "BKE_paint.h"
+#include "BKE_paint.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 #include "GPU_immediate.h"
 #include "GPU_state.h"
 
-#include "ED_screen.h"
-#include "ED_view3d.h"
+#include "ED_screen.hh"
+#include "ED_view3d.hh"
 
 #include "IMB_imbuf_types.h"
 
-#include "paint_intern.h"
+#include "paint_intern.hh"
 #include "sculpt_intern.hh"
 
 //#define DEBUG_TIME
@@ -220,7 +221,8 @@ static bool paint_tool_require_location(Brush *brush, ePaintMode mode)
                SCULPT_TOOL_BOUNDARY,
                SCULPT_TOOL_ROTATE,
                SCULPT_TOOL_SNAKE_HOOK,
-               SCULPT_TOOL_THUMB)) {
+               SCULPT_TOOL_THUMB))
+      {
         return false;
       }
       else if (SCULPT_is_cloth_deform_brush(brush)) {
@@ -268,7 +270,8 @@ static bool paint_tool_require_inbetween_mouse_events(Brush *brush, ePaintMode m
                SCULPT_TOOL_ELASTIC_DEFORM,
                SCULPT_TOOL_CLOTH,
                SCULPT_TOOL_BOUNDARY,
-               SCULPT_TOOL_POSE)) {
+               SCULPT_TOOL_POSE))
+      {
         return false;
       }
       else {
@@ -322,9 +325,9 @@ static bool paint_brush_update(bContext *C,
     if (brush->mtex.tex && brush->mtex.tex->type == TEX_IMAGE && brush->mtex.tex->ima) {
       ImBuf *tex_ibuf = BKE_image_pool_acquire_ibuf(
           brush->mtex.tex->ima, &brush->mtex.tex->iuser, nullptr);
-      if (tex_ibuf && tex_ibuf->rect_float == nullptr) {
+      if (tex_ibuf && tex_ibuf->float_buffer.data == nullptr) {
         ups->do_linear_conversion = true;
-        ups->colorspace = tex_ibuf->rect_colorspace;
+        ups->colorspace = tex_ibuf->byte_buffer.colorspace;
       }
       BKE_image_pool_release_ibuf(brush->mtex.tex->ima, tex_ibuf, nullptr);
     }
@@ -372,7 +375,8 @@ static bool paint_brush_update(bContext *C,
       if (ELEM(brush->mask_mtex.brush_map_mode,
                MTEX_MAP_MODE_VIEW,
                MTEX_MAP_MODE_AREA,
-               MTEX_MAP_MODE_RANDOM)) {
+               MTEX_MAP_MODE_RANDOM))
+      {
         do_random_mask = true;
       }
 
@@ -440,7 +444,7 @@ static bool paint_brush_update(bContext *C,
     }
     /* curve strokes do their own rake calculation */
     else if (!(brush->flag & BRUSH_CURVE)) {
-      if (!paint_calculate_rake_rotation(ups, brush, mouse_init, mode)) {
+      if (!paint_calculate_rake_rotation(ups, brush, mouse_init, mode, stroke->rake_started)) {
         /* Not enough motion to define an angle. */
         if (!stroke->rake_started) {
           is_dry_run = true;
@@ -534,8 +538,8 @@ static void paint_brush_stroke_add_step(
    * windows for some tablets, then we just skip first touch. */
   if (tablet && (pressure >= 0.99f) &&
       ((pop->s.brush->flag & BRUSH_SPACING_PRESSURE) ||
-       BKE_brush_use_alpha_pressure(pop->s.brush) ||
-       BKE_brush_use_size_pressure(pop->s.brush))) {
+       BKE_brush_use_alpha_pressure(pop->s.brush) || BKE_brush_use_size_pressure(pop->s.brush)))
+  {
     return;
   }
 
@@ -547,8 +551,8 @@ static void paint_brush_stroke_add_step(
    * which is the sensitivity of the most sensitive pen tablet available */
   if (tablet && (pressure < 0.0002f) &&
       ((pop->s.brush->flag & BRUSH_SPACING_PRESSURE) ||
-       BKE_brush_use_alpha_pressure(pop->s.brush) ||
-       BKE_brush_use_size_pressure(pop->s.brush))) {
+       BKE_brush_use_alpha_pressure(pop->s.brush) || BKE_brush_use_size_pressure(pop->s.brush)))
+  {
     return;
   }
 #endif
@@ -562,7 +566,8 @@ static void paint_brush_stroke_add_step(
     float world_space_position[3];
 
     if (SCULPT_stroke_get_location(
-            C, world_space_position, stroke->last_mouse_position, stroke->original)) {
+            C, world_space_position, stroke->last_mouse_position, stroke->original))
+    {
       copy_v3_v3(stroke->last_world_space_position, world_space_position);
       mul_m4_v3(stroke->vc.obact->object_to_world, stroke->last_world_space_position);
     }
@@ -979,7 +984,7 @@ void paint_stroke_free(bContext *C, wmOperator * /*op*/, PaintStroke *stroke)
   ups->stroke_active = false;
 
   if (stroke->timer) {
-    WM_event_remove_timer(CTX_wm_manager(C), CTX_wm_window(C), stroke->timer);
+    WM_event_timer_remove(CTX_wm_manager(C), CTX_wm_window(C), stroke->timer);
   }
 
   if (stroke->rng) {
@@ -1041,7 +1046,13 @@ bool paint_space_stroke_enabled(Brush *br, ePaintMode mode)
   }
 
   if (mode == PAINT_MODE_SCULPT_CURVES &&
-      !curves_sculpt_brush_uses_spacing(eBrushCurvesSculptTool(br->curves_sculpt_tool))) {
+      !curves_sculpt_brush_uses_spacing(eBrushCurvesSculptTool(br->curves_sculpt_tool)))
+  {
+    return false;
+  }
+
+  if (mode == PAINT_MODE_GPENCIL) {
+    /* No spacing needed for now. */
     return false;
   }
 
@@ -1093,7 +1104,8 @@ bool paint_supports_dynamic_size(Brush *br, ePaintMode mode)
 bool paint_supports_smooth_stroke(Brush *br, ePaintMode mode)
 {
   if (!(br->flag & BRUSH_SMOOTH_STROKE) ||
-      (br->flag & (BRUSH_ANCHORED | BRUSH_DRAG_DOT | BRUSH_LINE))) {
+      (br->flag & (BRUSH_ANCHORED | BRUSH_DRAG_DOT | BRUSH_LINE)))
+  {
     return false;
   }
 
@@ -1341,7 +1353,8 @@ static bool paint_stroke_curve_end(bContext *C, wmOperator *op, PaintStroke *str
       }
 
       if ((br->mtex.brush_angle_mode & MTEX_ANGLE_RAKE) ||
-          (br->mask_mtex.brush_angle_mode & MTEX_ANGLE_RAKE)) {
+          (br->mask_mtex.brush_angle_mode & MTEX_ANGLE_RAKE))
+      {
         do_rake = true;
         for (j = 0; j < 2; j++) {
           BKE_curve_forward_diff_tangent_bezier(pcp->bez.vec[1][j],
@@ -1502,11 +1515,10 @@ int paint_stroke_modal(bContext *C, wmOperator *op, const wmEvent *event, PaintS
       mul_m4_v3(stroke->vc.obact->object_to_world, stroke->last_world_space_position);
     }
     stroke->stroke_started = stroke->test_start(C, op, sample_average.mouse);
-    BLI_assert((stroke->stroke_started & ~1) == 0); /* 0/1 */
 
     if (stroke->stroke_started) {
       if (br->flag & BRUSH_AIRBRUSH) {
-        stroke->timer = WM_event_add_timer(
+        stroke->timer = WM_event_timer_add(
             CTX_wm_manager(C), CTX_wm_window(C), TIMER, stroke->brush->rate);
       }
 
@@ -1559,10 +1571,11 @@ int paint_stroke_modal(bContext *C, wmOperator *op, const wmEvent *event, PaintS
 
     if (stroke->stroke_started && (first_modal || ISMOUSE_MOTION(event->type))) {
       if ((br->mtex.brush_angle_mode & MTEX_ANGLE_RAKE) ||
-          (br->mask_mtex.brush_angle_mode & MTEX_ANGLE_RAKE)) {
+          (br->mask_mtex.brush_angle_mode & MTEX_ANGLE_RAKE))
+      {
         copy_v2_v2(stroke->ups->last_rake, stroke->last_mouse_position);
       }
-      paint_calculate_rake_rotation(stroke->ups, br, mouse, mode);
+      paint_calculate_rake_rotation(stroke->ups, br, mouse, mode, true);
     }
   }
   else if (first_modal ||
@@ -1570,7 +1583,8 @@ int paint_stroke_modal(bContext *C, wmOperator *op, const wmEvent *event, PaintS
            (!(br->flag & BRUSH_AIRBRUSH) && ISMOUSE_MOTION(event->type)) ||
            /* airbrush */
            ((br->flag & BRUSH_AIRBRUSH) && event->type == TIMER &&
-            event->customdata == stroke->timer)) {
+            event->customdata == stroke->timer))
+  {
     if (paint_smooth_stroke(stroke, &sample_average, mode, mouse, &pressure)) {
       if (stroke->stroke_started) {
         if (paint_space_stroke_enabled(br, mode)) {
@@ -1597,20 +1611,21 @@ int paint_stroke_modal(bContext *C, wmOperator *op, const wmEvent *event, PaintS
     redraw = true;
   }
 
-  /* do updates for redraw. if event is in between mouse-move there are more
-   * coming, so postpone potentially slow redraw updates until all are done */
+  /* Don't update the paint cursor in #INBETWEEN_MOUSEMOVE events. */
   if (event->type != INBETWEEN_MOUSEMOVE) {
     wmWindow *window = CTX_wm_window(C);
     ARegion *region = CTX_wm_region(C);
 
-    /* At the very least, invalidate the cursor */
     if (region && (p->flags & PAINT_SHOW_BRUSH)) {
       WM_paint_cursor_tag_redraw(window, region);
     }
+  }
 
-    if (redraw && stroke->redraw) {
-      stroke->redraw(C, stroke, false);
-    }
+  /* Draw for all events (even in between) otherwise updating the brush
+   * display is noticeably delayed.
+   */
+  if (redraw && stroke->redraw) {
+    stroke->redraw(C, stroke, false);
   }
 
   return OPERATOR_RUNNING_MODAL;
@@ -1695,7 +1710,8 @@ bool PAINT_brush_tool_poll(bContext *C)
 
   if (p && ob && BKE_paint_brush(p) &&
       (area && ELEM(area->spacetype, SPACE_VIEW3D, SPACE_IMAGE)) &&
-      (region && region->regiontype == RGN_TYPE_WINDOW)) {
+      (region && region->regiontype == RGN_TYPE_WINDOW))
+  {
     /* Check the current tool is a brush. */
     bToolRef *tref = area->runtime.tool;
     if (tref && tref->runtime && tref->runtime->data_block[0]) {

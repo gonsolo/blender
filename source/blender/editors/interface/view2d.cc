@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2008 Blender Foundation */
+/* SPDX-FileCopyrightText: 2008 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edinterface
@@ -15,11 +16,10 @@
 #include "DNA_scene_types.h"
 #include "DNA_userdef_types.h"
 
-#include "BLI_array.h"
 #include "BLI_easing.h"
 #include "BLI_link_utils.h"
 #include "BLI_listbase.h"
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
 #include "BLI_memarena.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -28,22 +28,23 @@
 
 #include "BKE_context.h"
 #include "BKE_global.h"
-#include "BKE_screen.h"
+#include "BKE_screen.hh"
 
 #include "GPU_immediate.h"
 #include "GPU_matrix.h"
 #include "GPU_state.h"
 
-#include "WM_api.h"
+#include "WM_api.hh"
 
 #include "BLF_api.h"
 
-#include "ED_screen.h"
+#include "ED_screen.hh"
 
-#include "UI_interface.h"
-#include "UI_view2d.h"
+#include "UI_interface.hh"
+#include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "view2d_intern.hh"
 
 static void ui_view2d_curRect_validate_resize(View2D *v2d, bool resize);
 
@@ -75,6 +76,11 @@ BLI_INLINE void clamp_rctf_to_rcti(rcti *dst, const rctf *src)
   dst->xmax = clamp_float_to_int(src->xmax);
   dst->ymin = clamp_float_to_int(src->ymin);
   dst->ymax = clamp_float_to_int(src->ymax);
+}
+
+float view2d_page_size_y(const View2D &v2d)
+{
+  return v2d.page_size_y ? v2d.page_size_y : BLI_rcti_size_y(&v2d.mask);
 }
 
 /* XXX still unresolved: scrolls hide/unhide vs region mask handling */
@@ -221,7 +227,7 @@ void UI_view2d_region_reinit(View2D *v2d, short type, int winx, int winy)
 
   do_init = (v2d->flag & V2D_IS_INIT) == 0;
 
-  /* see eView2D_CommonViewTypes in UI_view2d.h for available view presets */
+  /* see eView2D_CommonViewTypes in UI_view2d.hh for available view presets */
   switch (type) {
     /* 'standard view' - optimum setup for 'standard' view behavior,
      * that should be used new views as basis for their
@@ -368,7 +374,7 @@ void UI_view2d_region_reinit(View2D *v2d, short type, int winx, int winy)
   /* set 'tot' rect before setting cur? */
   /* XXX confusing stuff here still */
   if (tot_changed) {
-    UI_view2d_totRect_set_resize(v2d, winx, winy, !do_init);
+    view2d_totRect_set_resize(v2d, winx, winy, !do_init);
   }
   else {
     ui_view2d_curRect_validate_resize(v2d, !do_init);
@@ -531,7 +537,7 @@ static void ui_view2d_curRect_validate_resize(View2D *v2d, bool resize)
       }
     }
     do_cur = do_x;
-    /* do_win = do_y; */ /* UNUSED */
+    // do_win = do_y; /* UNUSED. */
 
     if (do_cur) {
       if ((v2d->keeptot == V2D_KEEPTOT_STRICT) && (winx != v2d->oldwinx)) {
@@ -548,9 +554,8 @@ static void ui_view2d_curRect_validate_resize(View2D *v2d, bool resize)
           cur->xmin -= temp;
           cur->xmax -= temp;
 
-          /* width does not get modified, as keepaspect here is just set to make
-           * sure visible area adjusts to changing view shape!
-           */
+          /* Width does not get modified, as keep-aspect here is just set to make
+           * sure visible area adjusts to changing view shape! */
         }
       }
       else {
@@ -841,6 +846,20 @@ void UI_view2d_curRect_changed(const bContext *C, View2D *v2d)
   }
 }
 
+void UI_view2d_curRect_clamp_y(View2D *v2d)
+{
+  const float cur_height_y = BLI_rctf_size_y(&v2d->cur);
+
+  if (BLI_rctf_size_y(&v2d->cur) > BLI_rctf_size_y(&v2d->tot)) {
+    v2d->cur.ymin = -cur_height_y;
+    v2d->cur.ymax = 0;
+  }
+  else if (v2d->cur.ymin < v2d->tot.ymin) {
+    v2d->cur.ymin = v2d->tot.ymin;
+    v2d->cur.ymax = v2d->cur.ymin + cur_height_y;
+  }
+}
+
 /* ------------------ */
 
 bool UI_view2d_area_supports_sync(ScrArea *area)
@@ -960,7 +979,7 @@ void UI_view2d_curRect_reset(View2D *v2d)
 
 /* ------------------ */
 
-void UI_view2d_totRect_set_resize(View2D *v2d, int width, int height, bool resize)
+void view2d_totRect_set_resize(View2D *v2d, int width, int height, bool resize)
 {
   /* don't do anything if either value is 0 */
   width = abs(width);
@@ -1021,10 +1040,10 @@ void UI_view2d_totRect_set_resize(View2D *v2d, int width, int height, bool resiz
 
 void UI_view2d_totRect_set(View2D *v2d, int width, int height)
 {
-  UI_view2d_totRect_set_resize(v2d, width, height, false);
+  view2d_totRect_set_resize(v2d, width, height, false);
 }
 
-void UI_view2d_zoom_cache_reset(void)
+void UI_view2d_zoom_cache_reset()
 {
   /* TODO(sergey): This way we avoid threading conflict with sequencer rendering
    * text strip. But ideally we want to make glyph cache to be fully safe
@@ -1284,11 +1303,10 @@ void UI_view2d_dot_grid_draw(const View2D *v2d,
 
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(format, "pos", GPU_COMP_F32, 2, GPU_FETCH_FLOAT);
-  const uint color_id = GPU_vertformat_attr_add(format, "color", GPU_COMP_F32, 4, GPU_FETCH_FLOAT);
-  immBindBuiltinProgram(GPU_SHADER_3D_FLAT_COLOR);
+  immBindBuiltinProgram(GPU_SHADER_2D_POINT_UNIFORM_SIZE_UNIFORM_COLOR_AA);
 
   /* Scaling the dots fully with the zoom looks too busy, but a bit of size variation is nice. */
-  const float min_point_size = 2.0f * UI_SCALE_FAC;
+  const float min_point_size = 2.0f * U.pixelsize;
   const float point_size_factor = 1.5f;
   const float max_point_size = point_size_factor * min_point_size;
 
@@ -1309,6 +1327,9 @@ void UI_view2d_dot_grid_draw(const View2D *v2d,
     const float point_size_precise = min_point_size * level_scale * zoom_x;
     const float point_size_draw = ceilf(
         clamp_f(point_size_precise, min_point_size, max_point_size));
+
+    /* Offset point by this amount to better align centers as size changes. */
+    const float point_size_offset = (point_size_draw / 2.0f) - U.pixelsize;
 
     /* To compensate the for the clamped point_size we adjust the alpha to make the overall
      * brightness of the grid background more consistent. */
@@ -1333,15 +1354,20 @@ void UI_view2d_dot_grid_draw(const View2D *v2d,
     const float step = min_step * level_scale;
     int count_x;
     float start_x;
-    grid_axis_start_and_count(step, v2d->cur.xmin, v2d->cur.xmax, &start_x, &count_x);
+
+    /* Count points that fit in viewport minus space for the scroll-bars. */
+    grid_axis_start_and_count(
+        step, v2d->cur.xmin, v2d->cur.xmax - V2D_SCROLL_WIDTH, &start_x, &count_x);
     int count_y;
     float start_y;
-    grid_axis_start_and_count(step, v2d->cur.ymin, v2d->cur.ymax, &start_y, &count_y);
+    grid_axis_start_and_count(
+        step, v2d->cur.ymin + V2D_SCROLL_HEIGHT, v2d->cur.ymax, &start_y, &count_y);
     if (count_x == 0 || count_y == 0) {
       continue;
     }
 
-    GPU_point_size(point_size_draw);
+    immUniform1f("size", point_size_draw);
+    immUniform4fv("color", color);
     immBegin(GPU_PRIM_POINTS, count_x * count_y);
 
     /* Theoretically drawing on top of lower grid levels could be avoided, but it would also
@@ -1350,8 +1376,7 @@ void UI_view2d_dot_grid_draw(const View2D *v2d,
       const float y = start_y + step * i_y;
       for (int i_x = 0; i_x < count_x; i_x++) {
         const float x = start_x + step * i_x;
-        immAttr4fv(color_id, color);
-        immVertex2f(pos, x, y);
+        immVertex2f(pos, x + point_size_offset, y + point_size_offset);
       }
     }
 
@@ -1367,28 +1392,7 @@ void UI_view2d_dot_grid_draw(const View2D *v2d,
 /** \name Scrollers
  * \{ */
 
-/**
- * View2DScrollers is typedef'd in UI_view2d.h
- *
- * \warning The start of this struct must not change, as view2d_ops.c uses this too.
- * For now, we don't need to have a separate (internal) header for structs like this...
- */
-struct View2DScrollers {
-  /* focus bubbles */
-  /* focus bubbles */
-  /* focus bubbles */
-  int vert_min, vert_max; /* vertical scroll-bar */
-  int hor_min, hor_max;   /* horizontal scroll-bar */
-
-  /** Exact size of slider backdrop. */
-  rcti hor, vert;
-  /* set if sliders are full, we don't draw them */
-  /* int horfull, vertfull; */ /* UNUSED */
-};
-
-void UI_view2d_scrollers_calc(View2D *v2d,
-                              const rcti *mask_custom,
-                              struct View2DScrollers *r_scrollers)
+void view2d_scrollers_calc(View2D *v2d, const rcti *mask_custom, View2DScrollers *r_scrollers)
 {
   rcti vert, hor;
   float fac1, fac2, totsize, scrollsize;
@@ -1515,7 +1519,7 @@ void UI_view2d_scrollers_calc(View2D *v2d,
 void UI_view2d_scrollers_draw_ex(View2D *v2d, const rcti *mask_custom, bool use_full_hide)
 {
   View2DScrollers scrollers;
-  UI_view2d_scrollers_calc(v2d, mask_custom, &scrollers);
+  view2d_scrollers_calc(v2d, mask_custom, &scrollers);
   bTheme *btheme = UI_GetTheme();
   rcti vert, hor;
   const int scroll = view2d_scroll_mapped(v2d->scroll);
@@ -1559,7 +1563,8 @@ void UI_view2d_scrollers_draw_ex(View2D *v2d, const rcti *mask_custom, bool use_
      *   and only the time-grids with their zoom-ability can do so).
      */
     if ((v2d->keepzoom & V2D_LOCKZOOM_X) == 0 && (v2d->scroll & V2D_SCROLL_HORIZONTAL_HANDLES) &&
-        (BLI_rcti_size_x(&slider) > V2D_SCROLL_HANDLE_SIZE_HOTSPOT)) {
+        (BLI_rcti_size_x(&slider) > V2D_SCROLL_HANDLE_SIZE_HOTSPOT))
+    {
       state |= UI_SCROLL_ARROWS;
     }
 
@@ -1594,7 +1599,8 @@ void UI_view2d_scrollers_draw_ex(View2D *v2d, const rcti *mask_custom, bool use_
      *   and only the time-grids with their zoomability can do so)
      */
     if ((v2d->keepzoom & V2D_LOCKZOOM_Y) == 0 && (v2d->scroll & V2D_SCROLL_VERTICAL_HANDLES) &&
-        (BLI_rcti_size_y(&slider) > V2D_SCROLL_HANDLE_SIZE_HOTSPOT)) {
+        (BLI_rcti_size_y(&slider) > V2D_SCROLL_HANDLE_SIZE_HOTSPOT))
+    {
       state |= UI_SCROLL_ARROWS;
     }
 
@@ -1652,12 +1658,12 @@ void UI_view2d_listview_view_to_cell(float columnwidth,
 /** \name Coordinate Conversions
  * \{ */
 
-float UI_view2d_region_to_view_x(const struct View2D *v2d, float x)
+float UI_view2d_region_to_view_x(const View2D *v2d, float x)
 {
   return (v2d->cur.xmin +
           (BLI_rctf_size_x(&v2d->cur) * (x - v2d->mask.xmin) / BLI_rcti_size_x(&v2d->mask)));
 }
-float UI_view2d_region_to_view_y(const struct View2D *v2d, float y)
+float UI_view2d_region_to_view_y(const View2D *v2d, float y)
 {
   return (v2d->cur.ymin +
           (BLI_rctf_size_y(&v2d->cur) * (y - v2d->mask.ymin) / BLI_rcti_size_y(&v2d->mask)));
@@ -1827,7 +1833,8 @@ bool UI_view2d_view_to_region_rcti_clip(const View2D *v2d, const rctf *rect_src,
   rect_tmp.ymax = (rect_src->ymax - v2d->cur.ymin) / cur_size[1];
 
   if (((rect_tmp.xmax < 0.0f) || (rect_tmp.xmin > 1.0f) || (rect_tmp.ymax < 0.0f) ||
-       (rect_tmp.ymin > 1.0f)) == 0) {
+       (rect_tmp.ymin > 1.0f)) == 0)
+  {
     /* Step 2: convert proportional distances to screen coordinates. */
     rect_tmp.xmin = v2d->mask.xmin + (rect_tmp.xmin * mask_size[0]);
     rect_tmp.xmax = v2d->mask.ymin + (rect_tmp.xmax * mask_size[0]);
@@ -1933,7 +1940,7 @@ void UI_view2d_scale_get_inverse(const View2D *v2d, float *r_x, float *r_y)
   }
 }
 
-void UI_view2d_center_get(const struct View2D *v2d, float *r_x, float *r_y)
+void UI_view2d_center_get(const View2D *v2d, float *r_x, float *r_y)
 {
   /* get center */
   if (r_x) {
@@ -1943,7 +1950,7 @@ void UI_view2d_center_get(const struct View2D *v2d, float *r_x, float *r_y)
     *r_y = BLI_rctf_cent_y(&v2d->cur);
   }
 }
-void UI_view2d_center_set(struct View2D *v2d, float x, float y)
+void UI_view2d_center_set(View2D *v2d, float x, float y)
 {
   BLI_rctf_recenter(&v2d->cur, x, y);
 
@@ -1951,7 +1958,7 @@ void UI_view2d_center_set(struct View2D *v2d, float x, float y)
   UI_view2d_curRect_validate(v2d);
 }
 
-void UI_view2d_offset(struct View2D *v2d, float xfac, float yfac)
+void UI_view2d_offset(View2D *v2d, float xfac, float yfac)
 {
   if (xfac != -1.0f) {
     const float xsize = BLI_rctf_size_x(&v2d->cur);
@@ -1970,6 +1977,17 @@ void UI_view2d_offset(struct View2D *v2d, float xfac, float yfac)
     v2d->cur.ymin = (ymin * (1.0f - yfac)) + (ymax * yfac);
     v2d->cur.ymax = v2d->cur.ymin + ysize;
   }
+
+  UI_view2d_curRect_validate(v2d);
+}
+
+void UI_view2d_offset_y_snap_to_closest_page(View2D *v2d)
+{
+  const float cur_size_y = BLI_rctf_size_y(&v2d->cur);
+  const float page_size_y = view2d_page_size_y(*v2d);
+
+  v2d->cur.ymax = roundf(v2d->cur.ymax / page_size_y) * page_size_y;
+  v2d->cur.ymin = v2d->cur.ymax - cur_size_y;
 
   UI_view2d_curRect_validate(v2d);
 }
@@ -2049,7 +2067,7 @@ char UI_view2d_rect_in_scrollers(const ARegion *region, const View2D *v2d, const
  * \{ */
 
 struct View2DString {
-  struct View2DString *next;
+  View2DString *next;
   union {
     uchar ub[4];
     int pack;

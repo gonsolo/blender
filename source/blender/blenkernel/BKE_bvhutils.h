@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2006 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 #pragma once
 
 /** \file
@@ -38,8 +39,6 @@ typedef struct BVHTreeFromEditMesh {
   BVHTree_NearestPointCallback nearest_callback;
   BVHTree_RayCastCallback raycast_callback;
 
-  struct BMEditMesh *em;
-
   /* Private data */
   bool cached;
 
@@ -77,7 +76,7 @@ typedef enum BVHCacheType {
   BVHTREE_FROM_LOOSEVERTS,
   BVHTREE_FROM_LOOSEEDGES,
 
-  BVHTREE_FROM_EM_VERTS,
+  BVHTREE_FROM_EM_LOOSEVERTS,
   BVHTREE_FROM_EM_EDGES,
   BVHTREE_FROM_EM_LOOPTRI,
 
@@ -248,9 +247,11 @@ typedef struct BVHTreeFromPointCloud {
   const float (*coords)[3];
 } BVHTreeFromPointCloud;
 
-BVHTree *BKE_bvhtree_from_pointcloud_get(struct BVHTreeFromPointCloud *data,
-                                         const struct PointCloud *pointcloud,
-                                         int tree_type);
+#ifdef __cplusplus
+[[nodiscard]] BVHTree *BKE_bvhtree_from_pointcloud_get(BVHTreeFromPointCloud *data,
+                                                       const PointCloud *pointcloud,
+                                                       int tree_type);
+#endif
 
 void free_bvhtree_from_pointcloud(struct BVHTreeFromPointCloud *data);
 

@@ -1,5 +1,6 @@
+# SPDX-FileCopyrightText: 2021 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2021 Blender Foundation
 
 set(INC
   .
@@ -7,23 +8,18 @@ set(INC
   ../intern
   ../../editors/include
   ../../blenkernel
-  ../../blenlib
   ../../blentranslation
   ../../depsgraph
   ../../functions
   ../../gpu
   ../../imbuf
-  ../../makesdna
   ../../makesrna
   ../../render
   ../../windowmanager
   ../../compositor/realtime_compositor
   ../../compositor/realtime_compositor/algorithms
   ../../compositor/realtime_compositor/cached_resources
-  ../../../../intern/guardedalloc
 
-  # dna_type_offsets.h
-  ${CMAKE_CURRENT_BINARY_DIR}/../../makesdna/intern
   # RNA_prototypes.h
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
 )
@@ -76,6 +72,7 @@ set(SRC
   nodes/node_composite_invert.cc
   nodes/node_composite_keying.cc
   nodes/node_composite_keyingscreen.cc
+  nodes/node_composite_kuwahara.cc
   nodes/node_composite_lensdist.cc
   nodes/node_composite_levels.cc
   nodes/node_composite_luma_matte.cc
@@ -130,6 +127,9 @@ set(SRC
 )
 
 set(LIB
+  PRIVATE bf::blenlib
+  PRIVATE bf::dna
+  PRIVATE bf::intern::guardedalloc
   bf_realtime_compositor
 )
 
@@ -146,6 +146,15 @@ endif()
 
 if(WITH_OPENIMAGEDENOISE)
   add_definitions(-DWITH_OPENIMAGEDENOISE)
+  add_definitions(-DOIDN_STATIC_LIB)
+  list(APPEND INC_SYS
+    ${OPENIMAGEDENOISE_INCLUDE_DIRS}
+    ${TBB_INCLUDE_DIRS}
+  )
+  list(APPEND LIB
+    ${OPENIMAGEDENOISE_LIBRARIES}
+    ${TBB_LIBRARIES}
+  )
 endif()
 
 blender_add_lib(bf_nodes_composite "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
@@ -155,7 +164,5 @@ if(WITH_UNITY_BUILD)
   set_target_properties(bf_nodes_composite PROPERTIES UNITY_BUILD_BATCH_SIZE 10)
 endif()
 
-# Needed so we can use dna_type_offsets.h for defaults initialization.
-add_dependencies(bf_nodes_composite bf_dna)
 # RNA_prototypes.h
 add_dependencies(bf_nodes_composite bf_rna)

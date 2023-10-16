@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2021-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2021-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 /* OptiX implementation of ray-scene intersection. */
 
@@ -183,6 +184,12 @@ extern "C" __global__ void __anyhit__kernel_optix_shadow_all_hit()
     return optixIgnoreIntersection();
   }
 
+#  ifdef __SHADOW_LINKING__
+  if (intersection_skip_shadow_link(nullptr, ray->self, object)) {
+    return optixIgnoreIntersection();
+  }
+#  endif
+
 #  ifndef __TRANSPARENT_SHADOWS__
   /* No transparent shadows support compiled in, make opaque. */
   optixSetPayload_5(true);
@@ -195,7 +202,8 @@ extern "C" __global__ void __anyhit__kernel_optix_shadow_all_hit()
 
   /* If no transparent shadows, all light is blocked and we can stop immediately. */
   if (num_hits >= max_hits ||
-      !(intersection_get_shader_flags(NULL, prim, type) & SD_HAS_TRANSPARENT_SHADOW)) {
+      !(intersection_get_shader_flags(NULL, prim, type) & SD_HAS_TRANSPARENT_SHADOW))
+  {
     optixSetPayload_5(true);
     return optixTerminateRay();
   }
@@ -325,6 +333,12 @@ extern "C" __global__ void __anyhit__kernel_optix_visibility_test()
   ccl_private Ray *const ray = get_payload_ptr_6<Ray>();
 
   if (visibility & PATH_RAY_SHADOW_OPAQUE) {
+#ifdef __SHADOW_LINKING__
+    if (intersection_skip_shadow_link(nullptr, ray->self, object)) {
+      return optixIgnoreIntersection();
+    }
+#endif
+
     if (intersection_skip_self_shadow(ray->self, object, prim)) {
       return optixIgnoreIntersection();
     }

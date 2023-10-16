@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -22,8 +24,8 @@ using namespace Freestyle;
 PyDoc_STRVAR(CurvePointIterator_doc,
              "Class hierarchy: :class:`Iterator` > :class:`CurvePointIterator`\n"
              "\n"
-             "Class representing an iterator on a curve.  Allows an iterating\n"
-             "outside initial vertices.  A CurvePoint is instantiated and returned\n"
+             "Class representing an iterator on a curve. Allows an iterating\n"
+             "outside initial vertices. A CurvePoint is instantiated and returned\n"
              "through the .object attribute.\n"
              "\n"
              ".. method:: __init__()\n"
@@ -48,7 +50,8 @@ static int CurvePointIterator_init(BPy_CurvePointIterator *self, PyObject *args,
   float step;
 
   if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "|O!", (char **)kwlist_1, &CurvePointIterator_Type, &brother)) {
+          args, kwds, "|O!", (char **)kwlist_1, &CurvePointIterator_Type, &brother))
+  {
     if (!brother) {
       self->cp_it = new CurveInternal::CurvePointIterator();
     }
@@ -58,7 +61,8 @@ static int CurvePointIterator_init(BPy_CurvePointIterator *self, PyObject *args,
     }
   }
   else if ((void)PyErr_Clear(),
-           PyArg_ParseTupleAndKeywords(args, kwds, "f", (char **)kwlist_2, &step)) {
+           PyArg_ParseTupleAndKeywords(args, kwds, "f", (char **)kwlist_2, &step))
+  {
     self->cp_it = new CurveInternal::CurvePointIterator(step);
   }
   else {
@@ -119,7 +123,7 @@ static PyGetSetDef BPy_CurvePointIterator_getseters[] = {
 /*-----------------------BPy_CurvePointIterator type definition ------------------------------*/
 
 PyTypeObject CurvePointIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "CurvePointIterator",
     /*tp_basicsize*/ sizeof(BPy_CurvePointIterator),
     /*tp_itemsize*/ 0,

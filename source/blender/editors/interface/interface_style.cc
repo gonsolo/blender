@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2009 Blender Foundation */
+/* SPDX-FileCopyrightText: 2009 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edinterface
@@ -26,7 +27,7 @@
 
 #include "BLT_translation.h"
 
-#include "UI_interface.h"
+#include "UI_interface.hh"
 
 #include "ED_datafiles.h"
 
@@ -44,7 +45,7 @@ static void fontstyle_set_ex(const uiFontStyle *fs, const float dpi_fac);
  * This is a complete set of layout rules, the 'state' of the Layout
  * Engine. Multiple styles are possible, defined via C or Python. Styles
  * get a name, and will typically get activated per region type, like
- * "Header", or "Listview" or "Toolbar". Properties of Style definitions
+ * `Header`, or `Listview` or `Toolbar`. Properties of Style definitions
  * are:
  *
  * - default column properties, internal spacing, aligning, min/max width
@@ -62,7 +63,7 @@ static uiStyle *ui_style_new(ListBase *styles, const char *name, short uifont_id
   uiStyle *style = MEM_cnew<uiStyle>(__func__);
 
   BLI_addtail(styles, style);
-  BLI_strncpy(style->name, name, MAX_STYLE_NAME);
+  STRNCPY(style->name, name);
 
   style->panelzoom = 1.0; /* unused */
 
@@ -127,10 +128,10 @@ void UI_fontstyle_draw_ex(const uiFontStyle *fs,
                           const char *str,
                           const size_t str_len,
                           const uchar col[4],
-                          const struct uiFontStyleDraw_Params *fs_params,
+                          const uiFontStyleDraw_Params *fs_params,
                           int *r_xofs,
                           int *r_yofs,
-                          struct ResultBLF *r_info)
+                          ResultBLF *r_info)
 {
   int xofs = 0, yofs;
   int font_flag = BLF_CLIPPING;
@@ -198,7 +199,7 @@ void UI_fontstyle_draw(const uiFontStyle *fs,
                        const char *str,
                        const size_t str_len,
                        const uchar col[4],
-                       const struct uiFontStyleDraw_Params *fs_params)
+                       const uiFontStyleDraw_Params *fs_params)
 {
   UI_fontstyle_draw_ex(fs, rect, str, str_len, col, fs_params, nullptr, nullptr, nullptr);
 }
@@ -302,7 +303,7 @@ void UI_fontstyle_draw_simple_backdrop(const uiFontStyle *fs,
 
 /* ************** helpers ************************ */
 
-const uiStyle *UI_style_get(void)
+const uiStyle *UI_style_get()
 {
 #if 0
   uiStyle *style = nullptr;
@@ -314,7 +315,7 @@ const uiStyle *UI_style_get(void)
 #endif
 }
 
-const uiStyle *UI_style_get_dpi(void)
+const uiStyle *UI_style_get_dpi()
 {
   const uiStyle *style = UI_style_get();
   static uiStyle _style;
@@ -385,11 +386,11 @@ void uiStyleInit()
   }
 
   if (U.font_path_ui[0]) {
-    BLI_strncpy(font_first->filepath, U.font_path_ui, sizeof(font_first->filepath));
+    STRNCPY(font_first->filepath, U.font_path_ui);
     font_first->uifont_id = UIFONT_CUSTOM1;
   }
   else {
-    BLI_strncpy(font_first->filepath, "default", sizeof(font_first->filepath));
+    STRNCPY(font_first->filepath, "default");
     font_first->uifont_id = UIFONT_DEFAULT;
   }
 
@@ -439,7 +440,7 @@ void uiStyleInit()
   /* Set default flags based on UI preferences (not render fonts) */
   {
     const int flag_disable = (BLF_MONOCHROME | BLF_HINTING_NONE | BLF_HINTING_SLIGHT |
-                              BLF_HINTING_FULL);
+                              BLF_HINTING_FULL | BLF_RENDER_SUBPIXELAA);
     int flag_enable = 0;
 
     if (U.text_render & USER_TEXT_HINTING_NONE) {
@@ -454,6 +455,9 @@ void uiStyleInit()
 
     if (U.text_render & USER_TEXT_DISABLE_AA) {
       flag_enable |= BLF_MONOCHROME;
+    }
+    if (U.text_render & USER_TEXT_RENDER_SUBPIXELAA) {
+      flag_enable |= BLF_RENDER_SUBPIXELAA;
     }
 
     LISTBASE_FOREACH (uiFont *, font, &U.uifonts) {

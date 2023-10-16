@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -38,9 +40,11 @@ class ExtraColumns {
 class GeometryDataSource : public DataSource {
  private:
   Object *object_eval_;
-  const GeometrySet geometry_set_;
-  const GeometryComponent *component_;
+  const bke::GeometrySet geometry_set_;
+  const bke::GeometryComponent *component_;
   eAttrDomain domain_;
+  /* Layer index for grease pencil component. */
+  int layer_index_;
   ExtraColumns extra_columns_;
 
   /* Some data is computed on the fly only when it is requested. Computing it does not change the
@@ -51,14 +55,16 @@ class GeometryDataSource : public DataSource {
 
  public:
   GeometryDataSource(Object *object_eval,
-                     GeometrySet geometry_set,
-                     const GeometryComponentType component_type,
+                     bke::GeometrySet geometry_set,
+                     const bke::GeometryComponent::Type component_type,
                      const eAttrDomain domain,
+                     const int layer_index = -1,
                      ExtraColumns extra_columns = {})
       : object_eval_(object_eval),
         geometry_set_(std::move(geometry_set)),
-        component_(geometry_set_.get_component_for_read(component_type)),
+        component_(geometry_set_.get_component(component_type)),
         domain_(domain),
+        layer_index_(layer_index),
         extra_columns_(std::move(extra_columns))
   {
   }
@@ -69,7 +75,7 @@ class GeometryDataSource : public DataSource {
   }
 
   bool has_selection_filter() const override;
-  IndexMask apply_selection_filter(Vector<int64_t> &indices) const;
+  IndexMask apply_selection_filter(IndexMaskMemory &memory) const;
 
   void foreach_default_column_ids(
       FunctionRef<void(const SpreadsheetColumnID &, bool is_extra)> fn) const override;
@@ -78,16 +84,19 @@ class GeometryDataSource : public DataSource {
       const SpreadsheetColumnID &column_id) const override;
 
   int tot_rows() const override;
+
+ private:
+  std::optional<const bke::AttributeAccessor> get_component_attributes() const;
 };
 
 class VolumeDataSource : public DataSource {
-  const GeometrySet geometry_set_;
-  const VolumeComponent *component_;
+  const bke::GeometrySet geometry_set_;
+  const bke::VolumeComponent *component_;
 
  public:
-  VolumeDataSource(GeometrySet geometry_set)
+  VolumeDataSource(bke::GeometrySet geometry_set)
       : geometry_set_(std::move(geometry_set)),
-        component_(geometry_set_.get_component_for_read<VolumeComponent>())
+        component_(geometry_set_.get_component<bke::VolumeComponent>())
   {
   }
 

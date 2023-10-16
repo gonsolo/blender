@@ -1,20 +1,21 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_ambient_occlusion_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Color")).default_value({1.0f, 1.0f, 1.0f, 1.0f});
-  b.add_input<decl::Float>(N_("Distance")).default_value(1.0f).min(0.0f).max(1000.0f);
-  b.add_input<decl::Vector>(N_("Normal")).min(-1.0f).max(1.0f).hide_value();
-  b.add_output<decl::Color>(N_("Color"));
-  b.add_output<decl::Float>(N_("AO"));
+  b.add_input<decl::Color>("Color").default_value({1.0f, 1.0f, 1.0f, 1.0f});
+  b.add_input<decl::Float>("Distance").default_value(1.0f).min(0.0f).max(1000.0f);
+  b.add_input<decl::Vector>("Normal").min(-1.0f).max(1.0f).hide_value();
+  b.add_output<decl::Color>("Color");
+  b.add_output<decl::Float>("AO");
 }
 
 static void node_shader_buts_ambient_occlusion(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
@@ -54,6 +55,23 @@ static void node_shader_init_ambient_occlusion(bNodeTree * /*ntree*/, bNode *nod
   node->custom2 = 0;
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  /* TODO: observed crash while rendering MaterialX_v1_38_6::ExceptionShaderGenError */
+  /**
+   * \code{.cc}
+   * NodeItem maxdistance = get_input_value("Distance", NodeItem::Type::Float);
+   * NodeItem res = create_node("ambientocclusion", NodeItem::Type::Float);
+   * res.set_input("coneangle", val(90.0f));
+   * res.set_input("maxdistance", maxdistance);
+   * \endcode
+   */
+  return get_output_default(socket_out_->name, NodeItem::Type::Any);
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_ambient_occlusion_cc
 
 /* node type definition */
@@ -68,6 +86,7 @@ void register_node_type_sh_ambient_occlusion()
   ntype.draw_buttons = file_ns::node_shader_buts_ambient_occlusion;
   ntype.initfunc = file_ns::node_shader_init_ambient_occlusion;
   ntype.gpu_fn = file_ns::node_shader_gpu_ambient_occlusion;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

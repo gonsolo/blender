@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2022 NVIDIA Corporation
- * Copyright 2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2022 NVIDIA Corporation
+ * SPDX-FileCopyrightText: 2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "hydra/curves.h"
 #include "hydra/geometry.inl"
@@ -72,7 +73,8 @@ void HdCyclesCurves::PopulatePoints(HdSceneDelegate *sceneDelegate)
   VtValue value;
 
   for (const HdExtComputationPrimvarDescriptor &desc :
-       sceneDelegate->GetExtComputationPrimvarDescriptors(GetId(), HdInterpolationVertex)) {
+       sceneDelegate->GetExtComputationPrimvarDescriptors(GetId(), HdInterpolationVertex))
+  {
     if (desc.name == HdTokens->points) {
       auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues({desc}, sceneDelegate);
       const auto valueStoreIt = valueStore.find(desc.name);
@@ -179,7 +181,8 @@ void HdCyclesCurves::PopulatePrimvars(HdSceneDelegate *sceneDelegate)
 
       // Skip attributes that are not needed
       if ((std != ATTR_STD_NONE && _geom->need_attribute(scene, std)) ||
-          _geom->need_attribute(scene, name)) {
+          _geom->need_attribute(scene, name))
+      {
         ApplyPrimvars(_geom->attributes, name, value, interpolation.second, std);
       }
     }

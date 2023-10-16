@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/alembic.h"
 
@@ -254,7 +255,8 @@ static M44d convert_yup_zup(const M44d &mtx, float scale_mult)
                    rotation,
                    translation,
                    true,
-                   IMATH_INTERNAL_NAMESPACE::Euler<double>::XZY)) {
+                   IMATH_INTERNAL_NAMESPACE::Euler<double>::XZY))
+  {
     return mtx;
   }
 
@@ -610,6 +612,41 @@ void AlembicObject::load_data_in_cache(CachedData &cached_data,
   data_loaded = true;
 }
 
+void AlembicObject::load_data_in_cache(CachedData &cached_data,
+                                       AlembicProcedural *proc,
+                                       const IPointsSchema &schema,
+                                       Progress &progress)
+{
+  /* Only load data for the original Geometry. */
+  if (instance_of) {
+    return;
+  }
+
+  cached_data.clear();
+
+  PointsSchemaData data;
+  data.positions = schema.getPositionsProperty();
+  data.radiuses = schema.getWidthsParam();
+  data.velocities = schema.getVelocitiesProperty();
+  data.time_sampling = schema.getTimeSampling();
+  data.num_samples = schema.getNumSamples();
+  data.default_radius = proc->get_default_radius();
+  data.radius_scale = get_radius_scale();
+
+  read_geometry_data(proc, cached_data, data, progress);
+
+  if (progress.get_cancel()) {
+    return;
+  }
+
+  /* Use the schema as the base compound property to also be able to look for top level properties.
+   */
+  read_attributes(proc, cached_data, schema, {}, get_requested_attributes(), progress);
+
+  cached_data.invalidate_last_loaded_time(true);
+  data_loaded = true;
+}
+
 void AlembicObject::setup_transform_cache(CachedData &cached_data, float scale)
 {
   cached_data.transforms.clear();
@@ -806,7 +843,8 @@ void AlembicProcedural::generate(Scene *scene, Progress &progress)
 
     /* Check if the shaders were modified. */
     if (object->used_shaders_is_modified() && object->get_object() &&
-        object->get_object()->get_geometry()) {
+        object->get_object()->get_geometry())
+    {
       Geometry *geometry = object->get_object()->get_geometry();
       array<Node *> used_shaders = object->get_used_shaders();
       geometry->set_used_shaders(used_shaders);
@@ -908,7 +946,8 @@ void AlembicProcedural::generate(Scene *scene, Progress &progress)
 
     /* skip constant objects */
     if (object->is_constant() && !object->is_modified() && !object->need_shader_update &&
-        !scale_is_modified()) {
+        !scale_is_modified())
+    {
       continue;
     }
 
@@ -994,7 +1033,8 @@ void AlembicProcedural::load_objects(Progress &progress)
         geometry = scene_->create_node<PointCloud>();
       }
       else if (abc_object->schema_type == AlembicObject::POLY_MESH ||
-               abc_object->schema_type == AlembicObject::SUBD) {
+               abc_object->schema_type == AlembicObject::SUBD)
+      {
         geometry = scene_->create_node<Mesh>();
       }
       else {
@@ -1469,7 +1509,8 @@ void AlembicProcedural::build_caches(Progress &progress)
     }
     else if (object->schema_type == AlembicObject::CURVES) {
       if (!object->has_data_loaded() || default_radius_is_modified() ||
-          object->radius_scale_is_modified()) {
+          object->radius_scale_is_modified())
+      {
         ICurves curves(object->iobject, Alembic::Abc::kWrapExisting);
         ICurvesSchema schema = curves.getSchema();
         object->load_data_in_cache(object->get_cached_data(), this, schema, progress);
@@ -1477,7 +1518,8 @@ void AlembicProcedural::build_caches(Progress &progress)
     }
     else if (object->schema_type == AlembicObject::POINTS) {
       if (!object->has_data_loaded() || default_radius_is_modified() ||
-          object->radius_scale_is_modified()) {
+          object->radius_scale_is_modified())
+      {
         IPoints points(object->iobject, Alembic::Abc::kWrapExisting);
         IPointsSchema schema = points.getSchema();
         object->load_data_in_cache(object->get_cached_data(), this, schema, progress);

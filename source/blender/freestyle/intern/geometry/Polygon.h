@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -45,7 +47,8 @@ template<class Point> class Polygon {
     Point p;
     for (typename vector<Point>::const_iterator it = poly.getVertices().begin();
          it != poly.getVertices().end();
-         it++) {
+         it++)
+    {
       p = *it;
       _vertices.push_back(p);
     }
@@ -90,7 +93,7 @@ template<class Point> class Polygon {
     return result;
   }
 
-  inline unsigned getId() const
+  inline uint getId() const
   {
     return _id;
   }
@@ -103,15 +106,15 @@ template<class Point> class Polygon {
   {
     _vertices.clear();
     Point p;
-    for (typename vector<Point>::const_iterator it = vertices.begin(); it != vertices.end();
-         it++) {
+    for (typename vector<Point>::const_iterator it = vertices.begin(); it != vertices.end(); it++)
+    {
       p = *it;
       _vertices.push_back(p);
     }
     computeBBox();
   }
 
-  inline void setId(unsigned id)
+  inline void setId(uint id)
   {
     _id = id;
   }
@@ -130,7 +133,7 @@ template<class Point> class Polygon {
     _min = _vertices[0];
 
     for (typename vector<Point>::iterator it = _vertices.begin(); it != _vertices.end(); it++) {
-      for (unsigned int i = 0; i < Point::dim(); i++) {
+      for (uint i = 0; i < Point::dim(); i++) {
         if ((*it)[i] > _max[i]) {
           _max[i] = (*it)[i];
         }
@@ -149,7 +152,7 @@ template<class Point> class Polygon {
   vector<Point> _vertices;
   Point _min;
   Point _max;
-  unsigned _id;
+  uint _id;
 
 #ifdef WITH_CXX_GUARDEDALLOC
   MEM_CXX_CLASS_ALLOC_FUNCS("Freestyle:Geometry:Polygon")

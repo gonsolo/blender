@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
@@ -7,18 +8,22 @@
 
 #include "node_shader_util.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "FN_multi_function_builder.hh"
+
+#include "NOD_multi_function.hh"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_clamp_cc {
 
 static void sh_node_clamp_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Float>(N_("Value")).default_value(1.0f);
-  b.add_input<decl::Float>(N_("Min")).default_value(0.0f).min(-10000.0f).max(10000.0f);
-  b.add_input<decl::Float>(N_("Max")).default_value(1.0f).min(-10000.0f).max(10000.0f);
-  b.add_output<decl::Float>(N_("Result"));
+  b.add_input<decl::Float>("Value").default_value(1.0f);
+  b.add_input<decl::Float>("Min").default_value(0.0f).min(-10000.0f).max(10000.0f);
+  b.add_input<decl::Float>("Max").default_value(1.0f).min(-10000.0f).max(10000.0f);
+  b.add_output<decl::Float>("Result");
 }
 
 static void node_shader_buts_clamp(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
@@ -65,6 +70,27 @@ static void sh_node_clamp_build_multi_function(NodeMultiFunctionBuilder &builder
   }
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  auto type = node_->custom1;
+  NodeItem value = get_input_value("Value", NodeItem::Type::Float);
+  NodeItem min = get_input_value("Min", NodeItem::Type::Float);
+  NodeItem max = get_input_value("Max", NodeItem::Type::Float);
+
+  NodeItem res = empty();
+  if (type == NODE_CLAMP_RANGE) {
+    res = min.if_else(
+        NodeItem::CompareOp::Less, max, value.clamp(min, max), value.clamp(max, min));
+  }
+  else {
+    res = value.clamp(min, max);
+  }
+  return res;
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_clamp_cc
 
 void register_node_type_sh_clamp()
@@ -79,6 +105,7 @@ void register_node_type_sh_clamp()
   ntype.initfunc = file_ns::node_shader_init_clamp;
   ntype.gpu_fn = file_ns::gpu_shader_clamp;
   ntype.build_multi_function = file_ns::sh_node_clamp_build_multi_function;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

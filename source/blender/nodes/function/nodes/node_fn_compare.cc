@@ -1,18 +1,24 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include <cmath>
 
 #include "BLI_listbase.h"
 #include "BLI_math_vector.h"
 #include "BLI_string.h"
+#include "BLI_string_utf8.h"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "BLT_translation.h"
 
-#include "RNA_enum_types.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
+
+#include "RNA_enum_types.hh"
 
 #include "node_function_util.hh"
 
+#include "NOD_rna_define.hh"
 #include "NOD_socket_search_link.hh"
 
 namespace blender::nodes::node_fn_compare_cc {
@@ -22,36 +28,38 @@ NODE_STORAGE_FUNCS(NodeFunctionCompare)
 static void node_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Float>(N_("A")).min(-10000.0f).max(10000.0f);
-  b.add_input<decl::Float>(N_("B")).min(-10000.0f).max(10000.0f);
+  b.add_input<decl::Float>("A").min(-10000.0f).max(10000.0f).translation_context(
+      BLT_I18NCONTEXT_ID_NODETREE);
+  b.add_input<decl::Float>("B").min(-10000.0f).max(10000.0f).translation_context(
+      BLT_I18NCONTEXT_ID_NODETREE);
 
-  b.add_input<decl::Int>(N_("A"), "A_INT");
-  b.add_input<decl::Int>(N_("B"), "B_INT");
+  b.add_input<decl::Int>("A", "A_INT").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
+  b.add_input<decl::Int>("B", "B_INT").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
 
-  b.add_input<decl::Vector>(N_("A"), "A_VEC3");
-  b.add_input<decl::Vector>(N_("B"), "B_VEC3");
+  b.add_input<decl::Vector>("A", "A_VEC3").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
+  b.add_input<decl::Vector>("B", "B_VEC3").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
 
-  b.add_input<decl::Color>(N_("A"), "A_COL");
-  b.add_input<decl::Color>(N_("B"), "B_COL");
+  b.add_input<decl::Color>("A", "A_COL").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
+  b.add_input<decl::Color>("B", "B_COL").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
 
-  b.add_input<decl::String>(N_("A"), "A_STR");
-  b.add_input<decl::String>(N_("B"), "B_STR");
+  b.add_input<decl::String>("A", "A_STR").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
+  b.add_input<decl::String>("B", "B_STR").translation_context(BLT_I18NCONTEXT_ID_NODETREE);
 
-  b.add_input<decl::Float>(N_("C")).default_value(0.9f);
-  b.add_input<decl::Float>(N_("Angle")).default_value(0.0872665f).subtype(PROP_ANGLE);
-  b.add_input<decl::Float>(N_("Epsilon")).default_value(0.001).min(-10000.0f).max(10000.0f);
+  b.add_input<decl::Float>("C").default_value(0.9f);
+  b.add_input<decl::Float>("Angle").default_value(0.0872665f).subtype(PROP_ANGLE);
+  b.add_input<decl::Float>("Epsilon").default_value(0.001).min(-10000.0f).max(10000.0f);
 
-  b.add_output<decl::Bool>(N_("Result"));
+  b.add_output<decl::Bool>("Result");
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
   const NodeFunctionCompare &data = node_storage(*static_cast<const bNode *>(ptr->data));
-  uiItemR(layout, ptr, "data_type", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "data_type", UI_ITEM_NONE, "", ICON_NONE);
   if (data.data_type == SOCK_VECTOR) {
-    uiItemR(layout, ptr, "mode", 0, "", ICON_NONE);
+    uiItemR(layout, ptr, "mode", UI_ITEM_NONE, "", ICON_NONE);
   }
-  uiItemR(layout, ptr, "operation", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "operation", UI_ITEM_NONE, "", ICON_NONE);
 }
 
 static void node_update(bNodeTree *ntree, bNode *node)
@@ -63,23 +71,25 @@ static void node_update(bNodeTree *ntree, bNode *node)
   bNodeSocket *sock_epsilon = (bNodeSocket *)BLI_findlink(&node->inputs, 12);
 
   LISTBASE_FOREACH (bNodeSocket *, socket, &node->inputs) {
-    nodeSetSocketAvailability(ntree, socket, socket->type == (eNodeSocketDatatype)data->data_type);
+    bke::nodeSetSocketAvailability(
+        ntree, socket, socket->type == (eNodeSocketDatatype)data->data_type);
   }
 
-  nodeSetSocketAvailability(ntree,
-                            sock_epsilon,
-                            ELEM(data->operation, NODE_COMPARE_EQUAL, NODE_COMPARE_NOT_EQUAL) &&
-                                !ELEM(data->data_type, SOCK_INT, SOCK_STRING));
+  bke::nodeSetSocketAvailability(
+      ntree,
+      sock_epsilon,
+      ELEM(data->operation, NODE_COMPARE_EQUAL, NODE_COMPARE_NOT_EQUAL) &&
+          !ELEM(data->data_type, SOCK_INT, SOCK_STRING));
 
-  nodeSetSocketAvailability(ntree,
-                            sock_comp,
-                            ELEM(data->mode, NODE_COMPARE_MODE_DOT_PRODUCT) &&
-                                data->data_type == SOCK_VECTOR);
+  bke::nodeSetSocketAvailability(ntree,
+                                 sock_comp,
+                                 ELEM(data->mode, NODE_COMPARE_MODE_DOT_PRODUCT) &&
+                                     data->data_type == SOCK_VECTOR);
 
-  nodeSetSocketAvailability(ntree,
-                            sock_angle,
-                            ELEM(data->mode, NODE_COMPARE_MODE_DIRECTION) &&
-                                data->data_type == SOCK_VECTOR);
+  bke::nodeSetSocketAvailability(ntree,
+                                 sock_angle,
+                                 ELEM(data->mode, NODE_COMPARE_MODE_DIRECTION) &&
+                                     data->data_type == SOCK_VECTOR);
 }
 
 static void node_init(bNodeTree * /*tree*/, bNode *node)
@@ -128,7 +138,8 @@ static std::optional<eNodeSocketDatatype> get_compare_type_for_operation(
                 NODE_COMPARE_COLOR_BRIGHTER,
                 NODE_COMPARE_COLOR_DARKER,
                 NODE_COMPARE_EQUAL,
-                NODE_COMPARE_NOT_EQUAL)) {
+                NODE_COMPARE_NOT_EQUAL))
+      {
         return SOCK_VECTOR;
       }
       return type;
@@ -152,11 +163,13 @@ static void node_gather_link_searches(GatherLinkSearchOpParams &params)
   const StringRef socket_name = params.in_out() == SOCK_IN ? "A" : "Result";
   for (const EnumPropertyItem *item = rna_enum_node_compare_operation_items;
        item->identifier != nullptr;
-       item++) {
+       item++)
+  {
     if (item->name != nullptr && item->identifier[0] != '\0') {
       const NodeCompareOperation operation = NodeCompareOperation(item->value);
       if (const std::optional<eNodeSocketDatatype> fixed_type = get_compare_type_for_operation(
-              type, operation)) {
+              type, operation))
+      {
         params.add_item(IFACE_(item->name), SocketSearchOp{socket_name, *fixed_type, operation});
       }
     }
@@ -170,7 +183,10 @@ static void node_gather_link_searches(GatherLinkSearchOpParams &params)
   }
 }
 
-static void node_label(const bNodeTree * /*tree*/, const bNode *node, char *label, int maxlen)
+static void node_label(const bNodeTree * /*tree*/,
+                       const bNode *node,
+                       char *label,
+                       int label_maxncpy)
 {
   const NodeFunctionCompare *data = (NodeFunctionCompare *)node->storage;
   const char *name;
@@ -178,7 +194,7 @@ static void node_label(const bNodeTree * /*tree*/, const bNode *node, char *labe
   if (!enum_label) {
     name = "Unknown";
   }
-  BLI_strncpy(label, IFACE_(name), maxlen);
+  BLI_strncpy_utf8(label, IFACE_(name), label_maxncpy);
 }
 
 static float component_average(float3 a)
@@ -591,22 +607,146 @@ static void node_build_multi_function(NodeMultiFunctionBuilder &builder)
   builder.set_matching_fn(fn);
 }
 
-}  // namespace blender::nodes::node_fn_compare_cc
-
-void register_node_type_fn_compare()
+static void data_type_update(Main *bmain, Scene *scene, PointerRNA *ptr)
 {
-  namespace file_ns = blender::nodes::node_fn_compare_cc;
+  bNode *node = static_cast<bNode *>(ptr->data);
+  NodeFunctionCompare *node_storage = static_cast<NodeFunctionCompare *>(node->storage);
 
+  if (node_storage->data_type == SOCK_RGBA && !ELEM(node_storage->operation,
+                                                    NODE_COMPARE_EQUAL,
+                                                    NODE_COMPARE_NOT_EQUAL,
+                                                    NODE_COMPARE_COLOR_BRIGHTER,
+                                                    NODE_COMPARE_COLOR_DARKER))
+  {
+    node_storage->operation = NODE_COMPARE_EQUAL;
+  }
+  else if (node_storage->data_type == SOCK_STRING &&
+           !ELEM(node_storage->operation, NODE_COMPARE_EQUAL, NODE_COMPARE_NOT_EQUAL))
+  {
+    node_storage->operation = NODE_COMPARE_EQUAL;
+  }
+  else if (node_storage->data_type != SOCK_RGBA &&
+           ELEM(node_storage->operation, NODE_COMPARE_COLOR_BRIGHTER, NODE_COMPARE_COLOR_DARKER))
+  {
+    node_storage->operation = NODE_COMPARE_EQUAL;
+  }
+
+  rna_Node_socket_update(bmain, scene, ptr);
+}
+
+static void node_rna(StructRNA *srna)
+{
+  static const EnumPropertyItem mode_items[] = {
+      {NODE_COMPARE_MODE_ELEMENT,
+       "ELEMENT",
+       0,
+       "Element-Wise",
+       "Compare each element of the input vectors"},
+      {NODE_COMPARE_MODE_LENGTH, "LENGTH", 0, "Length", "Compare the length of the input vectors"},
+      {NODE_COMPARE_MODE_AVERAGE,
+       "AVERAGE",
+       0,
+       "Average",
+       "Compare the average of the input vectors elements"},
+      {NODE_COMPARE_MODE_DOT_PRODUCT,
+       "DOT_PRODUCT",
+       0,
+       "Dot Product",
+       "Compare the dot products of the input vectors"},
+      {NODE_COMPARE_MODE_DIRECTION,
+       "DIRECTION",
+       0,
+       "Direction",
+       "Compare the direction of the input vectors"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+
+  PropertyRNA *prop;
+
+  prop = RNA_def_node_enum(
+      srna,
+      "operation",
+      "Operation",
+      "",
+      rna_enum_node_compare_operation_items,
+      NOD_storage_enum_accessors(operation),
+      NODE_COMPARE_EQUAL,
+      [](bContext * /*C*/, PointerRNA *ptr, PropertyRNA * /*prop*/, bool *r_free) {
+        *r_free = true;
+        bNode *node = static_cast<bNode *>(ptr->data);
+        NodeFunctionCompare *data = static_cast<NodeFunctionCompare *>(node->storage);
+
+        if (ELEM(data->data_type, SOCK_FLOAT, SOCK_INT, SOCK_VECTOR)) {
+          return enum_items_filter(
+              rna_enum_node_compare_operation_items, [](const EnumPropertyItem &item) {
+                return !ELEM(item.value, NODE_COMPARE_COLOR_BRIGHTER, NODE_COMPARE_COLOR_DARKER);
+              });
+        }
+        else if (data->data_type == SOCK_STRING) {
+          return enum_items_filter(
+              rna_enum_node_compare_operation_items, [](const EnumPropertyItem &item) {
+                return ELEM(item.value, NODE_COMPARE_EQUAL, NODE_COMPARE_NOT_EQUAL);
+              });
+        }
+        else if (data->data_type == SOCK_RGBA) {
+          return enum_items_filter(rna_enum_node_compare_operation_items,
+                                   [](const EnumPropertyItem &item) {
+                                     return ELEM(item.value,
+                                                 NODE_COMPARE_EQUAL,
+                                                 NODE_COMPARE_NOT_EQUAL,
+                                                 NODE_COMPARE_COLOR_BRIGHTER,
+                                                 NODE_COMPARE_COLOR_DARKER);
+                                   });
+        }
+        else {
+          return enum_items_filter(rna_enum_node_compare_operation_items,
+                                   [](const EnumPropertyItem & /*item*/) { return false; });
+        }
+      });
+
+  prop = RNA_def_node_enum(
+      srna,
+      "data_type",
+      "Input Type",
+      "",
+      rna_enum_node_socket_data_type_items,
+      NOD_storage_enum_accessors(data_type),
+      std::nullopt,
+      [](bContext * /*C*/, PointerRNA * /*ptr*/, PropertyRNA * /*prop*/, bool *r_free) {
+        *r_free = true;
+        return enum_items_filter(
+            rna_enum_node_socket_data_type_items, [](const EnumPropertyItem &item) {
+              return ELEM(item.value, SOCK_FLOAT, SOCK_INT, SOCK_VECTOR, SOCK_STRING, SOCK_RGBA);
+            });
+      });
+  RNA_def_property_update_runtime(prop, data_type_update);
+
+  prop = RNA_def_node_enum(srna,
+                           "mode",
+                           "Mode",
+                           "",
+                           mode_items,
+                           NOD_storage_enum_accessors(mode),
+                           NODE_COMPARE_MODE_ELEMENT);
+}
+
+static void node_register()
+{
   static bNodeType ntype;
   fn_node_type_base(&ntype, FN_NODE_COMPARE, "Compare", NODE_CLASS_CONVERTER);
-  ntype.declare = file_ns::node_declare;
-  ntype.labelfunc = file_ns::node_label;
-  ntype.updatefunc = file_ns::node_update;
-  ntype.initfunc = file_ns::node_init;
+  ntype.declare = node_declare;
+  ntype.labelfunc = node_label;
+  ntype.updatefunc = node_update;
+  ntype.initfunc = node_init;
   node_type_storage(
       &ntype, "NodeFunctionCompare", node_free_standard_storage, node_copy_standard_storage);
-  ntype.build_multi_function = file_ns::node_build_multi_function;
-  ntype.draw_buttons = file_ns::node_layout;
-  ntype.gather_link_search_ops = file_ns::node_gather_link_searches;
+  ntype.build_multi_function = node_build_multi_function;
+  ntype.draw_buttons = node_layout;
+  ntype.gather_link_search_ops = node_gather_link_searches;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_fn_compare_cc

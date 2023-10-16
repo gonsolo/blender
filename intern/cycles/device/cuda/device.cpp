@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "device/cuda/device.h"
 
@@ -23,8 +24,9 @@ bool device_cuda_init()
   static bool initialized = false;
   static bool result = false;
 
-  if (initialized)
+  if (initialized) {
     return result;
+  }
 
   initialized = true;
   int cuew_result = cuewInit(CUEW_INIT_CUDA);
@@ -75,10 +77,12 @@ Device *device_cuda_create(const DeviceInfo &info, Stats &stats, Profiler &profi
 static CUresult device_cuda_safe_init()
 {
 #  ifdef _WIN32
-  __try {
+  __try
+  {
     return cuInit(0);
   }
-  __except (EXCEPTION_EXECUTE_HANDLER) {
+  __except (EXCEPTION_EXECUTE_HANDLER)
+  {
     /* Ignore crashes inside the CUDA driver and hope we can
      * survive even with corrupted CUDA installs. */
     fprintf(stderr, "Cycles CUDA: driver crashed, continuing without CUDA.\n");
@@ -96,8 +100,9 @@ void device_cuda_info(vector<DeviceInfo> &devices)
 #ifdef WITH_CUDA
   CUresult result = device_cuda_safe_init();
   if (result != CUDA_SUCCESS) {
-    if (result != CUDA_ERROR_NO_DEVICE)
+    if (result != CUDA_ERROR_NO_DEVICE) {
       fprintf(stderr, "CUDA cuInit: %s\n", cuewErrorString(result));
+    }
     return;
   }
 
@@ -185,8 +190,9 @@ void device_cuda_info(vector<DeviceInfo> &devices)
     VLOG_INFO << "Added device \"" << name << "\" with id \"" << info.id << "\".";
   }
 
-  if (!display_devices.empty())
+  if (!display_devices.empty()) {
     devices.insert(devices.end(), display_devices.begin(), display_devices.end());
+  }
 #else  /* WITH_CUDA */
   (void)devices;
 #endif /* WITH_CUDA */

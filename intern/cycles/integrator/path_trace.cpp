@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "integrator/path_trace.h"
 
@@ -348,7 +349,8 @@ void PathTrace::update_work_buffer_params_if_needed(const RenderWork &render_wor
   }
 
   if (render_state_.need_reset_params ||
-      render_state_.resolution_divider != render_work.resolution_divider) {
+      render_state_.resolution_divider != render_work.resolution_divider)
+  {
     update_effective_work_buffer_params(render_work);
   }
 
@@ -565,7 +567,8 @@ void PathTrace::denoise(const RenderWork &render_work)
   if (denoiser_->denoise_buffer(render_state_.effective_big_tile_params,
                                 buffer_to_denoise,
                                 get_num_samples_in_buffer(),
-                                allow_inplace_modification)) {
+                                allow_inplace_modification))
+  {
     render_state_.has_denoised_result = true;
   }
 
@@ -1149,6 +1152,8 @@ static const char *device_type_for_description(const DeviceType type)
       return "OptiX";
     case DEVICE_HIP:
       return "HIP";
+    case DEVICE_HIPRT:
+      return "HIPRT";
     case DEVICE_ONEAPI:
       return "oneAPI";
     case DEVICE_DUMMY:
@@ -1301,9 +1306,7 @@ void PathTrace::set_guiding_params(const GuidingParams &guiding_params, const bo
           break;
         }
       }
-#  if OPENPGL_VERSION_MINOR >= 4
       field_args.deterministic = guiding_params.deterministic;
-#  endif
       reinterpret_cast<PGLKDTreeArguments *>(field_args.spatialSturctureArguments)->maxDepth = 16;
       openpgl::cpp::Device *guiding_device = static_cast<openpgl::cpp::Device *>(
           device_->get_guiding_device());
@@ -1370,12 +1373,7 @@ void PathTrace::guiding_update_structures()
 
   /* we wait until we have at least 1024 samples */
   if (num_valid_samples >= 1024) {
-#  if OPENPGL_VERSION_MINOR < 4
-    const size_t num_samples = 1;
-    guiding_field_->Update(*guiding_sample_data_storage_, num_samples);
-#  else
     guiding_field_->Update(*guiding_sample_data_storage_);
-#  endif
     guiding_update_count++;
 
     VLOG_DEBUG << "Path guiding field valid: " << guiding_field_->Validate();

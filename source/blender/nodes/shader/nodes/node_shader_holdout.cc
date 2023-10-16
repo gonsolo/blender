@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
 
@@ -7,8 +8,8 @@ namespace blender::nodes::node_shader_holdout_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Float>(N_("Weight")).unavailable();
-  b.add_output<decl::Shader>(N_("Holdout"));
+  b.add_input<decl::Float>("Weight").unavailable();
+  b.add_output<decl::Shader>("Holdout");
 }
 
 static int gpu_shader_rgb(GPUMaterial *mat,

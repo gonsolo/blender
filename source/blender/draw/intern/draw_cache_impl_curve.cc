@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2017 Blender Foundation */
+/* SPDX-FileCopyrightText: 2017 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup draw
@@ -12,6 +13,7 @@
 #include "BLI_array.hh"
 #include "BLI_color.hh"
 #include "BLI_listbase.h"
+#include "BLI_math_rotation.h"
 #include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_span.hh"
@@ -30,13 +32,13 @@
 #include "GPU_material.h"
 #include "GPU_texture.h"
 
-#include "UI_resources.h"
+#include "UI_resources.hh"
 
 #include "DRW_render.h"
 
 #include "draw_cache_inline.h"
 
-#include "draw_cache_impl.h" /* own include */
+#include "draw_cache_impl.hh" /* own include */
 
 using blender::Array;
 using blender::ColorGeometry4f;
@@ -121,7 +123,8 @@ static int curve_render_normal_len_get(const ListBase *lb, const CurveCache *ob_
   const BevList *bl;
   const Nurb *nu;
   for (bl = (const BevList *)ob_curve_cache->bev.first, nu = (const Nurb *)lb->first; nu && bl;
-       bl = bl->next, nu = nu->next) {
+       bl = bl->next, nu = nu->next)
+  {
     int nr = bl->nr;
     int skip = nu->resolu / 16;
 #if 0
@@ -193,8 +196,8 @@ enum {
   CU_DATATYPE_TEXT_SELECT = 1 << 4,
 };
 
-/*
- * ob_curve_cache can be NULL
+/**
+ * \param ob_curve_cache: can be null.
  */
 static CurveRenderData *curve_render_data_create(Curve *cu,
                                                  CurveCache *ob_curve_cache,
@@ -584,7 +587,8 @@ static void curve_create_edit_curves_nor(CurveRenderData *rdata,
   for (bl = (const BevList *)rdata->ob_curve_cache->bev.first,
       nu = (const Nurb *)rdata->nurbs->first;
        nu && bl;
-       bl = bl->next, nu = nu->next) {
+       bl = bl->next, nu = nu->next)
+  {
     const BevPoint *bevp = bl->bevpoints;
     int nr = bl->nr;
     int skip = nu->resolu / 16;
@@ -833,7 +837,7 @@ int DRW_curve_material_count_get(Curve *cu)
 /** \name Grouped batch generation
  * \{ */
 
-void DRW_curve_batch_cache_create_requested(Object *ob, const struct Scene *scene)
+void DRW_curve_batch_cache_create_requested(Object *ob, const Scene *scene)
 {
   BLI_assert(ELEM(ob->type, OB_CURVES_LEGACY, OB_SURF, OB_FONT));
 
@@ -900,7 +904,8 @@ void DRW_curve_batch_cache_create_requested(Object *ob, const struct Scene *scen
     curve_create_curves_lines(rdata, cache->ibo.curves_lines);
   }
   if (DRW_vbo_requested(cache->edit.pos) || DRW_vbo_requested(cache->edit.data) ||
-      DRW_ibo_requested(cache->ibo.edit_verts) || DRW_ibo_requested(cache->ibo.edit_lines)) {
+      DRW_ibo_requested(cache->ibo.edit_verts) || DRW_ibo_requested(cache->ibo.edit_lines))
+  {
     curve_create_edit_data_and_handles(
         rdata, cache->edit.pos, cache->edit.data, cache->ibo.edit_verts, cache->ibo.edit_lines);
   }

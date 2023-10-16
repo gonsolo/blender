@@ -1,12 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
  */
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "GPU_material.h"
 
@@ -20,12 +21,12 @@ namespace blender::nodes::node_composite_brightness_cc {
 
 static void cmp_node_brightcontrast_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image"))
+  b.add_input<decl::Color>("Image")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_input<decl::Float>(N_("Bright")).min(-100.0f).max(100.0f).compositor_domain_priority(1);
-  b.add_input<decl::Float>(N_("Contrast")).min(-100.0f).max(100.0f).compositor_domain_priority(2);
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_input<decl::Float>("Bright").min(-100.0f).max(100.0f).compositor_domain_priority(1);
+  b.add_input<decl::Float>("Contrast").min(-100.0f).max(100.0f).compositor_domain_priority(2);
+  b.add_output<decl::Color>("Image");
 }
 
 static void node_composit_init_brightcontrast(bNodeTree * /*ntree*/, bNode *node)

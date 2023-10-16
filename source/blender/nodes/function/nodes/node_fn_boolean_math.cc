@@ -1,14 +1,19 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "BLI_listbase.h"
 #include "BLI_string.h"
+#include "BLI_string_utf8.h"
 
-#include "RNA_enum_types.h"
+#include "RNA_enum_types.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "NOD_socket_search_link.hh"
+
+#include "NOD_rna_define.hh"
 
 #include "node_function_util.hh"
 
@@ -17,43 +22,48 @@ namespace blender::nodes::node_fn_boolean_math_cc {
 static void node_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Bool>(N_("Boolean"), "Boolean");
-  b.add_input<decl::Bool>(N_("Boolean"), "Boolean_001");
-  b.add_output<decl::Bool>(N_("Boolean"));
+  b.add_input<decl::Bool>("Boolean", "Boolean");
+  b.add_input<decl::Bool>("Boolean", "Boolean_001");
+  b.add_output<decl::Bool>("Boolean");
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
-  uiItemR(layout, ptr, "operation", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "operation", UI_ITEM_NONE, "", ICON_NONE);
 }
 
 static void node_update(bNodeTree *ntree, bNode *node)
 {
   bNodeSocket *sockB = (bNodeSocket *)BLI_findlink(&node->inputs, 1);
 
-  nodeSetSocketAvailability(ntree, sockB, !ELEM(node->custom1, NODE_BOOLEAN_MATH_NOT));
+  bke::nodeSetSocketAvailability(ntree, sockB, !ELEM(node->custom1, NODE_BOOLEAN_MATH_NOT));
 }
 
-static void node_label(const bNodeTree * /*tree*/, const bNode *node, char *label, int maxlen)
+static void node_label(const bNodeTree * /*tree*/,
+                       const bNode *node,
+                       char *label,
+                       int label_maxncpy)
 {
   const char *name;
   bool enum_label = RNA_enum_name(rna_enum_node_boolean_math_items, node->custom1, &name);
   if (!enum_label) {
     name = "Unknown";
   }
-  BLI_strncpy(label, IFACE_(name), maxlen);
+  BLI_strncpy_utf8(label, IFACE_(name), label_maxncpy);
 }
 
 static void node_gather_link_searches(GatherLinkSearchOpParams &params)
 {
   if (!params.node_tree().typeinfo->validate_link(
-          static_cast<eNodeSocketDatatype>(params.other_socket().type), SOCK_BOOLEAN)) {
+          static_cast<eNodeSocketDatatype>(params.other_socket().type), SOCK_BOOLEAN))
+  {
     return;
   }
 
   for (const EnumPropertyItem *item = rna_enum_node_boolean_math_items;
        item->identifier != nullptr;
-       item++) {
+       item++)
+  {
     if (item->name != nullptr && item->identifier[0] != '\0') {
       NodeBooleanMathOperation operation = static_cast<NodeBooleanMathOperation>(item->value);
       params.add_item(IFACE_(item->name), [operation](LinkSearchOpParams &params) {
@@ -118,20 +128,31 @@ static void node_build_multi_function(NodeMultiFunctionBuilder &builder)
   builder.set_matching_fn(fn);
 }
 
-}  // namespace blender::nodes::node_fn_boolean_math_cc
-
-void register_node_type_fn_boolean_math()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_fn_boolean_math_cc;
+  RNA_def_node_enum(srna,
+                    "operation",
+                    "Operation",
+                    "",
+                    rna_enum_node_boolean_math_items,
+                    NOD_inline_enum_accessors(custom1));
+}
 
+static void node_register()
+{
   static bNodeType ntype;
 
   fn_node_type_base(&ntype, FN_NODE_BOOLEAN_MATH, "Boolean Math", NODE_CLASS_CONVERTER);
-  ntype.declare = file_ns::node_declare;
-  ntype.labelfunc = file_ns::node_label;
-  ntype.updatefunc = file_ns::node_update;
-  ntype.build_multi_function = file_ns::node_build_multi_function;
-  ntype.draw_buttons = file_ns::node_layout;
-  ntype.gather_link_search_ops = file_ns::node_gather_link_searches;
+  ntype.declare = node_declare;
+  ntype.labelfunc = node_label;
+  ntype.updatefunc = node_update;
+  ntype.build_multi_function = node_build_multi_function;
+  ntype.draw_buttons = node_layout;
+  ntype.gather_link_search_ops = node_gather_link_searches;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_fn_boolean_math_cc

@@ -1,4 +1,7 @@
+# SPDX-FileCopyrightText: 2012-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
+
 from bpy.types import Menu
 
 
@@ -79,6 +82,8 @@ class UnifiedPaintPanel:
             return tool_settings.gpencil_vertex_paint
         elif mode == 'SCULPT_CURVES':
             return tool_settings.curves_sculpt
+        elif mode == 'PAINT_GREASE_PENCIL':
+            return tool_settings.gpencil_paint
         return None
 
     @staticmethod
@@ -632,6 +637,9 @@ def brush_settings(layout, context, brush, popover=False):
             row = layout.row()
             row.prop(brush, "tip_roundness")
 
+            row = layout.row()
+            row.prop(brush, "tip_scale_x")
+
         elif sculpt_tool == 'ELASTIC_DEFORM':
             layout.separator()
             layout.prop(brush, "elastic_deform_type")
@@ -860,6 +868,11 @@ def brush_shared_settings(layout, context, brush, popover=False):
         strength = True
         direction = brush.curves_sculpt_tool in {'GROW_SHRINK', 'SELECTION_PAINT'}
 
+    # Grease Pencil #
+    if mode == 'PAINT_GREASE_PENCIL':
+        size = True
+        strength = True
+
     ### Draw settings. ###
     ups = context.scene.tool_settings.unified_paint_settings
 
@@ -937,7 +950,6 @@ def brush_settings_advanced(layout, context, brush, popover=False):
 
         col = layout.column(heading="Auto-Masking", align=True)
 
-        col = layout.column(align=True)
         col.prop(brush, "use_automasking_topology", text="Topology")
         col.prop(brush, "use_automasking_face_sets", text="Face Sets")
 
@@ -964,7 +976,7 @@ def brush_settings_advanced(layout, context, brush, popover=False):
 
         if is_cavity_active:
             props = row.operator("sculpt.mask_from_cavity", text="Create Mask")
-            props.settings_source = "BRUSH"
+            props.settings_source = 'BRUSH'
 
         col.prop(brush, "use_automasking_cavity_inverted", text="Cavity (inverted)")
 

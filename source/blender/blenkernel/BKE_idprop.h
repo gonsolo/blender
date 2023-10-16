@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -14,7 +16,6 @@ extern "C" {
 #endif
 
 struct BlendDataReader;
-struct BlendExpander;
 struct BlendLibReader;
 struct BlendWriter;
 struct ID;
@@ -72,22 +73,25 @@ void IDP_FreeArray(struct IDProperty *prop);
 /**
  * \param st: The string to assign.
  * \param name: The property name.
- * \param maxlen: The size of the new string (including the \0 terminator).
+ * \param maxncpy: The maximum size of the string (including the `\0` terminator).
  * \return The new string property.
  */
-struct IDProperty *IDP_NewString(const char *st,
-                                 const char *name,
-                                 int maxlen) ATTR_WARN_UNUSED_RESULT
-    ATTR_NONNULL(2 /* 'name 'arg */); /* maxlen excludes '\0' */
-void IDP_AssignString(struct IDProperty *prop, const char *st, int maxlen)
-    ATTR_NONNULL(); /* maxlen excludes '\0' */
-void IDP_ConcatStringC(struct IDProperty *prop, const char *st) ATTR_NONNULL();
-void IDP_ConcatString(struct IDProperty *str1, struct IDProperty *append) ATTR_NONNULL();
+struct IDProperty *IDP_NewStringMaxSize(const char *st,
+                                        const char *name,
+                                        int maxncpy) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(2);
+struct IDProperty *IDP_NewString(const char *st, const char *name) ATTR_WARN_UNUSED_RESULT
+    ATTR_NONNULL(2);
+/**
+ * \param st: The string to assign.
+ * \param maxncpy: The maximum size of the string (including the `\0` terminator).
+ */
+void IDP_AssignStringMaxSize(struct IDProperty *prop, const char *st, int maxncpy) ATTR_NONNULL();
+void IDP_AssignString(struct IDProperty *prop, const char *st) ATTR_NONNULL();
 void IDP_FreeString(struct IDProperty *prop) ATTR_NONNULL();
 
 /*-------- ID Type -------*/
 
-typedef void (*IDPWalkFunc)(void *userData, struct IDProperty *idp);
+typedef void (*IDPWalkFunc)(void *user_data, struct IDProperty *idp);
 
 void IDP_AssignID(struct IDProperty *prop, struct ID *id, int flag);
 
@@ -145,7 +149,7 @@ bool IDP_AddToGroup(struct IDProperty *group, struct IDProperty *prop) ATTR_NONN
  */
 bool IDP_InsertToGroup(struct IDProperty *group,
                        struct IDProperty *previous,
-                       struct IDProperty *pnew) ATTR_NONNULL(1 /* group */, 3 /* pnew */);
+                       struct IDProperty *pnew) ATTR_NONNULL(1 /*group*/, 3 /*pnew*/);
 /**
  * \note this does not free the property!
  *
@@ -171,12 +175,12 @@ struct IDProperty *IDP_GetPropertyTypeFromGroup(const struct IDProperty *prop,
 /*-------- Main Functions --------*/
 /**
  * Get the Group property that contains the id properties for ID `id`.
- *
- * \param create_if_needed: Set to create the group property and attach it to id if it doesn't
- * exist; otherwise the function will return NULL if there's no Group property attached to the ID.
  */
-struct IDProperty *IDP_GetProperties(struct ID *id, bool create_if_needed) ATTR_WARN_UNUSED_RESULT
-    ATTR_NONNULL();
+struct IDProperty *IDP_GetProperties(struct ID *id) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+/**
+ * Ensure the Group property that contains the id properties for ID `id` exists & return it.
+ */
+struct IDProperty *IDP_EnsureProperties(struct ID *id) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 struct IDProperty *IDP_CopyProperty(const struct IDProperty *prop) ATTR_WARN_UNUSED_RESULT
     ATTR_NONNULL();
 struct IDProperty *IDP_CopyProperty_ex(const struct IDProperty *prop,
@@ -215,7 +219,7 @@ bool IDP_EqualsProperties(const struct IDProperty *prop1,
  * val.array.type = IDP_FLOAT;
  * color = IDP_New(IDP_ARRAY, val, "color1");
  *
- * idgroup = IDP_GetProperties(some_id, 1);
+ * idgroup = IDP_EnsureProperties(some_id);
  * IDP_AddToGroup(idgroup, color);
  * IDP_AddToGroup(idgroup, group);
  * \endcode
@@ -247,25 +251,15 @@ void IDP_Reset(struct IDProperty *prop, const struct IDProperty *reference);
 /* C11 const correctness for casts */
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  define IDP_Float(prop) \
-    _Generic((prop), \
-  struct IDProperty *:             (*(float *)&(prop)->data.val), \
-  const struct IDProperty *: (*(const float *)&(prop)->data.val))
+    _Generic((prop), struct IDProperty * : (*(float *)&(prop)->data.val), const struct IDProperty * : (*(const float *)&(prop)->data.val))
 #  define IDP_Double(prop) \
-    _Generic((prop), \
-  struct IDProperty *:             (*(double *)&(prop)->data.val), \
-  const struct IDProperty *: (*(const double *)&(prop)->data.val))
+    _Generic((prop), struct IDProperty * : (*(double *)&(prop)->data.val), const struct IDProperty * : (*(const double *)&(prop)->data.val))
 #  define IDP_String(prop) \
-    _Generic((prop), \
-  struct IDProperty *:             ((char *) (prop)->data.pointer), \
-  const struct IDProperty *: ((const char *) (prop)->data.pointer))
+    _Generic((prop), struct IDProperty * : ((char *)(prop)->data.pointer), const struct IDProperty * : ((const char *)(prop)->data.pointer))
 #  define IDP_IDPArray(prop) \
-    _Generic((prop), \
-  struct IDProperty *:             ((struct IDProperty *) (prop)->data.pointer), \
-  const struct IDProperty *: ((const struct IDProperty *) (prop)->data.pointer))
+    _Generic((prop), struct IDProperty * : ((struct IDProperty *)(prop)->data.pointer), const struct IDProperty * : ((const struct IDProperty *)(prop)->data.pointer))
 #  define IDP_Id(prop) \
-    _Generic((prop), \
-  struct IDProperty *:             ((ID *) (prop)->data.pointer), \
-  const struct IDProperty *: ((const ID *) (prop)->data.pointer))
+    _Generic((prop), struct IDProperty * : ((ID *)(prop)->data.pointer), const struct IDProperty * : ((const ID *)(prop)->data.pointer))
 #else
 #  define IDP_Float(prop) (*(float *)&(prop)->data.val)
 #  define IDP_Double(prop) (*(double *)&(prop)->data.val)
@@ -320,8 +314,6 @@ void IDP_BlendReadData_impl(struct BlendDataReader *reader,
                             struct IDProperty **prop,
                             const char *caller_func_id);
 #define IDP_BlendDataRead(reader, prop) IDP_BlendReadData_impl(reader, prop, __func__)
-void IDP_BlendReadLib(struct BlendLibReader *reader, struct Library *lib, struct IDProperty *prop);
-void IDP_BlendReadExpand(struct BlendExpander *expander, struct IDProperty *prop);
 
 typedef enum eIDPropertyUIDataType {
   /** Other properties types that don't support RNA UI data. */

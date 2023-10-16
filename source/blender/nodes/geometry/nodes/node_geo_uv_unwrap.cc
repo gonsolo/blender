@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "GEO_uv_parametrizer.hh"
 
@@ -7,8 +9,10 @@
 
 #include "BKE_mesh.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
+
+#include "NOD_rna_define.hh"
 
 #include "node_geometry_util.hh"
 
@@ -18,33 +22,29 @@ NODE_STORAGE_FUNCS(NodeGeometryUVUnwrap)
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Bool>(N_("Selection"))
+  b.add_input<decl::Bool>("Selection")
       .default_value(true)
       .hide_value()
       .supports_field()
-      .description(N_("Faces to participate in the unwrap operation"));
-  b.add_input<decl::Bool>(N_("Seam"))
-      .hide_value()
-      .supports_field()
-      .description(N_("Edges to mark where the mesh is \"cut\" for the purposes of unwrapping"));
-  b.add_input<decl::Float>(N_("Margin"))
-      .default_value(0.001f)
-      .min(0.0f)
-      .max(1.0f)
-      .description(N_("Space between islands"));
-  b.add_input<decl::Bool>(N_("Fill Holes"))
+      .description("Faces to participate in the unwrap operation");
+  b.add_input<decl::Bool>("Seam").hide_value().supports_field().description(
+      "Edges to mark where the mesh is \"cut\" for the purposes of unwrapping");
+  b.add_input<decl::Float>("Margin").default_value(0.001f).min(0.0f).max(1.0f).description(
+      "Space between islands");
+  b.add_input<decl::Bool>("Fill Holes")
       .default_value(true)
-      .description(N_("Virtually fill holes in mesh before unwrapping, to better avoid overlaps "
-                      "and preserve symmetry"));
-  b.add_output<decl::Vector>(N_("UV")).field_source_reference_all().description(
-      N_("UV coordinates between 0 and 1 for each face corner in the selected faces"));
+      .description(
+          "Virtually fill holes in mesh before unwrapping, to better avoid overlaps "
+          "and preserve symmetry");
+  b.add_output<decl::Vector>("UV").field_source_reference_all().description(
+      "UV coordinates between 0 and 1 for each face corner in the selected faces");
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
   uiLayoutSetPropSep(layout, true);
   uiLayoutSetPropDecorate(layout, false);
-  uiItemR(layout, ptr, "method", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "method", UI_ITEM_NONE, "", ICON_NONE);
 }
 
 static void node_init(bNodeTree * /*tree*/, bNode *node)
@@ -64,11 +64,11 @@ static VArray<float3> construct_uv_gvarray(const Mesh &mesh,
 {
   const Span<float3> positions = mesh.vert_positions();
   const Span<int2> edges = mesh.edges();
-  const OffsetIndices polys = mesh.polys();
+  const OffsetIndices faces = mesh.faces();
   const Span<int> corner_verts = mesh.corner_verts();
 
-  bke::MeshFieldContext face_context{mesh, ATTR_DOMAIN_FACE};
-  FieldEvaluator face_evaluator{face_context, polys.size()};
+  const bke::MeshFieldContext face_context{mesh, ATTR_DOMAIN_FACE};
+  FieldEvaluator face_evaluator{face_context, faces.size()};
   face_evaluator.add(selection_field);
   face_evaluator.evaluate();
   const IndexMask selection = face_evaluator.get_evaluated_as_mask(0);
@@ -76,7 +76,7 @@ static VArray<float3> construct_uv_gvarray(const Mesh &mesh,
     return {};
   }
 
-  bke::MeshFieldContext edge_context{mesh, ATTR_DOMAIN_EDGE};
+  const bke::MeshFieldContext edge_context{mesh, ATTR_DOMAIN_EDGE};
   FieldEvaluator edge_evaluator{edge_context, edges.size()};
   edge_evaluator.add(seam_field);
   edge_evaluator.evaluate();
@@ -84,16 +84,16 @@ static VArray<float3> construct_uv_gvarray(const Mesh &mesh,
 
   Array<float3> uv(corner_verts.size(), float3(0));
 
-  geometry::ParamHandle *handle = geometry::uv_parametrizer_construct_begin();
-  for (const int poly_index : selection) {
-    const IndexRange poly = polys[poly_index];
-    Array<geometry::ParamKey, 16> mp_vkeys(poly.size());
-    Array<bool, 16> mp_pin(poly.size());
-    Array<bool, 16> mp_select(poly.size());
-    Array<const float *, 16> mp_co(poly.size());
-    Array<float *, 16> mp_uv(poly.size());
-    for (const int i : IndexRange(poly.size())) {
-      const int corner = poly[i];
+  geometry::ParamHandle *handle = new geometry::ParamHandle();
+  selection.foreach_index([&](const int face_index) {
+    const IndexRange face = faces[face_index];
+    Array<geometry::ParamKey, 16> mp_vkeys(face.size());
+    Array<bool, 16> mp_pin(face.size());
+    Array<bool, 16> mp_select(face.size());
+    Array<const float *, 16> mp_co(face.size());
+    Array<float *, 16> mp_uv(face.size());
+    for (const int i : IndexRange(face.size())) {
+      const int corner = face[i];
       const int vert = corner_verts[corner];
       mp_vkeys[i] = vert;
       mp_co[i] = positions[vert];
@@ -102,18 +102,20 @@ static VArray<float3> construct_uv_gvarray(const Mesh &mesh,
       mp_select[i] = false;
     }
     geometry::uv_parametrizer_face_add(handle,
-                                       poly_index,
-                                       poly.size(),
+                                       face_index,
+                                       face.size(),
                                        mp_vkeys.data(),
                                        mp_co.data(),
                                        mp_uv.data(),
                                        mp_pin.data(),
                                        mp_select.data());
-  }
-  for (const int i : seam) {
+  });
+
+  seam.foreach_index([&](const int i) {
     geometry::ParamKey vkeys[2]{uint(edges[i][0]), uint(edges[i][1])};
     geometry::uv_parametrizer_edge_set_seam(handle, vkeys);
-  }
+  });
+
   /* TODO: once field input nodes are able to emit warnings (#94039), emit a
    * warning if we fail to solve an island. */
   geometry::uv_parametrizer_construct_end(handle, fill_holes, false, nullptr);
@@ -125,7 +127,7 @@ static VArray<float3> construct_uv_gvarray(const Mesh &mesh,
   geometry::uv_parametrizer_average(handle, true, false, false);
   geometry::uv_parametrizer_pack(handle, margin, true, true);
   geometry::uv_parametrizer_flush(handle);
-  geometry::uv_parametrizer_delete(handle);
+  delete (handle);
 
   return mesh.attributes().adapt_domain<float3>(
       VArray<float3>::ForContainer(std::move(uv)), ATTR_DOMAIN_CORNER, domain);
@@ -157,7 +159,7 @@ class UnwrapFieldInput final : public bke::MeshFieldInput {
 
   GVArray get_varray_for_context(const Mesh &mesh,
                                  const eAttrDomain domain,
-                                 const IndexMask /*mask*/) const final
+                                 const IndexMask & /*mask*/) const final
   {
     return construct_uv_gvarray(mesh, selection_, seam_, fill_holes_, margin_, method_, domain);
   }
@@ -187,20 +189,42 @@ static void node_geo_exec(GeoNodeExecParams params)
                         selection_field, seam_field, fill_holes, margin, method)));
 }
 
-}  // namespace blender::nodes::node_geo_uv_unwrap_cc
-
-void register_node_type_geo_uv_unwrap()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_geo_uv_unwrap_cc;
+  static EnumPropertyItem method_items[] = {
+      {GEO_NODE_UV_UNWRAP_METHOD_ANGLE_BASED,
+       "ANGLE_BASED",
+       0,
+       "Angle Based",
+       "This method gives a good 2D representation of a mesh"},
+      {GEO_NODE_UV_UNWRAP_METHOD_CONFORMAL,
+       "CONFORMAL",
+       0,
+       "Conformal",
+       "Uses LSCM (Least Squares Conformal Mapping). This usually gives a less accurate UV "
+       "mapping than Angle Based, but works better for simpler objects"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
 
+  RNA_def_node_enum(
+      srna, "method", "Method", "", method_items, NOD_storage_enum_accessors(method));
+}
+
+static void node_register()
+{
   static bNodeType ntype;
 
   geo_node_type_base(&ntype, GEO_NODE_UV_UNWRAP, "UV Unwrap", NODE_CLASS_CONVERTER);
-  ntype.initfunc = file_ns::node_init;
+  ntype.initfunc = node_init;
   node_type_storage(
       &ntype, "NodeGeometryUVUnwrap", node_free_standard_storage, node_copy_standard_storage);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.draw_buttons = file_ns::node_layout;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_uv_unwrap_cc

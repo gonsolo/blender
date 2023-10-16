@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2023 Blender Foundation */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -18,7 +19,7 @@ class VKContext;
  * Class for handing vulkan buffers (allocation/updating/binding).
  */
 class VKBuffer {
-  int64_t size_in_bytes_;
+  int64_t size_in_bytes_ = 0;
   VkBuffer vk_buffer_ = VK_NULL_HANDLE;
   VmaAllocation allocation_ = VK_NULL_HANDLE;
   /* Pointer to the virtually mapped memory. */
@@ -31,14 +32,11 @@ class VKBuffer {
   /** Has this buffer been allocated? */
   bool is_allocated() const;
 
-  bool create(VKContext &context,
-              int64_t size,
-              GPUUsageType usage,
-              VkBufferUsageFlagBits buffer_usage);
+  bool create(int64_t size, GPUUsageType usage, VkBufferUsageFlagBits buffer_usage);
   void clear(VKContext &context, uint32_t clear_value);
   void update(const void *data) const;
   void read(void *data) const;
-  bool free(VKContext &context);
+  bool free();
 
   int64_t size_in_bytes() const
   {
@@ -60,7 +58,21 @@ class VKBuffer {
  private:
   /** Check if this buffer is mapped. */
   bool is_mapped() const;
-  bool map(VKContext &context);
-  void unmap(VKContext &context);
+  bool map();
+  void unmap();
 };
+
+/**
+ * Helper struct to enable buffers to be bound with an offset.
+ *
+ * VKImmediate mode uses a single VKBuffer with multiple vertex layouts. Those layouts are send to
+ * the command buffer containing an offset.
+ *
+ * VKIndexBuffer uses this when it is a subrange of another buffer.
+ */
+struct VKBufferWithOffset {
+  const VKBuffer &buffer;
+  VkDeviceSize offset;
+};
+
 }  // namespace blender::gpu

@@ -1,31 +1,34 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include <algorithm>
 
 #include "curves_sculpt_intern.hh"
 
 #include "BLI_kdtree.h"
+#include "BLI_math_geom.h"
 #include "BLI_math_matrix.hh"
 #include "BLI_rand.hh"
 #include "BLI_vector.hh"
 
 #include "PIL_time.h"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
 #include "BKE_attribute_math.hh"
-#include "BKE_brush.h"
+#include "BKE_brush.hh"
 #include "BKE_bvhutils.h"
 #include "BKE_context.h"
 #include "BKE_curves.hh"
 #include "BKE_curves_utils.hh"
 #include "BKE_geometry_set.hh"
 #include "BKE_mesh.hh"
-#include "BKE_mesh_runtime.h"
+#include "BKE_mesh_runtime.hh"
 #include "BKE_mesh_sample.hh"
 #include "BKE_modifier.h"
-#include "BKE_object.h"
-#include "BKE_paint.h"
+#include "BKE_object.hh"
+#include "BKE_paint.hh"
 #include "BKE_report.h"
 
 #include "DNA_brush_enums.h"
@@ -37,14 +40,14 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 
-#include "ED_screen.h"
-#include "ED_view3d.h"
+#include "ED_screen.hh"
+#include "ED_view3d.hh"
 
 #include "GEO_add_curves_on_mesh.hh"
 
-#include "WM_api.h"
+#include "WM_api.hh"
 
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph_query.hh"
 
 /**
  * The code below uses a suffix naming convention to indicate the coordinate space:
@@ -126,7 +129,7 @@ struct AddOperationExecutor {
 
     Object &surface_ob_orig = *curves_id_orig_->surface;
     Mesh &surface_orig = *static_cast<Mesh *>(surface_ob_orig.data);
-    if (surface_orig.totpoly == 0) {
+    if (surface_orig.faces_num == 0) {
       report_empty_original_surface(stroke_extension.reports);
       return;
     }
@@ -136,7 +139,7 @@ struct AddOperationExecutor {
       return;
     }
     surface_eval_ = BKE_object_get_evaluated_mesh(surface_ob_eval_);
-    if (surface_eval_->totpoly == 0) {
+    if (surface_eval_->faces_num == 0) {
       report_empty_evaluated_surface(stroke_extension.reports);
       return;
     }
@@ -206,11 +209,11 @@ struct AddOperationExecutor {
     const Span<MLoopTri> surface_looptris_orig = surface_orig.looptris();
 
     /* Find normals. */
-    if (!CustomData_has_layer(&surface_orig.ldata, CD_NORMAL)) {
+    if (!CustomData_has_layer(&surface_orig.loop_data, CD_NORMAL)) {
       BKE_mesh_calc_normals_split(&surface_orig);
     }
     const Span<float3> corner_normals_su = {
-        reinterpret_cast<const float3 *>(CustomData_get_layer(&surface_orig.ldata, CD_NORMAL)),
+        reinterpret_cast<const float3 *>(CustomData_get_layer(&surface_orig.loop_data, CD_NORMAL)),
         surface_orig.totloop};
 
     const geometry::ReverseUVSampler reverse_uv_sampler{surface_uv_map, surface_looptris_orig};
@@ -233,7 +236,8 @@ struct AddOperationExecutor {
     add_inputs.corner_normals_su = corner_normals_su;
 
     if (add_inputs.interpolate_length || add_inputs.interpolate_shape ||
-        add_inputs.interpolate_point_count || add_inputs.interpolate_resolution) {
+        add_inputs.interpolate_point_count || add_inputs.interpolate_resolution)
+    {
       this->ensure_curve_roots_kdtree();
       add_inputs.old_roots_kdtree = self_->curve_roots_kdtree_;
     }
@@ -306,7 +310,7 @@ struct AddOperationExecutor {
     const float3 bary_coords = bke::mesh_surface_sample::compute_bary_coord_in_triangle(
         surface_positions_eval_, surface_corner_verts_eval_, looptri, brush_pos_su);
 
-    const float2 uv = bke::mesh_surface_sample::sample_corner_attrribute_with_bary_coords(
+    const float2 uv = bke::mesh_surface_sample::sample_corner_attribute_with_bary_coords(
         bary_coords, looptri, surface_uv_map_eval_);
     r_sampled_uvs.append(uv);
   }
@@ -364,7 +368,7 @@ struct AddOperationExecutor {
           positions_su);
 
       for (const int i : IndexRange(new_points)) {
-        const float2 uv = bke::mesh_surface_sample::sample_corner_attrribute_with_bary_coords(
+        const float2 uv = bke::mesh_surface_sample::sample_corner_attribute_with_bary_coords(
             bary_coords[i], surface_looptris_eval_[looptri_indices[i]], surface_uv_map_eval_);
         r_sampled_uvs.append(uv);
       }
@@ -487,7 +491,7 @@ struct AddOperationExecutor {
           looptri_indices,
           positions_su);
       for (const int i : IndexRange(new_points)) {
-        const float2 uv = bke::mesh_surface_sample::sample_corner_attrribute_with_bary_coords(
+        const float2 uv = bke::mesh_surface_sample::sample_corner_attribute_with_bary_coords(
             bary_coords[i], surface_looptris_eval_[looptri_indices[i]], surface_uv_map_eval_);
         r_sampled_uvs.append(uv);
       }
@@ -504,10 +508,10 @@ struct AddOperationExecutor {
   {
     if (self_->curve_roots_kdtree_ == nullptr) {
       self_->curve_roots_kdtree_ = BLI_kdtree_3d_new(curves_orig_->curves_num());
+      const Span<int> offsets = curves_orig_->offsets();
+      const Span<float3> positions = curves_orig_->positions();
       for (const int curve_i : curves_orig_->curves_range()) {
-        const int root_point_i = curves_orig_->offsets()[curve_i];
-        const float3 &root_pos_cu = curves_orig_->positions()[root_point_i];
-        BLI_kdtree_3d_insert(self_->curve_roots_kdtree_, curve_i, root_pos_cu);
+        BLI_kdtree_3d_insert(self_->curve_roots_kdtree_, curve_i, positions[offsets[curve_i]]);
       }
       BLI_kdtree_3d_balance(self_->curve_roots_kdtree_);
     }

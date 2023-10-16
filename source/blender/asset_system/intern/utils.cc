@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup asset_system
@@ -23,7 +25,7 @@ std::string normalize_directory_path(StringRef directory)
               directory.data(),
               /* + 1 for null terminator. */
               std::min(directory.size() + 1, int64_t(sizeof(dir_normalized))));
-  BLI_path_normalize_dir(nullptr, dir_normalized, sizeof(dir_normalized));
+  BLI_path_normalize_dir(dir_normalized, sizeof(dir_normalized));
   return std::string(dir_normalized);
 }
 
@@ -34,7 +36,7 @@ std::string normalize_path(StringRefNull path, int64_t max_len)
 
   char *buf = BLI_strdupn(path.c_str(), len);
   BLI_path_slash_native(buf);
-  BLI_path_normalize(nullptr, buf);
+  BLI_path_normalize(buf);
 
   std::string normalized_path = buf;
   MEM_freeN(buf);

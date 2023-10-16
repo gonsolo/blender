@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -7,6 +9,8 @@
  * \brief Functions for dealing with objects and deform verts,
  *        used by painting and tools.
  */
+
+#include "DNA_scene_enums.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,7 +96,6 @@ void BKE_object_defgroup_index_map_apply(struct MDeformVert *dvert,
 
 /* Select helpers. */
 
-enum eVGroupSelect;
 /**
  * Return the subset type of the Vertex Group Selection.
  */
@@ -140,6 +143,12 @@ bool BKE_object_defgroup_check_lock_relative_multi(int defbase_tot,
                                                    const bool *lock_flags,
                                                    const bool *selected,
                                                    int sel_tot);
+
+/**
+ * Return lock status of active vertex group.
+ */
+bool BKE_object_defgroup_active_is_locked(const struct Object *ob);
+
 /**
  * Takes a pair of boolean masks of all locked and all deform groups, and computes
  * a pair of masks for locked deform and unlocked deform groups. Output buffers may

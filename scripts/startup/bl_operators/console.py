@@ -1,4 +1,7 @@
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import annotations
 
 import bpy
@@ -7,6 +10,7 @@ from bpy.props import (
     BoolProperty,
     StringProperty,
 )
+from bpy.app.translations import contexts as i18n_contexts
 
 
 def _lang_module_get(sc):
@@ -16,7 +20,7 @@ def _lang_module_get(sc):
 
 
 class ConsoleExec(Operator):
-    """Execute the current console line as a python expression"""
+    """Execute the current console line as a Python expression"""
     bl_idname = "console.execute"
     bl_label = "Console Execute"
     bl_options = {'UNDO_GROUPED'}
@@ -123,6 +127,7 @@ class ConsoleLanguage(Operator):
 
     language: StringProperty(
         name="Language",
+        translation_context=i18n_contexts.editor_python_console,
         maxlen=32,
     )
 

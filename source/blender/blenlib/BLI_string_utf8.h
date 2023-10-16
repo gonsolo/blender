@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -13,11 +15,11 @@
 extern "C" {
 #endif
 
-char *BLI_strncpy_utf8(char *__restrict dst, const char *__restrict src, size_t maxncpy)
+char *BLI_strncpy_utf8(char *__restrict dst, const char *__restrict src, size_t dst_maxncpy)
     ATTR_NONNULL(1, 2);
 size_t BLI_strncpy_utf8_rlen(char *__restrict dst,
                              const char *__restrict src,
-                             size_t maxncpy) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1, 2);
+                             size_t dst_maxncpy) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1, 2);
 /**
  * Find first UTF-8 invalid byte in given \a str, of \a length bytes.
  *
@@ -35,7 +37,7 @@ int BLI_str_utf8_invalid_strip(char *str, size_t length) ATTR_NONNULL(1);
  * \return The size (in bytes) of a single UTF-8 char.
  * \warning Can return -1 on bad chars.
  */
-int BLI_str_utf8_size(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_size_or_error(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 /**
  * Use when we want to skip errors.
  */
@@ -51,20 +53,21 @@ int BLI_str_utf8_size_safe(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1
  *
  * Return value: the resulting character
  */
-unsigned int BLI_str_utf8_as_unicode(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+unsigned int BLI_str_utf8_as_unicode_or_error(const char *p) ATTR_WARN_UNUSED_RESULT
+    ATTR_NONNULL(1);
+unsigned int BLI_str_utf8_as_unicode_safe(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 /**
- * UTF8 decoding that steps over the index (unless an error is encountered).
+ * UTF8 decoding that steps over the index.
+ * When an error is encountered fall back to `LATIN1`, stepping over a single byte.
  *
  * \param p: The text to step over.
  * \param p_len: The length of `p`.
  * \param index: Index of `p` to step over.
  * \return the code-point `(p + *index)` if there is a decoding error.
- *
- * \note Falls back to `LATIN1` for text drawing.
  */
-unsigned int BLI_str_utf8_as_unicode_step(const char *__restrict p,
-                                          size_t p_len,
-                                          size_t *__restrict index) ATTR_WARN_UNUSED_RESULT
+unsigned int BLI_str_utf8_as_unicode_step_safe(const char *__restrict p,
+                                               size_t p_len,
+                                               size_t *__restrict index) ATTR_WARN_UNUSED_RESULT
     ATTR_NONNULL(1, 3);
 /**
  * UTF8 decoding that steps over the index (unless an error is encountered).
@@ -88,20 +91,21 @@ size_t BLI_str_utf8_from_unicode_len(unsigned int c) ATTR_WARN_UNUSED_RESULT;
  * BLI_str_utf8_from_unicode:
  *
  * \param c: a Unicode character code
- * \param outbuf: output buffer, must have at least `outbuf_len` bytes of space.
- * If the length required by `c` exceeds `outbuf_len`,
- * the bytes available bytes will be zeroed and `outbuf_len` returned.
+ * \param dst: output buffer, must have at least `dst_maxncpy` bytes of space.
+ * If the length required by `c` exceeds `dst_maxncpy`,
+ * the bytes available bytes will be zeroed and `dst_maxncpy` returned.
  *
  * Converts a single character to UTF-8.
  *
  * \return number of bytes written.
  */
-size_t BLI_str_utf8_from_unicode(unsigned int c, char *outbuf, size_t outbuf_len) ATTR_NONNULL(2);
+size_t BLI_str_utf8_from_unicode(unsigned int c, char *dst, size_t dst_maxncpy) ATTR_NONNULL(2);
 size_t BLI_str_utf8_as_utf32(char32_t *__restrict dst_w,
                              const char *__restrict src_c,
-                             size_t maxncpy) ATTR_NONNULL(1, 2);
-size_t BLI_str_utf32_as_utf8(char *__restrict dst, const char32_t *__restrict src, size_t maxncpy)
-    ATTR_NONNULL(1, 2);
+                             size_t dst_w_maxncpy) ATTR_NONNULL(1, 2);
+size_t BLI_str_utf32_as_utf8(char *__restrict dst,
+                             const char32_t *__restrict src,
+                             size_t dst_maxncpy) ATTR_NONNULL(1, 2);
 /**
  * \return The UTF-32 len in UTF-8 with a clamped length.
  */
@@ -151,26 +155,28 @@ size_t BLI_wstrlen_utf8(const wchar_t *src) ATTR_NONNULL(1) ATTR_WARN_UNUSED_RES
 size_t BLI_strlen_utf8_ex(const char *strc, size_t *r_len_bytes)
     ATTR_NONNULL(1, 2) ATTR_WARN_UNUSED_RESULT;
 size_t BLI_strlen_utf8(const char *strc) ATTR_NONNULL(1) ATTR_WARN_UNUSED_RESULT;
-size_t BLI_strnlen_utf8_ex(const char *strc, size_t maxlen, size_t *r_len_bytes)
+size_t BLI_strnlen_utf8_ex(const char *strc, size_t strc_maxlen, size_t *r_len_bytes)
     ATTR_NONNULL(1, 3);
 /**
  * \param strc: the string to measure the length.
- * \param maxlen: the string length (in bytes)
+ * \param strc_maxlen: the string length (in bytes)
  * \return the unicode length (not in bytes!)
  */
-size_t BLI_strnlen_utf8(const char *strc, size_t maxlen) ATTR_NONNULL(1) ATTR_WARN_UNUSED_RESULT;
+size_t BLI_strnlen_utf8(const char *strc, size_t strc_maxlen)
+    ATTR_NONNULL(1) ATTR_WARN_UNUSED_RESULT;
 size_t BLI_strncpy_wchar_as_utf8(char *__restrict dst,
                                  const wchar_t *__restrict src,
-                                 size_t maxncpy) ATTR_NONNULL(1, 2);
+                                 size_t dst_maxncpy) ATTR_NONNULL(1, 2);
 size_t BLI_strncpy_wchar_from_utf8(wchar_t *__restrict dst_w,
                                    const char *__restrict src_c,
-                                   size_t maxncpy) ATTR_NONNULL(1, 2);
+                                   size_t dst_w_maxncpy) ATTR_NONNULL(1, 2);
 
 /**
  * Count columns that character/string occupies (based on `wcwidth.co`).
  */
-int BLI_wcwidth(char32_t ucs) ATTR_WARN_UNUSED_RESULT;
-int BLI_wcswidth(const char32_t *pwcs, size_t n) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_wcwidth_or_error(char32_t ucs) ATTR_WARN_UNUSED_RESULT;
+int BLI_wcwidth_safe(char32_t ucs) ATTR_WARN_UNUSED_RESULT;
+int BLI_wcswidth_or_error(const char32_t *pwcs, size_t n) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 
 /**
  * Return the uppercase of a 32-bit character or the character when no case change is needed.
@@ -188,7 +194,7 @@ char32_t BLI_str_utf32_char_to_lower(char32_t wc);
 /**
  * \warning can return -1 on bad chars.
  */
-int BLI_str_utf8_char_width(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_char_width_or_error(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 int BLI_str_utf8_char_width_safe(const char *p) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 
 size_t BLI_str_partition_utf8(const char *str,
@@ -206,13 +212,26 @@ size_t BLI_str_partition_ex_utf8(const char *str,
                                  const char **r_suf,
                                  bool from_right) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1, 3, 4, 5);
 
-int BLI_str_utf8_offset_to_index(const char *str, int offset) ATTR_WARN_UNUSED_RESULT
-    ATTR_NONNULL(1);
-int BLI_str_utf8_offset_from_index(const char *str, int index) ATTR_WARN_UNUSED_RESULT
-    ATTR_NONNULL(1);
-int BLI_str_utf8_offset_to_column(const char *str, int offset) ATTR_WARN_UNUSED_RESULT
-    ATTR_NONNULL(1);
-int BLI_str_utf8_offset_from_column(const char *str, int column) ATTR_WARN_UNUSED_RESULT
+int BLI_str_utf8_offset_to_index(const char *str,
+                                 size_t str_len,
+                                 int offset_target) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_offset_from_index(const char *str,
+                                   size_t str_len,
+                                   int index_target) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_offset_to_column(const char *str,
+                                  size_t str_len,
+                                  int offset_target) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_offset_from_column(const char *str,
+                                    size_t str_len,
+                                    int column_target) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_offset_to_column_with_tabs(const char *str,
+                                            size_t str_len,
+                                            int offset_target,
+                                            int tab_width) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLI_str_utf8_offset_from_column_with_tabs(const char *str,
+                                              size_t str_len,
+                                              int column_target,
+                                              int tab_width) ATTR_WARN_UNUSED_RESULT
     ATTR_NONNULL(1);
 
 /** Size in bytes. */

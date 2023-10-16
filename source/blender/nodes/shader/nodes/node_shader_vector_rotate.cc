@@ -1,38 +1,48 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2013 Blender Foundation */
+/* SPDX-FileCopyrightText: 2013 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
  */
 
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
+#include "BLI_math_vector_types.hh"
+
+#include "FN_multi_function.hh"
+#include "FN_multi_function_builder.hh"
+
+#include "NOD_multi_function.hh"
+
 #include "node_shader_util.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_vector_rotate_cc {
 
 static void sh_node_vector_rotate_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Vector>(N_("Vector")).min(0.0f).max(1.0f).hide_value();
-  b.add_input<decl::Vector>(N_("Center"));
-  b.add_input<decl::Vector>(N_("Axis"))
+  b.add_input<decl::Vector>("Vector").min(0.0f).max(1.0f).hide_value();
+  b.add_input<decl::Vector>("Center");
+  b.add_input<decl::Vector>("Axis")
       .min(-1.0f)
       .max(1.0f)
       .default_value({0.0f, 0.0f, 1.0f})
       .make_available([](bNode &node) { node.custom1 = NODE_VECTOR_ROTATE_TYPE_AXIS; });
-  b.add_input<decl::Float>(N_("Angle")).subtype(PROP_ANGLE);
-  b.add_input<decl::Vector>(N_("Rotation")).subtype(PROP_EULER).make_available([](bNode &node) {
+  b.add_input<decl::Float>("Angle").subtype(PROP_ANGLE);
+  b.add_input<decl::Vector>("Rotation").subtype(PROP_EULER).make_available([](bNode &node) {
     node.custom1 = NODE_VECTOR_ROTATE_TYPE_EULER_XYZ;
   });
-  b.add_output<decl::Vector>(N_("Vector"));
+  b.add_output<decl::Vector>("Vector");
 }
 
 static void node_shader_buts_vector_rotate(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
   uiItemR(layout, ptr, "rotation_type", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, ICON_NONE);
-  uiItemR(layout, ptr, "invert", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, 0);
+  uiItemR(layout, ptr, "invert", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, ICON_NONE);
 }
 
 static const char *gpu_shader_get_name(int mode)
@@ -192,14 +202,58 @@ static void sh_node_vector_rotate_build_multi_function(NodeMultiFunctionBuilder 
 static void node_shader_update_vector_rotate(bNodeTree *ntree, bNode *node)
 {
   bNodeSocket *sock_rotation = nodeFindSocket(node, SOCK_IN, "Rotation");
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_rotation, ELEM(node->custom1, NODE_VECTOR_ROTATE_TYPE_EULER_XYZ));
   bNodeSocket *sock_axis = nodeFindSocket(node, SOCK_IN, "Axis");
-  nodeSetSocketAvailability(ntree, sock_axis, ELEM(node->custom1, NODE_VECTOR_ROTATE_TYPE_AXIS));
+  bke::nodeSetSocketAvailability(
+      ntree, sock_axis, ELEM(node->custom1, NODE_VECTOR_ROTATE_TYPE_AXIS));
   bNodeSocket *sock_angle = nodeFindSocket(node, SOCK_IN, "Angle");
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_angle, !ELEM(node->custom1, NODE_VECTOR_ROTATE_TYPE_EULER_XYZ));
 }
+
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  int mode = node_->custom1;
+  bool invert = node_->custom2;
+
+  NodeItem vector = get_input_value("Vector", NodeItem::Type::Vector3);
+  NodeItem center = get_input_value("Center", NodeItem::Type::Vector3) *
+                    val(MaterialX::Vector3(1.0f, 1.0f, -1.0f));
+  vector = vector - center;
+
+  if (mode == NODE_VECTOR_ROTATE_TYPE_EULER_XYZ) {
+    NodeItem rotation = get_input_value("Rotation", NodeItem::Type::Vector3) *
+                        val(MaterialX::Vector3(1.0f, 1.0f, -1.0f) * 180.0f / M_PI);
+
+    return vector.rotate(invert ? -rotation : rotation, invert) + center;
+  }
+
+  NodeItem angle = get_input_value("Angle", NodeItem::Type::Float) * val(float(180.0f / M_PI));
+  NodeItem axis = empty();
+  switch (mode) {
+    case NODE_VECTOR_ROTATE_TYPE_AXIS:
+      axis = get_input_value("Axis", NodeItem::Type::Vector3) *
+             val(MaterialX::Vector3(1.0f, 1.0f, -1.0f));
+      break;
+    case NODE_VECTOR_ROTATE_TYPE_AXIS_X:
+      axis = val(MaterialX::Vector3(1.0f, 0.0f, 0.0f));
+      break;
+    case NODE_VECTOR_ROTATE_TYPE_AXIS_Y:
+      axis = val(MaterialX::Vector3(0.0f, 1.0f, 0.0f));
+      break;
+    case NODE_VECTOR_ROTATE_TYPE_AXIS_Z:
+      axis = val(MaterialX::Vector3(0.0f, 0.0f, -1.0f));
+      break;
+    default:
+      BLI_assert_unreachable();
+  }
+
+  return vector.rotate(invert ? -angle : angle, axis) + center;
+}
+#endif
+NODE_SHADER_MATERIALX_END
 
 }  // namespace blender::nodes::node_shader_vector_rotate_cc
 
@@ -215,6 +269,7 @@ void register_node_type_sh_vector_rotate()
   ntype.gpu_fn = file_ns::gpu_shader_vector_rotate;
   ntype.updatefunc = file_ns::node_shader_update_vector_rotate;
   ntype.build_multi_function = file_ns::sh_node_vector_rotate_build_multi_function;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

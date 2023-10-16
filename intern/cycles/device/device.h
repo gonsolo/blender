@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifndef __DEVICE_H__
 #define __DEVICE_H__
@@ -40,6 +41,7 @@ enum DeviceType {
   DEVICE_MULTI,
   DEVICE_OPTIX,
   DEVICE_HIP,
+  DEVICE_HIPRT,
   DEVICE_METAL,
   DEVICE_ONEAPI,
   DEVICE_DUMMY,
@@ -74,13 +76,13 @@ class DeviceInfo {
   bool display_device;          /* GPU is used as a display device. */
   bool has_nanovdb;             /* Support NanoVDB volumes. */
   bool has_light_tree;          /* Support light tree. */
+  bool has_mnee;                /* Support MNEE. */
   bool has_osl;                 /* Support Open Shading Language. */
   bool has_guiding;             /* Support path guiding. */
   bool has_profiling;           /* Supports runtime collection of profiling info. */
   bool has_peer_memory;         /* GPU has P2P access to memory of another GPU. */
   bool has_gpu_queue;           /* Device supports GPU queue. */
-  bool use_hardware_raytracing; /* Use hardware ray tracing to accelerate ray queries in a backend.
-                                 */
+  bool use_hardware_raytracing; /* Use hardware instructions to accelerate ray tracing. */
   KernelOptimizationLevel kernel_optimization_level; /* Optimization level applied to path tracing
                                                       * kernels (Metal only). */
   DenoiserTypeMask denoisers;                        /* Supported denoiser types. */
@@ -97,6 +99,7 @@ class DeviceInfo {
     display_device = false;
     has_nanovdb = false;
     has_light_tree = true;
+    has_mnee = true;
     has_osl = false;
     has_guiding = false;
     has_profiling = false;

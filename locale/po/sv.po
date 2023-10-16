@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 3.6.0 Alpha (b'dfa42c614fb4')\n"
+"Project-Id-Version: Blender 4.0.0 Beta (b'26346464e0c0')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-17 09:43:08\n"
+"POT-Creation-Date: 2023-10-09 09:45:23\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Arvid Rudling <arvid.r@gmail.com>\n"
 "Language-Team: \n"
@@ -117,6 +117,14 @@ msgid "Width"
 msgstr "Bredd"
 
 
+msgid "Options"
+msgstr "Alternativ"
+
+
+msgid "Quaternion"
+msgstr "Kvaternion"
+
+
 msgid "Edge"
 msgstr "Kant"
 
@@ -225,10 +233,6 @@ msgid "Inherit Scale"
 msgstr "Ärva skalning"
 
 
-msgid "Layers"
-msgstr "Lager"
-
-
 msgid "Length"
 msgstr "Längd"
 
@@ -257,8 +261,8 @@ msgid "Local Location"
 msgstr "Lokalposition"
 
 
-msgid "Bone Groups"
-msgstr "Bengrupper"
+msgid "Custom"
+msgstr "Anpassad"
 
 
 msgid "Remove"
@@ -297,16 +301,12 @@ msgid "Fill"
 msgstr "Fyll"
 
 
-msgid "Smooth"
-msgstr "Jämn"
+msgid "Hardness"
+msgstr "Hårdhet"
 
 
 msgid "Thickness"
 msgstr "Tjocklek"
-
-
-msgid "Hardness"
-msgstr "Hårdhet"
 
 
 msgid "Saturation"
@@ -315,10 +315,6 @@ msgstr "Mättnad"
 
 msgid "Outline"
 msgstr "Kontur"
-
-
-msgid "Path"
-msgstr "Bana"
 
 
 msgid "Opacity"
@@ -489,10 +485,6 @@ msgid "Front"
 msgstr "Fram"
 
 
-msgid "Quaternion"
-msgstr "Kvaternion"
-
-
 msgid "Location"
 msgstr "Position"
 
@@ -565,10 +557,6 @@ msgid "Factor"
 msgstr "Faktor"
 
 
-msgid "Force"
-msgstr "Kraft"
-
-
 msgid "Velocity"
 msgstr "Hastighet"
 
@@ -595,6 +583,10 @@ msgstr "Vertex"
 
 msgid "Anti-Aliasing"
 msgstr "Antialias"
+
+
+msgid "Force"
+msgstr "Kraft"
 
 
 msgid "Turbulence"
@@ -631,10 +623,6 @@ msgstr "5.1 Surround"
 
 msgid "7.1 Surround"
 msgstr "7.1 Surround"
-
-
-msgid "Samplerate"
-msgstr "Samplingsfrekvens"
 
 
 msgid "Audio volume"
@@ -675,10 +663,6 @@ msgstr "Form"
 
 msgid "Axis"
 msgstr "Axel"
-
-
-msgid "Kink"
-msgstr "Nyck"
 
 
 msgid "Seed"
@@ -765,10 +749,6 @@ msgid "Vertex Group"
 msgstr "Vertexgrupp"
 
 
-msgid "Temp. Diff."
-msgstr "Temperaturskillnad"
-
-
 msgid "Mapping"
 msgstr "Mappning"
 
@@ -805,16 +785,8 @@ msgid "Layer"
 msgstr "Lager"
 
 
-msgid "Custom"
-msgstr "Anpassad"
-
-
 msgid "Grid"
 msgstr "Rutnät"
-
-
-msgid "Options"
-msgstr "Alternativ"
 
 
 msgid "Window"
@@ -835,6 +807,10 @@ msgstr "Dela upp"
 
 msgid "Lattice"
 msgstr "Lattice"
+
+
+msgid "Smooth"
+msgstr "Jämn"
 
 
 msgid "Falloff Curve"
@@ -885,10 +861,6 @@ msgid "Wire"
 msgstr "Trådmodell"
 
 
-msgid "Visible Layers"
-msgstr "Synliga lager"
-
-
 msgid "Box"
 msgstr "Box"
 
@@ -905,14 +877,6 @@ msgid "Rate"
 msgstr "Frekvens"
 
 
-msgid "Rotate"
-msgstr "Rotera"
-
-
-msgid "Cloth"
-msgstr "Tyg"
-
-
 msgid "List of background images"
 msgstr "Lista på bakgrundsbilder"
 
@@ -923,6 +887,10 @@ msgstr "Beskärningsstart"
 
 msgid "Display Background Images"
 msgstr "Visa bakgrundsbilder"
+
+
+msgid "Path"
+msgstr "Bana"
 
 
 msgid "Font"
@@ -955,6 +923,10 @@ msgstr "Min"
 
 msgid "Max"
 msgstr "Max"
+
+
+msgid "Layers"
+msgstr "Lager"
 
 
 msgid "Alpha Mode"
@@ -1017,10 +989,6 @@ msgid "Compositing"
 msgstr "Komponering"
 
 
-msgid "Samples"
-msgstr "Samplar"
-
-
 msgid "Size Y"
 msgstr "Storlek Y"
 
@@ -1045,6 +1013,10 @@ msgid "Cube"
 msgstr "Kub"
 
 
+msgid "Cloth"
+msgstr "Tyg"
+
+
 msgid "Specular Color"
 msgstr "Glansighetsfärg"
 
@@ -1059,6 +1031,18 @@ msgstr "Vertexfärger"
 
 msgid "Nodes"
 msgstr "Noder"
+
+
+msgid "Sculpt"
+msgstr "Skulptera"
+
+
+msgid "Tool"
+msgstr "Verktyg"
+
+
+msgid "Mesh"
+msgstr "Mesh"
 
 
 msgid "Cylinder"
@@ -1229,16 +1213,16 @@ msgid "Rotation Angle"
 msgstr "Rotationsvinkel"
 
 
-msgid "Even"
-msgstr "Jämn"
-
-
 msgid "Pivot Point"
 msgstr "Fast punkt"
 
 
 msgid "Snap"
 msgstr "Snäpp"
+
+
+msgid "Files"
+msgstr "Filer"
 
 
 msgid "Show/Hide Faces"
@@ -1253,16 +1237,16 @@ msgid "Text"
 msgstr "Text"
 
 
+msgid "Node"
+msgstr "Nod"
+
+
 msgid "Instances"
 msgstr "Instanser"
 
 
-msgid "Mesh"
-msgstr "Mesh"
-
-
-msgid "Node"
-msgstr "Nod"
+msgid "Physics"
+msgstr "Fysik"
 
 
 msgid "Frame Rate Presets"
@@ -1317,12 +1301,12 @@ msgid "Rigid Body"
 msgstr "Rigid kropp"
 
 
-msgid "Sculpt"
-msgstr "Skulptera"
-
-
 msgid "Root"
 msgstr "Rot"
+
+
+msgid "Samples"
+msgstr "Samplar"
 
 
 msgid "Active Clone"
@@ -1381,6 +1365,10 @@ msgid "Limits"
 msgstr "Gränser"
 
 
+msgid "Even"
+msgstr "Jämn"
+
+
 msgid "Aspect X"
 msgstr "Aspekt X"
 
@@ -1423,6 +1411,18 @@ msgstr "Zooma"
 
 msgid "Shadow"
 msgstr "Skugga"
+
+
+msgid "Eccentricity"
+msgstr "Eccentricitet"
+
+
+msgid "Anisotropic"
+msgstr "Anisotropisk"
+
+
+msgid "Rotate"
+msgstr "Rotera"
 
 
 msgid "Convex Hull"
@@ -1507,10 +1507,6 @@ msgid "Filter folders"
 msgstr "Filtrera mappar"
 
 
-msgid "Filter python"
-msgstr "Filtrera Python"
-
-
 msgid "Toggle selection status of all bones"
 msgstr "Växla markeringsstatus för alla ben"
 
@@ -1530,10 +1526,6 @@ msgid "Preset"
 msgstr "Förinställning"
 
 
-msgid "Tool"
-msgstr "Verktyg"
-
-
 msgid "Name of the preset, used to make the path name"
 msgstr "Namn på förinställningen, bestämmer sökvägen"
 
@@ -1546,10 +1538,6 @@ msgstr "Radera markör"
 msgctxt "Operator"
 msgid "Select"
 msgstr "Markera"
-
-
-msgid "Files"
-msgstr "Filer"
 
 
 msgid "Backwards"
@@ -1754,6 +1742,10 @@ msgid "Restrict Render Unselected"
 msgstr "Begränsa rendering till markering"
 
 
+msgid "Selected Only"
+msgstr "Bara Markerad"
+
+
 msgctxt "Operator"
 msgid "Multires Subdivide"
 msgstr "Dela upp i flera upplösningsnivåer"
@@ -1875,10 +1867,6 @@ msgid "Particle Edit Toggle"
 msgstr "Redigera partiklar på/av"
 
 
-msgid "Selected Only"
-msgstr "Bara Markerad"
-
-
 msgctxt "Operator"
 msgid "Copy Previous Settings"
 msgstr "Kopiera föregående inställningar"
@@ -1932,26 +1920,6 @@ msgstr "ID-namn på menyn som detta anropades från"
 
 msgid "Operator"
 msgstr "Operator"
-
-
-msgid "Alpha Under"
-msgstr "Alfa under"
-
-
-msgid "Gamma Cross"
-msgstr "Gamma-övertona"
-
-
-msgid "Wipe"
-msgstr "Torka"
-
-
-msgid "Glow"
-msgstr "Glöd"
-
-
-msgid "Adjustment Layer"
-msgstr "Justeringslager"
 
 
 msgctxt "Operator"
@@ -2112,8 +2080,8 @@ msgid "Histogram"
 msgstr "Histogram"
 
 
-msgid "Physics"
-msgstr "Fysik"
+msgid "Kink"
+msgstr "Nyck"
 
 
 msgid "Border Collisions"
@@ -2130,10 +2098,6 @@ msgstr "Viskositet"
 
 msgid "Shadows"
 msgstr "Skuggor"
-
-
-msgid "FFMPEG Presets"
-msgstr "FFMPEG-förinställningar"
 
 
 msgid "Playback"
@@ -2240,6 +2204,10 @@ msgid "Translate Tooltips"
 msgstr "Översätt verktygstipsen"
 
 
+msgid "Base"
+msgstr "Bas"
+
+
 msgid "Find"
 msgstr "Sök"
 
@@ -2296,10 +2264,6 @@ msgid "When true the format is a movie"
 msgstr "Om 'sant' så är formatet en film"
 
 
-msgid "Resolution %"
-msgstr "Upplösning %"
-
-
 msgid "Percentage scale for render resolution"
 msgstr "Percentuell skala för renderingsupplösning"
 
@@ -2340,10 +2304,6 @@ msgid "Collision Margin"
 msgstr "Krockmarginal"
 
 
-msgid "Base"
-msgstr "Bas"
-
-
 msgid "Settings for particle fluids physics"
 msgstr "Fysikinställningar för partikelvätskor"
 
@@ -2354,6 +2314,14 @@ msgstr "Instrument för statistisk analys av bilder"
 
 msgid "Vectorscope Opacity"
 msgstr "Genomskinlighet för vektroskop"
+
+
+msgid "Alpha Under"
+msgstr "Alfa under"
+
+
+msgid "Gamma Cross"
+msgstr "Gamma-övertona"
 
 
 msgid "Camera Override"
@@ -2540,14 +2508,6 @@ msgid "Pivot Offset"
 msgstr "Rotationspunktförskjutning"
 
 
-msgid "Layers:"
-msgstr "Lager:"
-
-
-msgid "Protected Layers:"
-msgstr "Skyddade lager:"
-
-
 msgid "Axes"
 msgstr "Axlar"
 
@@ -2599,10 +2559,6 @@ msgstr "Exponent"
 
 msgid "Auto-Step"
 msgstr "Automatiska steg"
-
-
-msgid "Eccentricity"
-msgstr "Eccentricitet"
 
 
 msgid "Options:"
@@ -2729,12 +2685,12 @@ msgid "IOR"
 msgstr "Brytningsindex"
 
 
-msgid "Anisotropic"
-msgstr "Anisotropisk"
-
-
 msgid "Transparency"
 msgstr "Genomskinlighet"
+
+
+msgid "Glow"
+msgstr "Glöd"
 
 
 msgid "English (English)"
@@ -2743,10 +2699,6 @@ msgstr "Engelska (English)"
 
 msgid "Japanese (日本語)"
 msgstr "Japanska (日本語)"
-
-
-msgid "Dutch (Nederlandse taal)"
-msgstr "Nederländska (Nederlandse taal)"
 
 
 msgid "Italian (Italiano)"
@@ -2771,10 +2723,6 @@ msgstr "Spanska (Español)"
 
 msgid "Catalan (Català)"
 msgstr "Katalanska (Català)"
-
-
-msgid "Czech (Český)"
-msgstr "Tjeckiska (Český)"
 
 
 msgid "Traditional Chinese (繁體中文)"

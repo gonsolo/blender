@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2011 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup spclip
@@ -12,27 +13,28 @@
 
 #include "BLI_lasso_2d.h"
 #include "BLI_listbase.h"
-#include "BLI_math.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_vector.h"
 #include "BLI_rect.h"
 #include "BLI_utildefines.h"
 
 #include "BKE_context.h"
 #include "BKE_tracking.h"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
-#include "ED_clip.h"
-#include "ED_mask.h"
-#include "ED_screen.h"
-#include "ED_select_utils.h"
+#include "ED_clip.hh"
+#include "ED_mask.hh"
+#include "ED_screen.hh"
+#include "ED_select_utils.hh"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
 
-#include "UI_view2d.h"
+#include "UI_view2d.hh"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
 #include "clip_intern.h"         /* own include */
 #include "tracking_ops_intern.h" /* own include */
@@ -41,7 +43,7 @@
 /** \name Point track marker picking.
  * \{ */
 
-BLI_INLINE PointTrackPick point_track_pick_make_null(void)
+BLI_INLINE PointTrackPick point_track_pick_make_null()
 {
   PointTrackPick pick = {nullptr};
 
@@ -354,7 +356,7 @@ bool ed_tracking_point_track_pick_can_slide(const SpaceClip *space_clip,
 /** \name Plane track marker picking.
  * \{ */
 
-BLI_INLINE PlaneTrackPick plane_track_pick_make_null(void)
+BLI_INLINE PlaneTrackPick plane_track_pick_make_null()
 {
   PlaneTrackPick result = {nullptr};
 
@@ -457,7 +459,7 @@ bool ed_tracking_plane_track_pick_can_slide(const PlaneTrackPick *pick)
 /** \name Pick closest point or plane track.
  * \{ */
 
-BLI_INLINE TrackingPick tracking_pick_make_null(void)
+BLI_INLINE TrackingPick tracking_pick_make_null()
 {
   TrackingPick result;
 
@@ -701,7 +703,7 @@ void CLIP_OT_select(wmOperatorType *ot)
   PropertyRNA *prop;
   prop = RNA_def_boolean(ot->srna,
                          "extend",
-                         0,
+                         false,
                          "Extend",
                          "Extend selection rather than clearing the existing selection");
   RNA_def_property_flag(prop, PROP_SKIP_SAVE);
@@ -868,7 +870,8 @@ static int do_lasso_select_marker(bContext *C,
 
       if (BLI_rcti_isect_pt(&rect, screen_co[0], screen_co[1]) &&
           BLI_lasso_is_point_inside(
-              mcoords, mcoords_len, screen_co[0], screen_co[1], V2D_IS_CLIPPED)) {
+              mcoords, mcoords_len, screen_co[0], screen_co[1], V2D_IS_CLIPPED))
+      {
         if (select) {
           BKE_tracking_track_flag_set(track, TRACK_AREA_ALL, SELECT);
         }
@@ -897,7 +900,8 @@ static int do_lasso_select_marker(bContext *C,
 
       if (BLI_rcti_isect_pt(&rect, screen_co[0], screen_co[1]) &&
           BLI_lasso_is_point_inside(
-              mcoords, mcoords_len, screen_co[0], screen_co[1], V2D_IS_CLIPPED)) {
+              mcoords, mcoords_len, screen_co[0], screen_co[1], V2D_IS_CLIPPED))
+      {
         if (select) {
           plane_track->flag |= SELECT;
         }
@@ -1030,7 +1034,8 @@ static int circle_select_exec(bContext *C, wmOperator *op)
     const MovieTrackingMarker *marker = BKE_tracking_marker_get(track, framenr);
 
     if (ED_space_clip_marker_is_visible(sc, tracking_object, track, marker) &&
-        marker_inside_ellipse(marker, offset, ellipse)) {
+        marker_inside_ellipse(marker, offset, ellipse))
+    {
       if (select) {
         BKE_tracking_track_flag_set(track, TRACK_AREA_ALL, SELECT);
       }

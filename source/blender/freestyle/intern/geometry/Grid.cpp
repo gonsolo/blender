@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2008-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -25,7 +27,8 @@ static bool inBox(const Vec3r &inter, const Vec3r &box_min, const Vec3r &box_max
 {
   if (((inter.x() >= box_min.x()) && (inter.x() < box_max.x())) &&
       ((inter.y() >= box_min.y()) && (inter.y() < box_max.y())) &&
-      ((inter.z() >= box_min.z()) && (inter.z() < box_max.z()))) {
+      ((inter.z() >= box_min.z()) && (inter.z() < box_max.z())))
+  {
     return true;
   }
   return false;
@@ -46,7 +49,8 @@ void firstIntersectionGridVisitor::examineOccluder(Polygon3r *occ)
       // Check whether the intersection is in the cell:
       if (inBox(ray_org_ + tmp_t * ray_dir_ / ray_dir_.norm(),
                 current_cell_->getOrigin(),
-                current_cell_->getOrigin() + cell_size_)) {
+                current_cell_->getOrigin() + cell_size_))
+      {
 #if 0
         Vec3d bboxdiag(_scene3d->bbox().getMax() - _scene3d->bbox().getMin());
         if ((t > 1.0e-06 * (min(min(bboxdiag.x(), bboxdiag.y()), bboxdiag.z()))) &&
@@ -332,7 +336,7 @@ void Grid::initRay(const Vec3r &orig, const Vec3r &end, uint timestamp)
 
   for (uint i = 0; i < 3; i++) {
     _current_cell[i] = uint(floor((orig[i] - _orig[i]) / _cell_size[i]));
-    // soc unused - unsigned u = _current_cell[i];
+    // soc unused - uint u = _current_cell[i];
     _pt[i] = orig[i] - _orig[i] - _current_cell[i] * _cell_size[i];
   }
   //_ray_occluders.clear();
@@ -353,7 +357,7 @@ bool Grid::initInfiniteRay(const Vec3r &orig, const Vec3r &dir, uint timestamp)
   if (box.inside(orig)) {
     for (uint i = 0; i < 3; i++) {
       _current_cell[i] = uint(floor((orig[i] - _orig[i]) / _cell_size[i]));
-      // soc unused - unsigned u = _current_cell[i];
+      // soc unused - uint u = _current_cell[i];
       _pt[i] = orig[i] - _orig[i] - _current_cell[i] * _cell_size[i];
     }
   }
@@ -368,7 +372,7 @@ bool Grid::initInfiniteRay(const Vec3r &orig, const Vec3r &dir, uint timestamp)
         if (_current_cell[i] == _cells_nb[i]) {
           _current_cell[i] = _cells_nb[i] - 1;
         }
-        // soc unused - unsigned u = _current_cell[i];
+        // soc unused - uint u = _current_cell[i];
         _pt[i] = newOrig[i] - _orig[i] - _current_cell[i] * _cell_size[i];
       }
     }

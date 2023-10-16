@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 3.6.0 Alpha (b'dfa42c614fb4')\n"
+"Project-Id-Version: Blender 4.0.0 Beta (b'26346464e0c0')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-04-17 09:43:08\n"
+"POT-Creation-Date: 2023-10-09 09:45:23\n"
 "PO-Revision-Date: 2017-08-26 11:13+0200\n"
 "Last-Translator: Mikołaj Juda <mikolaj.juda@gmail.com>\n"
 "Language: pl\n"
@@ -200,18 +200,6 @@ msgstr "Komunikat"
 
 msgid "Fribidi Library"
 msgstr "Biblioteka fribidi"
-
-
-msgid "The FriBidi C compiled library (.so under Linux, .dll under windows...), you’ll likely have to edit it if you’re under Windows, e.g. using the one included in svn's libraries repository"
-msgstr "Skompilowana biblioteka FriBidi dla C (.so pod Linuxem, .dll pod Windows), prawdopodobnie potrzebujesz ustawić ją gdy jesteś pod Windows, np. wykorzystując dołączone repozytorium bibliotek z SVN."
-
-
-msgid "Gettext 'msgfmt' executable"
-msgstr "Położenie 'msgfmt' dla Gettext"
-
-
-msgid "The gettext msgfmt 'compiler'. You’ll likely have to edit it if you’re under Windows"
-msgstr "Kompilator gettext 'msgfmt'. Zazwyczaj trzeba określić to pole jeżeli jesteś pod Windows"
 
 
 msgid "Translation Root"
@@ -1014,6 +1002,10 @@ msgid "Vector Fonts"
 msgstr "Czcionki wektorowe"
 
 
+msgid "Grease Pencil"
+msgstr "Szkicownik"
+
+
 msgid "Images"
 msgstr "Obrazy"
 
@@ -1690,28 +1682,12 @@ msgid "Inherit Scale"
 msgstr "Dziedzicz skalę"
 
 
-msgid "Layers"
-msgstr "Warstwy"
-
-
-msgid "Layers bone exists in"
-msgstr "Warstwy na których ta kość istnieje"
-
-
 msgid "Bone Matrix"
 msgstr "Macierz kości"
 
 
-msgid "3x3 bone matrix"
-msgstr "Macierz kości o rozmiarach 3x3"
-
-
 msgid "Bone Armature-Relative Matrix"
 msgstr "Macierz lokalna kości szkieletowych"
-
-
-msgid "4x4 bone matrix relative to armature"
-msgstr "Macierz 4x4 kości względna do szkieletu"
 
 
 msgid "Parent"
@@ -1806,12 +1782,8 @@ msgid "Object children will use relative transform, like deform"
 msgstr "Obiekty potomne będą używać transformacji względnych, takich jak deformacje"
 
 
-msgid "Bone Group"
-msgstr "Grupa kości"
-
-
-msgid "Groups of Pose Channels (Bones)"
-msgstr "Grupy kanałów pozy (kości)"
+msgid "Visible"
+msgstr "Widoczny"
 
 
 msgid "Brush Capabilities"
@@ -1854,10 +1826,6 @@ msgid "Material"
 msgstr "Materiał"
 
 
-msgid "Flat"
-msgstr "Płaskie"
-
-
 msgid "Direction"
 msgstr "Kierunek"
 
@@ -1866,16 +1834,8 @@ msgid "All"
 msgstr "Wszystko"
 
 
-msgid "Visible"
-msgstr "Widoczny"
-
-
 msgid "Threshold"
 msgstr "Próg"
-
-
-msgid "Smooth"
-msgstr "Wygładzanie"
 
 
 msgid "Blur"
@@ -2312,10 +2272,6 @@ msgstr "Grupa wierzchołków sztywności zgięć"
 
 msgid "Vertex group for fine control over bending stiffness"
 msgstr "Grupa wierzchołków, która pozwala kontrolować sztywność zginania"
-
-
-msgid "Mass Vertex Group"
-msgstr "Masa grupy wierzchołków"
 
 
 msgid "Vertex Group for pinning of vertices"
@@ -4423,10 +4379,6 @@ msgid "Map To"
 msgstr "Mapuj na"
 
 
-msgid "The transformation type to affect of the constrained object"
-msgstr "Typ transformacji do zmiany w obiekcie"
-
-
 msgid "Map To X From"
 msgstr "Mapuj na X z"
 
@@ -5199,26 +5151,6 @@ msgid "Multiplier for wave influence of this brush"
 msgstr "Mnożnik wpływu fali dla tego pędzla"
 
 
-msgid "Wave Type"
-msgstr "Rodzaj fali"
-
-
-msgid "Depth Change"
-msgstr "Zmiana głębi"
-
-
-msgid "Obstacle"
-msgstr "Przeszkoda"
-
-
-msgid "Force"
-msgstr "Siła"
-
-
-msgid "Reflect Only"
-msgstr "Tylko odbicie"
-
-
 msgid "Acceleration"
 msgstr "Przyspieszenie"
 
@@ -5317,6 +5249,10 @@ msgstr "Wciąganie"
 
 msgid "Drag effector weight"
 msgstr "Siła oddziaływania takiego jak wciąganie lub zasysanie"
+
+
+msgid "Force"
+msgstr "Siła"
 
 
 msgid "Force effector weight"
@@ -5593,14 +5529,6 @@ msgstr "Kodek dźwięku FFmpeg do użycia"
 
 msgid "Vorbis"
 msgstr "Vorbis"
-
-
-msgid "Samplerate"
-msgstr "Częstotliwość próbkowania"
-
-
-msgid "Audio samplerate(samples/s)"
-msgstr "Częstotliwość z jaką próbkowany jest dźwięk (w próbkach na sekundę)"
 
 
 msgctxt "Sound"
@@ -6052,12 +5980,12 @@ msgid "Size"
 msgstr "Rozmiar"
 
 
-msgid "Grease Pencil"
-msgstr "Szkicownik"
-
-
 msgid "Save"
 msgstr "Zapisz"
+
+
+msgid "Obstacle"
+msgstr "Przeszkoda"
 
 
 msgid "Time"
@@ -6116,6 +6044,10 @@ msgid "Lattice"
 msgstr "Kratownica"
 
 
+msgid "Smooth"
+msgstr "Wygładzanie"
+
+
 msgid "Target Object"
 msgstr "Obiekt docelowy"
 
@@ -6136,20 +6068,12 @@ msgid "Local"
 msgstr "Lokalnie"
 
 
-msgid "Mask"
-msgstr "Maska"
-
-
 msgid "Brush"
 msgstr "Pędzel"
 
 
 msgid "Paint Curve"
 msgstr "Krzywa graficzna"
-
-
-msgid "Rotate"
-msgstr "Obróć"
 
 
 msgid "Laplacian"
@@ -6196,8 +6120,20 @@ msgid "Use Nodes"
 msgstr "Używaj Węzłów"
 
 
+msgid "Layers"
+msgstr "Warstwy"
+
+
 msgid "Cube"
 msgstr "Sześcian"
+
+
+msgid "Edit"
+msgstr "Edytuj"
+
+
+msgid "Mesh"
+msgstr "Siatka"
 
 
 msgid "Faces"
@@ -6277,24 +6213,24 @@ msgid "ID Type"
 msgstr "Typ ID"
 
 
+msgid "Mask"
+msgstr "Maska"
+
+
 msgid "Key"
 msgstr "Klucz"
-
-
-msgid "Edit"
-msgstr "Edytuj"
-
-
-msgid "Distort"
-msgstr "Zniekształć"
 
 
 msgid "Text"
 msgstr "Tekst"
 
 
-msgid "Mesh"
-msgstr "Siatka"
+msgid "Distort"
+msgstr "Zniekształć"
+
+
+msgid "Add Modifier"
+msgstr "Dodaj Modyfikator"
 
 
 msgid "Python"
@@ -6365,6 +6301,10 @@ msgid "Pixelate"
 msgstr "Pikselizacja"
 
 
+msgid "Rotate"
+msgstr "Obróć"
+
+
 msgid "Translate"
 msgstr "Przesuń"
 
@@ -6395,6 +6335,10 @@ msgstr "Oś Y"
 
 msgid "Z axis"
 msgstr "Oś Z"
+
+
+msgid "Wave Type"
+msgstr "Rodzaj fali"
 
 
 msgid "Z Axis"
@@ -6445,6 +6389,10 @@ msgstr "Lampa"
 
 msgid "Open"
 msgstr "Otwórz"
+
+
+msgid "Play"
+msgstr "Start"
 
 
 msgid "Remove Pack"
@@ -6514,8 +6462,8 @@ msgid "Pinned"
 msgstr "Przypięty"
 
 
-msgid "Play"
-msgstr "Start"
+msgid "Speaker"
+msgstr "Głośnik"
 
 
 msgid "Property Name"
@@ -6574,6 +6522,10 @@ msgid "Continue"
 msgstr "Kontynuacja"
 
 
+msgid "Temperature"
+msgstr "Temperatura"
+
+
 msgid "Gray Scale"
 msgstr "Odcienie szarości"
 
@@ -6582,16 +6534,20 @@ msgid "Sepia"
 msgstr "Sepia"
 
 
+msgid "Mass Vertex Group"
+msgstr "Masa grupy wierzchołków"
+
+
 msgid "Timeline and playback controls"
 msgstr "Oś czasu oraz kontrolki odtwarzania"
 
 
-msgid "Speaker"
-msgstr "Głośnik"
-
-
 msgid "3D"
 msgstr "3D"
+
+
+msgid "Flat"
+msgstr "Płaskie"
 
 
 msgid "Animated"
@@ -6621,10 +6577,6 @@ msgstr "Szczegóły"
 
 msgid "Priority"
 msgstr "Priorytet"
-
-
-msgid "Temperature"
-msgstr "Temperatura"
 
 
 msgctxt "Image"
@@ -6714,22 +6666,6 @@ msgstr "OS Loop"
 
 msgid "PreviewLoopCol"
 msgstr "PreviewLoopCol"
-
-
-msgid "Source and destination meshes do not have the same amount of vertices, 'Topology' mapping cannot be used in this case"
-msgstr "Siatka źródłowa i docelowa nie mają tej samej liczby wierzchołków, Mapowanie 'Topologia' nie może być użyte w tym przypadku"
-
-
-msgid "Source and destination meshes do not have the same amount of edges, 'Topology' mapping cannot be used in this case"
-msgstr "Siatka źródłowa i docelowa nie mają tej samej liczby krawędzi, Mapowanie 'Topologia' nie może być użyte w tym przypadku"
-
-
-msgid "Source and destination meshes do not have the same amount of face corners, 'Topology' mapping cannot be used in this case"
-msgstr "Siatka źródłowa i docelowa nie mają tej samej liczby narożników ścian, Mapowanie 'Topologia' nie może być użyte w tym przypadku"
-
-
-msgid "Source and destination meshes do not have the same amount of faces, 'Topology' mapping cannot be used in this case"
-msgstr "Siatka źródłowa i docelowa nie mają tej samej liczby ścian, Mapowanie 'Topologia' nie może być użyte w tym przypadku"
 
 
 msgid "Not enough free memory"
@@ -6975,10 +6911,6 @@ msgid "Render height has to be 576 pixels for DV-PAL!"
 msgstr "Wysokość renderu musi wynosić 576 pikseli dla DV-PAL!"
 
 
-msgid "FFMPEG only supports 48khz / stereo audio for DV!"
-msgstr "FFMPEG obsługuje wyłącznie 48khz / dźwięk stereo dla DV!"
-
-
 msgid "Error initializing video stream"
 msgstr "Błąd inicjacji strumienia filmowego"
 
@@ -7183,10 +7115,6 @@ msgid "<Missing ID block>"
 msgstr "<Brak bloku ID>"
 
 
-msgid "No RNA pointer available to retrieve values for this fcurve"
-msgstr "Brak dostępnego wskaźnika RNA, z którego można odzyskać wartości dla tej krzywej-F"
-
-
 msgid "No F-Curve to add keyframes to"
 msgstr "Brak krzywej-F, do której można dodać klatki kluczowe"
 
@@ -7217,10 +7145,6 @@ msgstr "Ustanowienie ścieżki do właściwości nie powiodło się, spróbuj r�
 
 msgid "No active Keying Set"
 msgstr "Brak aktywnego Zestawu Kluczowania"
-
-
-msgid "Could not update flags for this fcurve, as RNA path is invalid for the given ID (ID = %s, path = %s)"
-msgstr "Nie można było uaktualnić flag dla tej krzywej-F ponieważ ścieżka RNA jest nieprawidłowa dla danego ID (ID = %s, path = %s)"
 
 
 msgid "F-Curve with path '%s[%d]' cannot be keyframed, ensure that it is not locked or sampled, and try removing F-Modifiers"
@@ -7672,24 +7596,12 @@ msgid "Active button not found"
 msgstr "Nie odnaleziono aktywnego przycisku"
 
 
-msgid "File '%s' cannot be opened"
-msgstr "Nie można otworzyć pliku '%s'"
-
-
-msgid "See '%s' in the text editor"
-msgstr "Patrz '%s' w edytorze tekstu"
-
-
 msgid "No valid po found for language '%s' under %s"
 msgstr "Nie odnaleziono prawidłowego 'po' dla języka '%s' pod '%s'"
 
 
 msgid "Hex"
 msgstr "Hex"
-
-
-msgid "(Gamma Corrected)"
-msgstr "(Po korekcji gammy)"
 
 
 msgid "Lightness"
@@ -7816,10 +7728,6 @@ msgid "Stop animation playback"
 msgstr "Zakończ odtwarzanie animacji"
 
 
-msgid "Click to see the remaining reports in text block: 'Recent Reports'"
-msgstr "Kliknij by zobaczyć pozostałe raporty w bloku tekstu: 'Ostatnie Raporty'"
-
-
 msgid "Browse Scene to be linked"
 msgstr "Przeglądaj sceny do powiązania"
 
@@ -7904,10 +7812,6 @@ msgid "Browse Particle Settings to be linked"
 msgstr "Przeglądaj dane cząstek do powiązania"
 
 
-msgid "Browse Grease Pencil Data to be linked"
-msgstr "Przeglądaj dane szkicownika do powiązania"
-
-
 msgid "Browse Movie Clip to be linked"
 msgstr "Przeglądaj klipy filmowe do powiązania"
 
@@ -7922,6 +7826,10 @@ msgstr "Przeglądaj dane palety do powiązania"
 
 msgid "Browse Paint Curve Data to be linked"
 msgstr "Przeglądaj dane krzywej malowania do powiązania"
+
+
+msgid "Browse Grease Pencil Data to be linked"
+msgstr "Przeglądaj dane szkicownika do powiązania"
 
 
 msgid "Browse ID data to be linked"
@@ -8025,10 +7933,6 @@ msgstr "Nowy"
 
 msgid "%d items"
 msgstr "%d elementów"
-
-
-msgid "No filename given"
-msgstr "Nie podano nazwy pliku"
 
 
 msgid "Can't create export file"
@@ -8234,10 +8138,6 @@ msgstr "Nie można dodać krawędzi w trybie edycji"
 
 msgid "Cannot add loops in edit mode"
 msgstr "Nie można dodać pętli w trybie edycji"
-
-
-msgid "Cannot add polygons in edit mode"
-msgstr "Nie można dodać poligonów w trybie edycji"
 
 
 msgid "Cannot remove vertices in edit mode"
@@ -8938,26 +8838,6 @@ msgid "Rigid Body World has no associated physics data to export"
 msgstr "Świat Brył Sztywnych nie posiada powiązanych danych fizyki do eksportu"
 
 
-msgid "3D Local View"
-msgstr "Widok 3D Lokalny"
-
-
-msgid "Frame:%d "
-msgstr "Klatka:%d "
-
-
-msgid "| Last:%s "
-msgstr "| Ostatni:%s "
-
-
-msgid "Time:%s "
-msgstr "Czas:%s "
-
-
-msgid "| Mem:%.2fM, Peak: %.2fM "
-msgstr "| Pamięć:%.2fM, Szczyt: %.2fM "
-
-
 msgid "Cannot write a single file with an animation format selected"
 msgstr "Nie można zapisać pojedynczego pliku z wybranym formatem animacji"
 
@@ -9026,12 +8906,12 @@ msgid "Maximize Area"
 msgstr "Maksymalizuj Obszar"
 
 
-msgid "Flip to Bottom"
-msgstr "Przerzuć w dół"
-
-
 msgid "Flip to Top"
 msgstr "Przerzuć na górę"
+
+
+msgid "Flip to Bottom"
+msgstr "Przerzuć w dół"
 
 
 msgid "Can only scale region size from an action zone"
@@ -9114,12 +8994,12 @@ msgid "Missing%s%s%s%s detected!"
 msgstr "Wykryto Missing%s%s%s%s!"
 
 
-msgid "Active group is locked, aborting"
-msgstr "Aktywna grupa jest zablokowana, rezygnuję"
-
-
 msgid "The modifier used does not support deformed locations"
 msgstr "Użyty modyfikator nie obsługuje deformowanych lokacji"
+
+
+msgid "Active group is locked, aborting"
+msgstr "Aktywna grupa jest zablokowana, rezygnuję"
 
 
 msgid "No active vertex group for painting, aborting"
@@ -9394,10 +9274,6 @@ msgid "Update Dependencies"
 msgstr "Odśwież Zależności"
 
 
-msgid "Add Modifier"
-msgstr "Dodaj Modyfikator"
-
-
 msgid "F-Curve only has F-Modifiers"
 msgstr "Krzywa F ma tylko modyfikatory F"
 
@@ -9536,10 +9412,6 @@ msgstr " bit RGBA"
 
 msgid " RGB byte"
 msgstr " bit RGB"
-
-
-msgid " + Z"
-msgstr " + Z"
 
 
 msgid "unsupported image format"
@@ -9686,25 +9558,8 @@ msgid "Modifier could not be added to (%s : %s) (see console for details)"
 msgstr "Modyfikator nie mógł być dodany to (%s : %s) (szczegóły w konsoli)"
 
 
-msgctxt "Action"
-msgid "Group"
-msgstr "Grupa"
-
-
 msgid "Library path '%s' does not exist, correct this before saving"
 msgstr "Ścieżka biblioteki '%s' nie istnieje, popraw to zanim zapiszesz"
-
-
-msgid "Cannot edit builtin name"
-msgstr "Nie można edytować wbudowanej nazwy"
-
-
-msgid "Cannot edit sequence name"
-msgstr "Nie można edytować nazwy sekwencji"
-
-
-msgid "Cannot edit the path of an indirectly linked library"
-msgstr "Nie można edytować ścieżki z biblioteki zlinkowanej niebezpośrednio"
 
 
 msgid "Operation requires an active keying set"
@@ -9823,10 +9678,6 @@ msgid "unknown error writing file"
 msgstr "nieznany błąd zapisu pliku"
 
 
-msgid "unknown error stating file"
-msgstr "nieznany błąd stating file"
-
-
 msgid "Could not reopen file"
 msgstr "Ponowne otwarcie pliku nie powiodło się"
 
@@ -9845,6 +9696,14 @@ msgstr "Nie możliwe stat \"%s': %s"
 
 msgid "Text not found: %s"
 msgstr "Nie odnaleziono tekstu: %s"
+
+
+msgid "File '%s' cannot be opened"
+msgstr "Nie można otworzyć pliku '%s'"
+
+
+msgid "See '%s' in the text editor"
+msgstr "Patrz '%s' w edytorze tekstu"
 
 
 msgid "No Recent Files"
@@ -10271,14 +10130,6 @@ msgid " or Alt) Even Thickness %s"
 msgstr " lub Alt) Równa grubość %s"
 
 
-msgid "Tilt: %s° %s"
-msgstr "Przechyl: %s° %s"
-
-
-msgid "Tilt: %.2f° %s"
-msgstr "Przechyl: %.2f° %s"
-
-
 msgid "ScaleX: %s"
 msgstr "SkalaX: %s"
 
@@ -10398,6 +10249,11 @@ msgstr "Obiekt posiada ujemną skalę, odwijanie (unwrap) będzie używało nie 
 
 msgid "Cannot open file: %s"
 msgstr "Nie można otworzyć pliku: %s"
+
+
+msgctxt "Action"
+msgid "Group"
+msgstr "Grupa"
 
 
 msgid "Index out of range"
@@ -10538,22 +10394,6 @@ msgstr "Nie odnaleziono modyfikatora '%s' w krzywej F"
 
 msgid "Already a control point at frame %.6f"
 msgstr "Punkt kontrolny już w klatce %.6f"
-
-
-msgid "FCurve has already sample points"
-msgstr "Krzywa F już posiada próbkowane punkty"
-
-
-msgid "FCurve has no keyframes"
-msgstr "Krzywa F nie posiada klatek kluczowych"
-
-
-msgid "FCurve has already keyframes"
-msgstr "Krzywa F już posiada klatki kluczowe"
-
-
-msgid "FCurve has no sample points"
-msgstr "Krzywa F nie posiada próbkowanych punktów"
 
 
 msgid "Invalid frame range (%d - %d)"
@@ -10705,16 +10545,20 @@ msgid "NLA strip '%s' not found in track '%s'"
 msgstr "Nie odnaleziono paska NLA '%s' na ścieżce '%s'"
 
 
+msgid "Registering node socket class: '%s' is too long, maximum length is %d"
+msgstr "Rejestracja node socket class: '%s' jest za długie, maksymalna długość: %d"
+
+
+msgid "Unable to create socket"
+msgstr "Utworzenie złącza niemożliwe"
+
+
 msgid "Same input/output direction of sockets"
 msgstr "Identyczny kierunek wejście/wyjście złącza"
 
 
 msgid "Unable to locate link in node tree"
 msgstr "Niemożliwe odnalezienie łącza w drzewie nodów (node tree)"
-
-
-msgid "Unable to create socket"
-msgstr "Utworzenie złącza niemożliwe"
 
 
 msgid "Node tree '%s' has undefined type %s"
@@ -10735,10 +10579,6 @@ msgstr "Nie znaleziono noda '%s' w drzewie nodów (node tree)"
 
 msgid "Unable to locate socket '%s' in node"
 msgstr "Nie znaleziono złącza '%s' w nodzie"
-
-
-msgid "Registering node socket class: '%s' is too long, maximum length is %d"
-msgstr "Rejestracja node socket class: '%s' jest za długie, maksymalna długość: %d"
 
 
 msgid "VertexGroup.add(): cannot be called while object is in edit mode"
@@ -10799,15 +10639,6 @@ msgstr "Siatka nie posiada danych UV"
 
 msgid "Mesh has no VCol data"
 msgstr "Siatka nie posiada danych VCol"
-
-
-msgctxt "Armature"
-msgid "Group"
-msgstr "Grupa [ Szkielet ]"
-
-
-msgid "Bone group '%s' not found in this object"
-msgstr "Nie odnaleziono grupy kości '%s' w tym obiekcie"
 
 
 msgid "Constraint '%s' not found in pose bone '%s'"
@@ -10922,10 +10753,6 @@ msgid "Property value not in enumeration"
 msgstr "Wartość właściwości nieobecna w wymienionych"
 
 
-msgid "KeyMapItem '%s' cannot be removed from '%s'"
-msgstr "KeyMapItem '%s' nie może być usunięte z '%s'"
-
-
 msgid "KeyConfig '%s' cannot be removed"
 msgstr "KeyConfig '%s' niemożlwe do usunięcia"
 
@@ -10942,12 +10769,12 @@ msgid "Val"
 msgstr "Val"
 
 
-msgid "Anisotropy"
-msgstr "Anizotropia"
-
-
 msgid "BSDF"
 msgstr "BSDF"
+
+
+msgid "Anisotropy"
+msgstr "Anizotropia"
 
 
 msgid "RoughnessU"
@@ -11112,10 +10939,6 @@ msgstr "W4"
 
 msgid "iScale"
 msgstr "iSkala"
-
-
-msgid "Unknown py-exception, could not convert"
-msgstr "Nieznana py-exception, przetworzenie nie powiodło się"
 
 
 msgid "Image too small"
@@ -11326,10 +11149,6 @@ msgid "Japanese (日本語)"
 msgstr "Japoński (日本語)"
 
 
-msgid "Dutch (Nederlandse taal)"
-msgstr "Niderlandzki (Nederlandse taal)"
-
-
 msgid "Italian (Italiano)"
 msgstr "Włoski (Italiano)"
 
@@ -11356,10 +11175,6 @@ msgstr "Hiszpański (Español)"
 
 msgid "Catalan (Català)"
 msgstr "Kataloński (Català)"
-
-
-msgid "Czech (Český)"
-msgstr "Czeski (Český)"
 
 
 msgid "Portuguese (Português)"
@@ -11442,16 +11257,8 @@ msgid "Hebrew (תירִבְעִ)"
 msgstr "Hebrajski (תירִבְעִ)"
 
 
-msgid "Estonian (Eestlane)"
-msgstr "Estoński (Eestlane)"
-
-
 msgid "Esperanto (Esperanto)"
 msgstr "Esperanto (Esperanto)"
-
-
-msgid "Spanish from Spain (Español de España)"
-msgstr "Hiszpański Hiszpania (Español de España)"
 
 
 msgid "Amharic (አማርኛ)"
@@ -11464,10 +11271,6 @@ msgstr "Uzbecki (Oʻzbek)"
 
 msgid "Uzbek Cyrillic (Ўзбек)"
 msgstr "Uzbecki Cyrylica (Ўзбек)"
-
-
-msgid "Hindi (मानक हिन्दी)"
-msgstr "Hinduski (मानक हिन्दी)"
 
 
 msgid "Complete"

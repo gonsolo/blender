@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_geometry_util.hh"
 
@@ -6,9 +8,9 @@ namespace blender::nodes::node_geo_string_join_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::String>(N_("Delimiter"));
-  b.add_input<decl::String>(N_("Strings")).multi_input().hide_value();
-  b.add_output<decl::String>(N_("String"));
+  b.add_input<decl::String>("Delimiter");
+  b.add_input<decl::String>("Strings").multi_input().hide_value();
+  b.add_output<decl::String>("String");
 }
 
 static void node_geo_exec(GeoNodeExecParams params)
@@ -27,16 +29,15 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("String", std::move(output));
 }
 
-}  // namespace blender::nodes::node_geo_string_join_cc
-
-void register_node_type_geo_string_join()
+static void node_register()
 {
-  namespace file_ns = blender::nodes::node_geo_string_join_cc;
-
   static bNodeType ntype;
 
   geo_node_type_base(&ntype, GEO_NODE_STRING_JOIN, "Join Strings", NODE_CLASS_CONVERTER);
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.declare = file_ns::node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.declare = node_declare;
   nodeRegisterType(&ntype);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_string_join_cc

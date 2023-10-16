@@ -1,4 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup imbuf
+ */
 
 #include "oiio/openimageio_support.hh"
 
@@ -13,7 +19,15 @@ extern "C" {
 
 bool imb_is_a_tiff(const uchar *mem, size_t size)
 {
-  return imb_oiio_check(mem, size, "tif");
+  constexpr int MAGIC_SIZE = 4;
+  if (size < MAGIC_SIZE) {
+    return false;
+  }
+
+  const char big_endian[MAGIC_SIZE] = {0x4d, 0x4d, 0x00, 0x2a};
+  const char lil_endian[MAGIC_SIZE] = {0x49, 0x49, 0x2a, 0x00};
+  return ((memcmp(big_endian, mem, MAGIC_SIZE) == 0) ||
+          (memcmp(lil_endian, mem, MAGIC_SIZE) == 0));
 }
 
 ImBuf *imb_load_tiff(const uchar *mem, size_t size, int flags, char colorspace[IM_MAX_SPACE])
@@ -38,9 +52,9 @@ ImBuf *imb_load_tiff(const uchar *mem, size_t size, int flags, char colorspace[I
   return ibuf;
 }
 
-bool imb_save_tiff(struct ImBuf *ibuf, const char *filepath, int flags)
+bool imb_save_tiff(ImBuf *ibuf, const char *filepath, int flags)
 {
-  const bool is_16bit = ((ibuf->foptions.flag & TIF_16BIT) && ibuf->rect_float);
+  const bool is_16bit = ((ibuf->foptions.flag & TIF_16BIT) && ibuf->float_buffer.data);
   const int file_channels = ibuf->planes >> 3;
   const TypeDesc data_format = is_16bit ? TypeDesc::UINT16 : TypeDesc::UINT8;
 

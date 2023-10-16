@@ -1,13 +1,20 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include <numeric>
 
 #include "BLI_math_base_safe.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
 
 #include "BKE_curves.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "NOD_rna_define.hh"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "node_geometry_util.hh"
 
@@ -24,67 +31,68 @@ static void node_declare(NodeDeclarationBuilder &b)
     node_storage(node).mode = GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_RADIUS;
   };
 
-  b.add_input<decl::Int>(N_("Resolution"))
+  b.add_input<decl::Int>("Resolution")
       .default_value(16)
       .min(2)
       .max(256)
       .subtype(PROP_UNSIGNED)
-      .description(N_("The number of points on the arc"));
-  b.add_input<decl::Vector>(N_("Start"))
+      .description("The number of points on the arc");
+  b.add_input<decl::Vector>("Start")
       .default_value({-1.0f, 0.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
-      .description(N_("Position of the first control point"))
+      .description("Position of the first control point")
       .make_available(enable_points);
-  b.add_input<decl::Vector>(N_("Middle"))
+  b.add_input<decl::Vector>("Middle")
       .default_value({0.0f, 2.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
-      .description(N_("Position of the middle control point"))
+      .description("Position of the middle control point")
       .make_available(enable_points);
-  b.add_input<decl::Vector>(N_("End"))
+  b.add_input<decl::Vector>("End")
       .default_value({1.0f, 0.0f, 0.0f})
       .subtype(PROP_TRANSLATION)
-      .description(N_("Position of the last control point"))
+      .description("Position of the last control point")
       .make_available(enable_points);
-  b.add_input<decl::Float>(N_("Radius"))
+  b.add_input<decl::Float>("Radius")
       .default_value(1.0f)
       .min(0.0f)
       .subtype(PROP_DISTANCE)
-      .description(N_("Distance of the points from the origin"))
+      .description("Distance of the points from the origin")
       .make_available(enable_radius);
-  b.add_input<decl::Float>(N_("Start Angle"))
+  b.add_input<decl::Float>("Start Angle")
       .default_value(0.0f)
       .subtype(PROP_ANGLE)
-      .description(N_("Starting angle of the arc"))
+      .description("Starting angle of the arc")
       .make_available(enable_radius);
-  b.add_input<decl::Float>(N_("Sweep Angle"))
+  b.add_input<decl::Float>("Sweep Angle")
       .default_value(1.75f * M_PI)
       .min(-2 * M_PI)
       .max(2 * M_PI)
       .subtype(PROP_ANGLE)
-      .description(N_("Length of the arc"))
+      .description("Length of the arc")
       .make_available(enable_radius);
-  b.add_input<decl::Float>(N_("Offset Angle"))
+  b.add_input<decl::Float>("Offset Angle")
       .default_value(0.0f)
       .subtype(PROP_ANGLE)
-      .description(N_("Offset angle of the arc"))
+      .description("Offset angle of the arc")
       .make_available(enable_points);
-  b.add_input<decl::Bool>(N_("Connect Center"))
+  b.add_input<decl::Bool>("Connect Center")
       .default_value(false)
-      .description(N_("Connect the arc at the center"));
-  b.add_input<decl::Bool>(N_("Invert Arc"))
+      .description("Connect the arc at the center");
+  b.add_input<decl::Bool>("Invert Arc")
       .default_value(false)
-      .description(N_("Invert and draw opposite arc"));
+      .description("Invert and draw opposite arc");
 
-  b.add_output<decl::Geometry>(N_("Curve"));
-  b.add_output<decl::Vector>(N_("Center"))
-      .description(N_("The center of the circle described by the three points"))
+  b.add_output<decl::Geometry>("Curve");
+  b.add_output<decl::Vector>("Center")
+      .description("The center of the circle described by the three points")
       .make_available(enable_points);
-  b.add_output<decl::Vector>(N_("Normal"))
-      .description(N_("The normal direction of the plane described by the three points, pointing "
-                      "towards the positive Z axis"))
+  b.add_output<decl::Vector>("Normal")
+      .description(
+          "The normal direction of the plane described by the three points, pointing "
+          "towards the positive Z axis")
       .make_available(enable_points);
-  b.add_output<decl::Float>(N_("Radius"))
-      .description(N_("The radius of the circle described by the three points"))
+  b.add_output<decl::Float>("Radius")
+      .description("The radius of the circle described by the three points")
       .make_available(enable_points);
 }
 
@@ -123,19 +131,19 @@ static void node_update(bNodeTree *ntree, bNode *node)
   const bool radius_mode = (mode == GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_RADIUS);
   const bool points_mode = (mode == GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_POINTS);
 
-  nodeSetSocketAvailability(ntree, start_socket, points_mode);
-  nodeSetSocketAvailability(ntree, middle_socket, points_mode);
-  nodeSetSocketAvailability(ntree, end_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, start_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, middle_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, end_socket, points_mode);
 
-  nodeSetSocketAvailability(ntree, radius_socket, radius_mode);
-  nodeSetSocketAvailability(ntree, start_angle_socket, radius_mode);
-  nodeSetSocketAvailability(ntree, sweep_angle_socket, radius_mode);
+  bke::nodeSetSocketAvailability(ntree, radius_socket, radius_mode);
+  bke::nodeSetSocketAvailability(ntree, start_angle_socket, radius_mode);
+  bke::nodeSetSocketAvailability(ntree, sweep_angle_socket, radius_mode);
 
-  nodeSetSocketAvailability(ntree, offset_angle_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, offset_angle_socket, points_mode);
 
-  nodeSetSocketAvailability(ntree, center_out_socket, points_mode);
-  nodeSetSocketAvailability(ntree, normal_out_socket, points_mode);
-  nodeSetSocketAvailability(ntree, radius_out_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, center_out_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, normal_out_socket, points_mode);
+  bke::nodeSetSocketAvailability(ntree, radius_out_socket, points_mode);
 }
 
 static float3 rotate_vector_around_axis(const float3 vector, const float3 axis, const float angle)
@@ -330,7 +338,7 @@ static void node_geo_exec(GeoNodeExecParams params)
           r_center,
           r_normal,
           r_radius);
-      params.set_output("Curve", GeometrySet::create_with_curves(curves));
+      params.set_output("Curve", GeometrySet::from_curves(curves));
       params.set_output("Center", r_center);
       params.set_output("Normal", r_normal);
       params.set_output("Radius", r_radius);
@@ -345,28 +353,54 @@ static void node_geo_exec(GeoNodeExecParams params)
           params.extract_input<bool>("Connect Center"),
           params.extract_input<bool>("Invert Arc"));
 
-      params.set_output("Curve", GeometrySet::create_with_curves(curves));
+      params.set_output("Curve", GeometrySet::from_curves(curves));
       break;
     }
   }
 }
 
-}  // namespace blender::nodes::node_geo_curve_primitive_arc_cc
-
-void register_node_type_geo_curve_primitive_arc()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_geo_curve_primitive_arc_cc;
+  static const EnumPropertyItem mode_items[] = {
+      {GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_POINTS,
+       "POINTS",
+       ICON_NONE,
+       "Points",
+       "Define arc by 3 points on circle. Arc is calculated between start and end points"},
+      {GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_RADIUS,
+       "RADIUS",
+       ICON_NONE,
+       "Radius",
+       "Define radius with a float"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
 
+  RNA_def_node_enum(srna,
+                    "mode",
+                    "Mode",
+                    "Method used to determine radius and placement",
+                    mode_items,
+                    NOD_storage_enum_accessors(mode),
+                    GEO_NODE_CURVE_PRIMITIVE_ARC_TYPE_RADIUS);
+}
+
+static void node_register()
+{
   static bNodeType ntype;
   geo_node_type_base(&ntype, GEO_NODE_CURVE_PRIMITIVE_ARC, "Arc", NODE_CLASS_GEOMETRY);
-  ntype.initfunc = file_ns::node_init;
-  ntype.updatefunc = file_ns::node_update;
+  ntype.initfunc = node_init;
+  ntype.updatefunc = node_update;
   node_type_storage(&ntype,
                     "NodeGeometryCurvePrimitiveArc",
                     node_free_standard_storage,
                     node_copy_standard_storage);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.draw_buttons = file_ns::node_layout;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_curve_primitive_arc_cc

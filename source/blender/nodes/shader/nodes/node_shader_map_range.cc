@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
@@ -8,13 +9,21 @@
 #include <algorithm>
 
 #include "node_shader_util.hh"
+#include "node_util.hh"
 
 #include "BLI_math_base_safe.h"
+#include "BLI_math_vector.h"
+#include "BLI_math_vector.hh"
 
+#include "FN_multi_function_builder.hh"
+
+#include "NOD_multi_function.hh"
 #include "NOD_socket_search_link.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "RNA_access.hh"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 namespace blender::nodes::node_shader_map_range_cc {
 
@@ -23,20 +32,20 @@ NODE_STORAGE_FUNCS(NodeMapRange)
 static void sh_node_map_range_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Float>(N_("Value")).min(-10000.0f).max(10000.0f).default_value(1.0f);
-  b.add_input<decl::Float>(N_("From Min")).min(-10000.0f).max(10000.0f);
-  b.add_input<decl::Float>(N_("From Max")).min(-10000.0f).max(10000.0f).default_value(1.0f);
-  b.add_input<decl::Float>(N_("To Min")).min(-10000.0f).max(10000.0f);
-  b.add_input<decl::Float>(N_("To Max")).min(-10000.0f).max(10000.0f).default_value(1.0f);
-  b.add_input<decl::Float>(N_("Steps")).min(-10000.0f).max(10000.0f).default_value(4.0f);
-  b.add_input<decl::Vector>(N_("Vector")).min(0.0f).max(1.0f).hide_value();
-  b.add_input<decl::Vector>(N_("From Min"), "From_Min_FLOAT3");
-  b.add_input<decl::Vector>(N_("From Max"), "From_Max_FLOAT3").default_value(float3(1.0f));
-  b.add_input<decl::Vector>(N_("To Min"), "To_Min_FLOAT3");
-  b.add_input<decl::Vector>(N_("To Max"), "To_Max_FLOAT3").default_value(float3(1.0f));
-  b.add_input<decl::Vector>(N_("Steps"), "Steps_FLOAT3").default_value(float3(4.0f));
-  b.add_output<decl::Float>(N_("Result"));
-  b.add_output<decl::Vector>(N_("Vector"));
+  b.add_input<decl::Float>("Value").min(-10000.0f).max(10000.0f).default_value(1.0f);
+  b.add_input<decl::Float>("From Min").min(-10000.0f).max(10000.0f);
+  b.add_input<decl::Float>("From Max").min(-10000.0f).max(10000.0f).default_value(1.0f);
+  b.add_input<decl::Float>("To Min").min(-10000.0f).max(10000.0f);
+  b.add_input<decl::Float>("To Max").min(-10000.0f).max(10000.0f).default_value(1.0f);
+  b.add_input<decl::Float>("Steps").min(-10000.0f).max(10000.0f).default_value(4.0f);
+  b.add_input<decl::Vector>("Vector").min(0.0f).max(1.0f).hide_value();
+  b.add_input<decl::Vector>("From Min", "From_Min_FLOAT3");
+  b.add_input<decl::Vector>("From Max", "From_Max_FLOAT3").default_value(float3(1.0f));
+  b.add_input<decl::Vector>("To Min", "To_Min_FLOAT3");
+  b.add_input<decl::Vector>("To Max", "To_Max_FLOAT3").default_value(float3(1.0f));
+  b.add_input<decl::Vector>("Steps", "Steps_FLOAT3").default_value(float3(4.0f));
+  b.add_output<decl::Float>("Result");
+  b.add_output<decl::Vector>("Vector");
 }
 
 static void node_shader_buts_map_range(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
@@ -45,7 +54,8 @@ static void node_shader_buts_map_range(uiLayout *layout, bContext * /*C*/, Point
   uiItemR(layout, ptr, "interpolation_type", UI_ITEM_R_SPLIT_EMPTY_NAME, "", ICON_NONE);
   if (!ELEM(RNA_enum_get(ptr, "interpolation_type"),
             NODE_MAP_RANGE_SMOOTHSTEP,
-            NODE_MAP_RANGE_SMOOTHERSTEP)) {
+            NODE_MAP_RANGE_SMOOTHERSTEP))
+  {
     uiItemR(layout, ptr, "clamp", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, ICON_NONE);
   }
 }
@@ -87,10 +97,10 @@ static void node_shader_update_map_range(bNodeTree *ntree, bNode *node)
   }
 
   LISTBASE_FOREACH_INDEX (bNodeSocket *, socket, &node->inputs, index) {
-    nodeSetSocketAvailability(ntree, socket, new_input_availability[index]);
+    bke::nodeSetSocketAvailability(ntree, socket, new_input_availability[index]);
   }
   LISTBASE_FOREACH_INDEX (bNodeSocket *, socket, &node->outputs, index) {
-    nodeSetSocketAvailability(ntree, socket, new_output_availability[index]);
+    bke::nodeSetSocketAvailability(ntree, socket, new_output_availability[index]);
   }
 }
 
@@ -213,7 +223,8 @@ static int gpu_shader_map_range(GPUMaterial *mat,
     ret = GPU_stack_link(mat, node, "map_range_linear", in, out, GPU_constant(&clamp));
   }
   if (ret && storage.clamp && !use_vector &&
-      !ELEM(storage.interpolation_type, NODE_MAP_RANGE_SMOOTHSTEP, NODE_MAP_RANGE_SMOOTHERSTEP)) {
+      !ELEM(storage.interpolation_type, NODE_MAP_RANGE_SMOOTHSTEP, NODE_MAP_RANGE_SMOOTHERSTEP))
+  {
     GPU_link(mat, "clamp_range", out[0].link, in[3].link, in[4].link, &out[0].link);
   }
   return ret;
@@ -431,6 +442,52 @@ static void sh_node_map_range_build_multi_function(NodeMultiFunctionBuilder &bui
   }
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  /* TODO: Implement steps */
+
+  const NodeMapRange *map_range = static_cast<NodeMapRange *>(node_->storage);
+  NodeItem::Type type;
+  NodeItem value = empty();
+  NodeItem from_min = empty();
+  NodeItem from_max = empty();
+  NodeItem to_min = empty();
+  NodeItem to_max = empty();
+  switch (map_range->data_type) {
+    case CD_PROP_FLOAT:
+      type = NodeItem::Type::Float;
+      value = get_input_value("Value", type);
+      from_min = get_input_value(1, type);
+      from_max = get_input_value(2, type);
+      to_min = get_input_value(3, type);
+      to_max = get_input_value(4, type);
+      break;
+    case CD_PROP_FLOAT3:
+      type = NodeItem::Type::Vector3;
+      value = get_input_value("Vector", type);
+      from_min = get_input_value(7, type);
+      from_max = get_input_value(8, type);
+      to_min = get_input_value(9, type);
+      to_max = get_input_value(10, type);
+      break;
+    default:
+      BLI_assert_unreachable();
+      return empty();
+  }
+
+  return create_node("range",
+                     type,
+                     {{"in", value},
+                      {"inlow", from_min},
+                      {"inhigh", from_max},
+                      {"outlow", to_min},
+                      {"outhigh", to_max},
+                      {"doclamp", val(bool(map_range->clamp))}});
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_map_range_cc
 
 void register_node_type_sh_map_range()
@@ -450,5 +507,6 @@ void register_node_type_sh_map_range()
   ntype.gpu_fn = file_ns::gpu_shader_map_range;
   ntype.build_multi_function = file_ns::sh_node_map_range_build_multi_function;
   ntype.gather_link_search_ops = file_ns::node_map_range_gather_link_searches;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
   nodeRegisterType(&ntype);
 }

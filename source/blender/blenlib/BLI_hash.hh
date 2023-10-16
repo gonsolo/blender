@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -64,7 +66,6 @@
 #include <string>
 #include <utility>
 
-#include "BLI_math_base.h"
 #include "BLI_string_ref.hh"
 #include "BLI_utildefines.h"
 
@@ -217,7 +218,7 @@ template<typename T> struct DefaultHash<T *> {
 
 template<typename T> uint64_t get_default_hash(const T &v)
 {
-  return DefaultHash<T>{}(v);
+  return DefaultHash<std::decay_t<T>>{}(v);
 }
 
 template<typename T1, typename T2> uint64_t get_default_hash_2(const T1 &v1, const T2 &v2)

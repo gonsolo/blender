@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup nodes
@@ -8,17 +9,21 @@
 #include "DNA_node_types.h"
 #include "DNA_space_types.h"
 
+#include "BLI_math_vector.h"
+#include "BLI_string.h"
+
 #include "BKE_context.h"
 #include "BKE_node_runtime.hh"
 
+#include "IMB_colormanagement.h"
+
 #include "node_shader_util.hh"
 
-#include "NOD_add_node_search.hh"
 #include "NOD_socket_search_link.hh"
 
 #include "RE_engine.h"
 
-#include "node_exec.h"
+#include "node_exec.hh"
 
 bool sh_node_poll_default(const bNodeType * /*ntype*/,
                           const bNodeTree *ntree,
@@ -42,14 +47,13 @@ static bool sh_fn_poll_default(const bNodeType * /*ntype*/,
   return true;
 }
 
-void sh_node_type_base(struct bNodeType *ntype, int type, const char *name, short nclass)
+void sh_node_type_base(bNodeType *ntype, int type, const char *name, short nclass)
 {
-  node_type_base(ntype, type, name, nclass);
+  blender::bke::node_type_base(ntype, type, name, nclass);
 
   ntype->poll = sh_node_poll_default;
   ntype->insert_link = node_insert_link_default;
   ntype->gather_link_search_ops = blender::nodes::search_link_ops_for_basic_node;
-  ntype->gather_add_node_search_ops = blender::nodes::search_node_add_ops_for_basic_node;
 }
 
 void sh_fn_node_type_base(bNodeType *ntype, int type, const char *name, short nclass)
@@ -57,7 +61,6 @@ void sh_fn_node_type_base(bNodeType *ntype, int type, const char *name, short nc
   sh_node_type_base(ntype, type, name, nclass);
   ntype->poll = sh_fn_poll_default;
   ntype->gather_link_search_ops = blender::nodes::search_link_ops_for_basic_node;
-  ntype->gather_add_node_search_ops = blender::nodes::search_node_add_ops_for_basic_node;
 }
 
 bool line_style_shader_nodes_poll(const bContext *C)
@@ -137,7 +140,7 @@ static void nodestack_get_vec(float *in, short type_in, bNodeStack *ns)
   }
 }
 
-void node_gpu_stack_from_data(struct GPUNodeStack *gs, int type, bNodeStack *ns)
+void node_gpu_stack_from_data(GPUNodeStack *gs, int type, bNodeStack *ns)
 {
   memset(gs, 0, sizeof(*gs));
 
@@ -159,6 +162,9 @@ void node_gpu_stack_from_data(struct GPUNodeStack *gs, int type, bNodeStack *ns)
       gs->type = GPU_FLOAT;
     }
     else if (type == SOCK_INT) {
+      gs->type = GPU_FLOAT; /* HACK: Support as float. */
+    }
+    else if (type == SOCK_BOOLEAN) {
       gs->type = GPU_FLOAT; /* HACK: Support as float. */
     }
     else if (type == SOCK_VECTOR) {
@@ -203,13 +209,18 @@ static void gpu_stack_from_data_list(GPUNodeStack *gs, ListBase *sockets, bNodeS
 
 static void data_from_gpu_stack_list(ListBase *sockets, bNodeStack **ns, GPUNodeStack *gs)
 {
-  int i;
-  LISTBASE_FOREACH_INDEX (bNodeSocket *, socket, sockets, i) {
-    node_data_from_gpu_stack(ns[i], &gs[i]);
+  int i = 0;
+  LISTBASE_FOREACH (bNodeSocket *, socket, sockets) {
+    if (ELEM(
+            socket->type, SOCK_FLOAT, SOCK_INT, SOCK_BOOLEAN, SOCK_VECTOR, SOCK_RGBA, SOCK_SHADER))
+    {
+      node_data_from_gpu_stack(ns[i], &gs[i]);
+      i++;
+    }
   }
 }
 
-bool nodeSupportsActiveFlag(const bNode *node, int sub_activity)
+bool blender::bke::nodeSupportsActiveFlag(const bNode *node, int sub_activity)
 {
   BLI_assert(ELEM(sub_activity, NODE_ACTIVE_TEXTURE, NODE_ACTIVE_PAINT_CANVAS));
   switch (sub_activity) {
@@ -240,7 +251,7 @@ static bNode *node_get_active(bNodeTree *ntree, int sub_activity)
         return node;
       }
     }
-    else if (!inactivenode && nodeSupportsActiveFlag(node, sub_activity)) {
+    else if (!inactivenode && blender::bke::nodeSupportsActiveFlag(node, sub_activity)) {
       inactivenode = node;
     }
     else if (node->type == NODE_GROUP) {
@@ -286,10 +297,13 @@ bNode *nodeGetActiveTexture(bNodeTree *ntree)
   return node_get_active(ntree, NODE_ACTIVE_TEXTURE);
 }
 
+namespace blender::bke {
+
 bNode *nodeGetActivePaintCanvas(bNodeTree *ntree)
 {
   return node_get_active(ntree, NODE_ACTIVE_PAINT_CANVAS);
 }
+}  // namespace blender::bke
 
 void ntreeExecGPUNodes(bNodeTreeExec *exec, GPUMaterial *mat, bNode *output_node)
 {

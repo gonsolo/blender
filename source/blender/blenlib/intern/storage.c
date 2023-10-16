@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -13,7 +14,7 @@
 
 #include <sys/stat.h>
 
-#if defined(__NetBSD__) || defined(__DragonFly__) || defined(__HAIKU__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__HAIKU__)
 /* Other modern unix OS's should probably use this also. */
 #  include <sys/statvfs.h>
 #  define USE_STATFS_STATVFS
@@ -31,7 +32,7 @@
 #endif
 
 #include <fcntl.h>
-#include <string.h> /* `strcpy` etc. */
+#include <string.h>
 
 #ifdef WIN32
 #  include "BLI_string_utf8.h"
@@ -136,7 +137,7 @@ double BLI_dir_free_space(const char *dir)
   struct statfs disk;
 #  endif
 
-  char name[FILE_MAXDIR], *slash;
+  char dirname[FILE_MAXDIR], *slash;
   int len = strlen(dir);
 
   if (len >= FILE_MAXDIR) {
@@ -144,28 +145,29 @@ double BLI_dir_free_space(const char *dir)
     return -1;
   }
 
-  strcpy(name, dir);
+  memcpy(dirname, dir, len + 1);
 
   if (len) {
-    slash = strrchr(name, '/');
+    slash = strrchr(dirname, '/');
     if (slash) {
-      slash[1] = 0;
+      slash[1] = '\0';
     }
   }
   else {
-    strcpy(name, "/");
+    dirname[0] = '/';
+    dirname[1] = '\0';
   }
 
 #  if defined(USE_STATFS_STATVFS)
-  if (statvfs(name, &disk)) {
+  if (statvfs(dirname, &disk)) {
     return -1;
   }
 #  elif defined(USE_STATFS_4ARGS)
-  if (statfs(name, &disk, sizeof(struct statfs), 0)) {
+  if (statfs(dirname, &disk, sizeof(struct statfs), 0)) {
     return -1;
   }
 #  else
-  if (statfs(name, &disk)) {
+  if (statfs(dirname, &disk)) {
     return -1;
   }
 #  endif
@@ -268,7 +270,8 @@ eFileAttributes BLI_file_attributes(const char *path)
     ret |= FILE_ATTR_SPARSE_FILE;
   }
   if (attr & FILE_ATTRIBUTE_OFFLINE || attr & FILE_ATTRIBUTE_RECALL_ON_OPEN ||
-      attr & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS) {
+      attr & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+  {
     ret |= FILE_ATTR_OFFLINE;
   }
   if (attr & FILE_ATTRIBUTE_REPARSE_POINT) {
@@ -601,30 +604,12 @@ void BLI_file_free_lines(LinkNode *lines)
 
 bool BLI_file_older(const char *file1, const char *file2)
 {
-#ifdef WIN32
-  struct _stat st1, st2;
-
-  UTF16_ENCODE(file1);
-  UTF16_ENCODE(file2);
-
-  if (_wstat(file1_16, &st1)) {
+  BLI_stat_t st1, st2;
+  if (BLI_stat(file1, &st1)) {
     return false;
   }
-  if (_wstat(file2_16, &st2)) {
+  if (BLI_stat(file2, &st2)) {
     return false;
   }
-
-  UTF16_UN_ENCODE(file2);
-  UTF16_UN_ENCODE(file1);
-#else
-  struct stat st1, st2;
-
-  if (stat(file1, &st1)) {
-    return false;
-  }
-  if (stat(file2, &st2)) {
-    return false;
-  }
-#endif
   return (st1.st_mtime < st2.st_mtime);
 }

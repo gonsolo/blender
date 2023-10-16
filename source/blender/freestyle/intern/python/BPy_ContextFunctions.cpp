@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2009-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -90,7 +92,7 @@ static char ContextFunctions_load_map___doc__[] =
     "   :arg map_name: The name that will be used to access this image.\n"
     "   :type map_name: str\n"
     "   :arg num_levels: The number of levels in the map pyramid\n"
-    "      (default = 4).  If num_levels == 0, the complete pyramid is\n"
+    "      (default = 4). If num_levels == 0, the complete pyramid is\n"
     "      built.\n"
     "   :type num_levels: int\n"
     "   :arg sigma: The sigma value of the gaussian function.\n"
@@ -104,7 +106,8 @@ static PyObject *ContextFunctions_load_map(PyObject * /*self*/, PyObject *args, 
   float sigma = 1.0;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "ss|If", (char **)kwlist, &fileName, &mapName, &nbLevels, &sigma)) {
+          args, kwds, "ss|If", (char **)kwlist, &fileName, &mapName, &nbLevels, &sigma))
+  {
     return nullptr;
   }
   ContextFunctions::LoadMapCF(fileName, mapName, nbLevels, sigma);
@@ -121,10 +124,10 @@ static char ContextFunctions_read_map_pixel___doc__[] =
     "   :arg level: The level of the pyramid in which we wish to read the\n"
     "      pixel.\n"
     "   :type level: int\n"
-    "   :arg x: The x coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg x: The x coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type x: int\n"
-    "   :arg y: The y coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg y: The y coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type y: int\n"
     "   :return: The floating-point value stored for that pixel.\n"
@@ -139,8 +142,8 @@ static PyObject *ContextFunctions_read_map_pixel(PyObject * /*self*/,
   int level;
   uint x, y;
 
-  if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "siII", (char **)kwlist, &mapName, &level, &x, &y)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "siII", (char **)kwlist, &mapName, &level, &x, &y))
+  {
     return nullptr;
   }
   return PyFloat_FromDouble(ContextFunctions::ReadMapPixelCF(mapName, level, x, y));
@@ -154,10 +157,10 @@ static char ContextFunctions_read_complete_view_map_pixel___doc__[] =
     "   :arg level: The level of the pyramid in which we wish to read the\n"
     "      pixel.\n"
     "   :type level: int\n"
-    "   :arg x: The x coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg x: The x coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type x: int\n"
-    "   :arg y: The y coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg y: The y coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type y: int\n"
     "   :return: The floating-point value stored for that pixel.\n"
@@ -188,10 +191,10 @@ static char ContextFunctions_read_directional_view_map_pixel___doc__[] =
     "   :arg level: The level of the pyramid in which we wish to read the\n"
     "      pixel.\n"
     "   :type level: int\n"
-    "   :arg x: The x coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg x: The x coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type x: int\n"
-    "   :arg y: The y coordinate of the pixel we wish to read.  The origin\n"
+    "   :arg y: The y coordinate of the pixel we wish to read. The origin\n"
     "      is in the lower-left corner.\n"
     "   :type y: int\n"
     "   :return: The floating-point value stored for that pixel.\n"
@@ -206,7 +209,8 @@ static PyObject *ContextFunctions_read_directional_view_map_pixel(PyObject * /*s
   uint x, y;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "iiII", (char **)kwlist, &orientation, &level, &x, &y)) {
+          args, kwds, "iiII", (char **)kwlist, &orientation, &level, &x, &y))
+  {
     return nullptr;
   }
   return PyFloat_FromDouble(
@@ -279,7 +283,7 @@ static PyMethodDef module_functions[] = {
 /*-----------------------ContextFunctions module definition--------------------------------*/
 
 static PyModuleDef module_definition = {
-    PyModuleDef_HEAD_INIT,
+    /*m_base*/ PyModuleDef_HEAD_INIT,
     /*m_name*/ "Freestyle.ContextFunctions",
     /*m_doc*/ module_docstring,
     /*m_size*/ -1,

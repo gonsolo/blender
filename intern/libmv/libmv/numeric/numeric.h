@@ -34,8 +34,8 @@
 #include <Eigen/SVD>
 
 #if !defined(__MINGW64__)
-#  if defined(_WIN32) || defined(__APPLE__) || defined(__FreeBSD__) ||         \
-      defined(__NetBSD__) || defined(__HAIKU__)
+#  if defined(_WIN32) || defined(__APPLE__) || defined(__NetBSD__) ||          \
+      defined(__HAIKU__)
 inline void sincos(double x, double* sinx, double* cosx) {
   *sinx = sin(x);
   *cosx = cos(x);
@@ -158,10 +158,11 @@ template <typename TMat, typename TVec>
 double Nullspace(TMat* A, TVec* nullspace) {
   Eigen::JacobiSVD<TMat> svd(*A, Eigen::ComputeFullV);
   (*nullspace) = svd.matrixV().col(A->cols() - 1);
-  if (A->rows() >= A->cols())
+  if (A->rows() >= A->cols()) {
     return svd.singularValues()(A->cols() - 1);
-  else
+  } else {
     return 0.0;
+  }
 }
 
 // Solve the linear system Ax = 0 via SVD. Finds two solutions, x1 and x2, such
@@ -174,10 +175,11 @@ double Nullspace2(TMat* A, TVec1* x1, TVec2* x2) {
   Eigen::JacobiSVD<TMat> svd(*A, Eigen::ComputeFullV);
   *x1 = svd.matrixV().col(A->cols() - 1);
   *x2 = svd.matrixV().col(A->cols() - 2);
-  if (A->rows() >= A->cols())
+  if (A->rows() >= A->cols()) {
     return svd.singularValues()(A->cols() - 1);
-  else
+  } else {
     return 0.0;
+  }
 }
 
 // In place transpose for square matrices.

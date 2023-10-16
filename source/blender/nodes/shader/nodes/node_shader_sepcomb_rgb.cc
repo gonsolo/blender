@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
@@ -7,15 +8,19 @@
 
 #include "node_shader_util.hh"
 
+#include "FN_multi_function_builder.hh"
+
+#include "NOD_multi_function.hh"
+
 namespace blender::nodes::node_shader_sepcomb_rgb_cc {
 
 static void sh_node_seprgb_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Color>(N_("Image")).default_value({0.8f, 0.8f, 0.8f, 1.0f});
-  b.add_output<decl::Float>(N_("R"));
-  b.add_output<decl::Float>(N_("G"));
-  b.add_output<decl::Float>(N_("B"));
+  b.add_input<decl::Color>("Image").default_value({0.8f, 0.8f, 0.8f, 1.0f});
+  b.add_output<decl::Float>("R");
+  b.add_output<decl::Float>("G");
+  b.add_output<decl::Float>("B");
 }
 
 static int gpu_shader_seprgb(GPUMaterial *mat,
@@ -43,7 +48,7 @@ class SeparateRGBFunction : public mf::MultiFunction {
     this->set_signature(&signature);
   }
 
-  void call(IndexMask mask, mf::Params params, mf::Context /*context*/) const override
+  void call(const IndexMask &mask, mf::Params params, mf::Context /*context*/) const override
   {
     const VArray<ColorGeometry4f> &colors = params.readonly_single_input<ColorGeometry4f>(0,
                                                                                           "Color");
@@ -51,12 +56,12 @@ class SeparateRGBFunction : public mf::MultiFunction {
     MutableSpan<float> gs = params.uninitialized_single_output<float>(2, "G");
     MutableSpan<float> bs = params.uninitialized_single_output<float>(3, "B");
 
-    for (int64_t i : mask) {
+    mask.foreach_index([&](const int64_t i) {
       ColorGeometry4f color = colors[i];
       rs[i] = color.r;
       gs[i] = color.g;
       bs[i] = color.b;
-    }
+    });
   }
 };
 
@@ -80,7 +85,6 @@ void register_node_type_sh_seprgb()
   ntype.gpu_fn = file_ns::gpu_shader_seprgb;
   ntype.build_multi_function = file_ns::sh_node_seprgb_build_multi_function;
   ntype.gather_link_search_ops = nullptr;
-  ntype.gather_add_node_search_ops = nullptr;
 
   nodeRegisterType(&ntype);
 }
@@ -90,10 +94,10 @@ namespace blender::nodes::node_shader_sepcomb_rgb_cc {
 static void sh_node_combrgb_declare(NodeDeclarationBuilder &b)
 {
   b.is_function_node();
-  b.add_input<decl::Float>(N_("R")).min(0.0f).max(1.0f);
-  b.add_input<decl::Float>(N_("G")).min(0.0f).max(1.0f);
-  b.add_input<decl::Float>(N_("B")).min(0.0f).max(1.0f);
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_input<decl::Float>("R").min(0.0f).max(1.0f);
+  b.add_input<decl::Float>("G").min(0.0f).max(1.0f);
+  b.add_input<decl::Float>("B").min(0.0f).max(1.0f);
+  b.add_output<decl::Color>("Image");
 }
 
 static int gpu_shader_combrgb(GPUMaterial *mat,
@@ -126,7 +130,6 @@ void register_node_type_sh_combrgb()
   ntype.gpu_fn = file_ns::gpu_shader_combrgb;
   ntype.build_multi_function = file_ns::sh_node_combrgb_build_multi_function;
   ntype.gather_link_search_ops = nullptr;
-  ntype.gather_add_node_search_ops = nullptr;
 
   nodeRegisterType(&ntype);
 }

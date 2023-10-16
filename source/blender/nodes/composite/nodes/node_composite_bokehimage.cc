@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
@@ -8,8 +9,8 @@
 #include "BLI_math_base.h"
 #include "BLI_math_vector_types.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "GPU_shader.h"
 
@@ -26,7 +27,7 @@ NODE_STORAGE_FUNCS(NodeBokehImage)
 
 static void cmp_node_bokehimage_declare(NodeDeclarationBuilder &b)
 {
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_output<decl::Color>("Image");
 }
 
 static void node_composit_init_bokehimage(bNodeTree * /*ntree*/, bNode *node)

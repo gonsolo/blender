@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup DNA
@@ -18,10 +20,6 @@ class AssetLibrary;
 class AssetIdentifier;
 }  // namespace blender::asset_system
 
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /**
@@ -126,6 +124,10 @@ typedef enum eAssetImportMethod {
   ASSET_IMPORT_APPEND_REUSE = 2,
 } eAssetImportMethod;
 
+typedef enum eAssetLibrary_Flag {
+  ASSET_LIBRARY_RELATIVE_PATH = (1 << 0),
+} eAssetLibrary_Flag;
+
 /**
  * Information to identify an asset library. May be either one of the predefined types (current
  * 'Main', builtin library, project library), or a custom type as defined in the Preferences.
@@ -177,10 +179,13 @@ typedef struct AssetWeakReference {
   AssetWeakReference();
   AssetWeakReference(AssetWeakReference &&);
   AssetWeakReference(const AssetWeakReference &) = delete;
-  /** Enables use with `std::unique_ptr<AssetWeakReference>`. */
   ~AssetWeakReference();
 
-  static std::unique_ptr<AssetWeakReference> make_reference(
+  /**
+   * See AssetRepresentation::make_weak_reference(). Must be freed using
+   * #BKE_asset_weak_reference_free().
+   */
+  static AssetWeakReference *make_reference(
       const blender::asset_system::AssetLibrary &library,
       const blender::asset_system::AssetIdentifier &asset_identifier);
 #endif
@@ -203,6 +208,7 @@ typedef struct AssetHandle {
   const struct FileDirEntry *file_data;
 } AssetHandle;
 
-#ifdef __cplusplus
-}
-#endif
+typedef enum eUserExtensionRepo_Flag {
+  /** Maintain disk cache. */
+  USER_EXTENSION_FLAG_NO_CACHE = 1 << 0,
+} eUserExtensionRepo_Flag;

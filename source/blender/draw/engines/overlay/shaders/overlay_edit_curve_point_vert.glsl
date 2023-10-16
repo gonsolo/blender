@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2017-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma BLENDER_REQUIRE(common_view_clipping_lib.glsl)
 #pragma BLENDER_REQUIRE(common_view_lib.glsl)
@@ -27,7 +30,8 @@ void main()
 
   bool show_handle = showCurveHandles;
   if ((uint(curveHandleDisplay) == CURVE_HANDLE_SELECTED) &&
-      ((data & VERT_SELECTED_BEZT_HANDLE) == 0u)) {
+      ((data & VERT_SELECTED_BEZT_HANDLE) == 0u))
+  {
     show_handle = false;
   }
 

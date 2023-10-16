@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2011 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup DNA
@@ -10,10 +11,6 @@
 #include "DNA_ID.h"
 #include "DNA_color_types.h"    /* for color management */
 #include "DNA_tracking_types.h" /* for #MovieTracking */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct AnimData;
 struct ImBuf;
@@ -59,6 +56,11 @@ typedef struct MovieClip {
   ID id;
   /** Animation data (must be immediately after id for utilities to use it). */
   struct AnimData *adt;
+  /**
+   * Engines draw data, must be immediately after AnimData. See IdDdtTemplate and
+   * DRW_drawdatalist_from_id to understand this requirement.
+   */
+  DrawDataList drawdata;
 
   /** File path, 1024 = FILE_MAX. */
   char filepath[1024];
@@ -186,7 +188,3 @@ enum {
   /** Use original, if proxy is not found. */
   MCLIP_PROXY_RENDER_USE_FALLBACK_RENDER = 2,
 };
-
-#ifdef __cplusplus
-}
-#endif

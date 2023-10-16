@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2008 Blender Foundation */
+/* SPDX-FileCopyrightText: 2008 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edrend
@@ -12,8 +13,9 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_listbase.h"
-#include "BLI_math.h"
 #include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_string_utils.h"
 #include "BLI_threads.h"
 #include "BLI_timecode.h"
 #include "BLI_utildefines.h"
@@ -35,25 +37,25 @@
 #include "BKE_layer.h"
 #include "BKE_lib_id.h"
 #include "BKE_main.h"
-#include "BKE_node.h"
+#include "BKE_node.hh"
 #include "BKE_node_tree_update.h"
-#include "BKE_object.h"
+#include "BKE_object.hh"
 #include "BKE_report.h"
 #include "BKE_scene.h"
-#include "BKE_screen.h"
+#include "BKE_screen.hh"
 
 #include "NOD_composite.h"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
-#include "ED_render.h"
-#include "ED_screen.h"
-#include "ED_util.h"
+#include "ED_render.hh"
+#include "ED_screen.hh"
+#include "ED_util.hh"
 
-#include "BIF_glutil.h"
+#include "BIF_glutil.hh"
 
 #include "RE_engine.h"
 #include "RE_pipeline.h"
@@ -61,8 +63,8 @@
 #include "IMB_colormanagement.h"
 #include "IMB_imbuf_types.h"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
 
 #include "SEQ_relations.h"
 
@@ -81,7 +83,7 @@ struct RenderJob {
    */
   Depsgraph *depsgraph;
   Render *re;
-  struct Object *camera_override;
+  Object *camera_override;
   bool v3d_override;
   bool anim, write_still;
   Image *image;
@@ -202,16 +204,19 @@ static void image_buffer_rect_update(RenderJob *rj,
    */
   /* TODO(sergey): Need to check has_combined here? */
   if (iuser->pass == 0) {
-    RenderView *rv;
     const int view_id = BKE_scene_multiview_view_id_get(&scene->r, viewname);
-    rv = RE_RenderViewGetById(rr, view_id);
+    const RenderView *rv = RE_RenderViewGetById(rr, view_id);
+
+    if (rv->ibuf == nullptr) {
+      return;
+    }
 
     /* find current float rect for display, first case is after composite... still weak */
-    if (rv->rectf) {
-      rectf = rv->rectf;
+    if (rv->ibuf->float_buffer.data) {
+      rectf = rv->ibuf->float_buffer.data;
     }
     else {
-      if (rv->rect32) {
+      if (rv->ibuf->byte_buffer.data) {
         /* special case, currently only happens with sequencer rendering,
          * which updates the whole frame, so we can only mark display buffer
          * as invalid here (sergey)
@@ -234,7 +239,7 @@ static void image_buffer_rect_update(RenderJob *rj,
     linear_offset_y = offset_y;
   }
   else {
-    rectf = ibuf->rect_float;
+    rectf = ibuf->float_buffer.data;
     linear_stride = ibuf->x;
     linear_offset_x = 0;
     linear_offset_y = 0;
@@ -311,7 +316,7 @@ static int screen_render_exec(bContext *C, wmOperator *op)
   Main *mainp = CTX_data_main(C);
   const bool is_animation = RNA_boolean_get(op->ptr, "animation");
   const bool is_write_still = RNA_boolean_get(op->ptr, "write_still");
-  struct Object *camera_override = v3d ? V3D_CAMERA_LOCAL(v3d) : nullptr;
+  Object *camera_override = v3d ? V3D_CAMERA_LOCAL(v3d) : nullptr;
 
   /* Cannot do render if there is not this function. */
   if (re_type->render == nullptr) {
@@ -401,85 +406,122 @@ static void render_freejob(void *rjv)
   MEM_freeN(rj);
 }
 
-/* str is IMA_MAX_RENDER_TEXT in size */
 static void make_renderinfo_string(const RenderStats *rs,
                                    const Scene *scene,
                                    const bool v3d_override,
                                    const char *error,
-                                   char *str)
+                                   char ret[IMA_MAX_RENDER_TEXT_SIZE])
 {
-  char info_time_str[32]; /* used to be extern to header_info.c */
-  uintptr_t mem_in_use, peak_memory;
-  float megs_used_memory, megs_peak_memory;
-  char *spos = str;
+  const char *info_space = " ";
+  const char *info_sep = "| ";
+  struct {
+    char time_last[32];
+    char time_elapsed[32];
+    char frame[16];
+    char statistics[64];
+  } info_buffers;
 
-  mem_in_use = MEM_get_memory_in_use();
-  peak_memory = MEM_get_peak_memory();
+  const char *ret_array[32];
+  int i = 0;
 
-  megs_used_memory = (mem_in_use) / (1024.0 * 1024.0);
-  megs_peak_memory = (peak_memory) / (1024.0 * 1024.0);
+  const uintptr_t mem_in_use = MEM_get_memory_in_use();
+  const uintptr_t peak_memory = MEM_get_peak_memory();
+
+  const float megs_used_memory = (mem_in_use) / (1024.0 * 1024.0);
+  const float megs_peak_memory = (peak_memory) / (1024.0 * 1024.0);
 
   /* local view */
   if (rs->localview) {
-    spos += BLI_sprintf(spos, "%s | ", TIP_("3D Local View"));
+    ret_array[i++] = TIP_("3D Local View ");
+    ret_array[i++] = info_sep;
   }
   else if (v3d_override) {
-    spos += BLI_sprintf(spos, "%s | ", TIP_("3D View"));
+    ret_array[i++] = TIP_("3D View ");
+    ret_array[i++] = info_sep;
   }
 
   /* frame number */
-  spos += BLI_sprintf(spos, TIP_("Frame:%d "), (scene->r.cfra));
+  SNPRINTF(info_buffers.frame, "%d ", scene->r.cfra);
+  ret_array[i++] = TIP_("Frame:");
+  ret_array[i++] = info_buffers.frame;
 
-  /* previous and elapsed time */
-  BLI_timecode_string_from_time_simple(info_time_str, sizeof(info_time_str), rs->lastframetime);
+  /* Previous and elapsed time. */
+  const char *info_time = info_buffers.time_last;
+  BLI_timecode_string_from_time_simple(
+      info_buffers.time_last, sizeof(info_buffers.time_last), rs->lastframetime);
 
+  ret_array[i++] = info_sep;
   if (rs->infostr && rs->infostr[0]) {
     if (rs->lastframetime != 0.0) {
-      spos += BLI_sprintf(spos, TIP_("| Last:%s "), info_time_str);
+      ret_array[i++] = "Last:";
+      ret_array[i++] = info_buffers.time_last;
+      ret_array[i++] = info_space;
+    }
+
+    info_time = info_buffers.time_elapsed;
+    BLI_timecode_string_from_time_simple(info_buffers.time_elapsed,
+                                         sizeof(info_buffers.time_elapsed),
+                                         PIL_check_seconds_timer() - rs->starttime);
+  }
+
+  ret_array[i++] = TIP_("Time:");
+  ret_array[i++] = info_time;
+  ret_array[i++] = info_space;
+
+  /* Statistics. */
+  {
+    const char *info_statistics = nullptr;
+    if (rs->statstr) {
+      if (rs->statstr[0]) {
+        info_statistics = rs->statstr;
+      }
     }
     else {
-      spos += BLI_sprintf(spos, "| ");
+      if (rs->mem_peak == 0.0f) {
+        SNPRINTF(info_buffers.statistics,
+                 TIP_("Mem:%.2fM (Peak %.2fM)"),
+                 megs_used_memory,
+                 megs_peak_memory);
+      }
+      else {
+        SNPRINTF(
+            info_buffers.statistics, TIP_("Mem:%.2fM, Peak: %.2fM"), rs->mem_used, rs->mem_peak);
+      }
+      info_statistics = info_buffers.statistics;
     }
 
-    BLI_timecode_string_from_time_simple(
-        info_time_str, sizeof(info_time_str), PIL_check_seconds_timer() - rs->starttime);
-  }
-  else {
-    spos += BLI_sprintf(spos, "| ");
-  }
-
-  spos += BLI_sprintf(spos, TIP_("Time:%s "), info_time_str);
-
-  /* statistics */
-  if (rs->statstr) {
-    if (rs->statstr[0]) {
-      spos += BLI_sprintf(spos, "| %s ", rs->statstr);
-    }
-  }
-  else {
-    if (rs->mem_peak == 0.0f) {
-      spos += BLI_sprintf(
-          spos, TIP_("| Mem:%.2fM (Peak %.2fM) "), megs_used_memory, megs_peak_memory);
-    }
-    else {
-      spos += BLI_sprintf(spos, TIP_("| Mem:%.2fM, Peak: %.2fM "), rs->mem_used, rs->mem_peak);
+    if (info_statistics) {
+      ret_array[i++] = info_sep;
+      ret_array[i++] = info_statistics;
+      ret_array[i++] = info_space;
     }
   }
 
-  /* extra info */
-  if (rs->infostr && rs->infostr[0]) {
-    spos += BLI_sprintf(spos, "| %s ", rs->infostr);
-  }
-  else if (error && error[0]) {
-    spos += BLI_sprintf(spos, "| %s ", error);
+  /* Extra info. */
+  {
+    const char *info_extra = nullptr;
+    if (rs->infostr && rs->infostr[0]) {
+      info_extra = rs->infostr;
+    }
+    else if (error && error[0]) {
+      info_extra = error;
+    }
+
+    if (info_extra) {
+      ret_array[i++] = info_sep;
+      ret_array[i++] = info_extra;
+      ret_array[i++] = info_space;
+    }
   }
 
-  /* very weak... but 512 characters is quite safe */
-  if (spos >= str + IMA_MAX_RENDER_TEXT) {
-    if (G.debug & G_DEBUG) {
+  if (G.debug & G_DEBUG) {
+    if (BLI_string_len_array(ret_array, i) >= IMA_MAX_RENDER_TEXT_SIZE) {
       printf("WARNING! renderwin text beyond limit\n");
     }
   }
+
+  BLI_assert(i < int(BOUNDED_ARRAY_TYPE_SIZE<decltype(ret_array)>()));
+  BLI_string_join_array(ret, IMA_MAX_RENDER_TEXT_SIZE, ret_array, i);
 }
 
 static void image_renderinfo_cb(void *rjv, RenderStats *rs)
@@ -492,7 +534,7 @@ static void image_renderinfo_cb(void *rjv, RenderStats *rs)
   if (rr) {
     /* malloc OK here, stats_draw is not in tile threads */
     if (rr->text == nullptr) {
-      rr->text = static_cast<char *>(MEM_callocN(IMA_MAX_RENDER_TEXT, "rendertext"));
+      rr->text = static_cast<char *>(MEM_callocN(IMA_MAX_RENDER_TEXT_SIZE, "rendertext"));
     }
 
     make_renderinfo_string(rs, rj->scene, rj->v3d_override, rr->error, rr->text);
@@ -523,15 +565,19 @@ static void render_progress_update(void *rjv, float progress)
  */
 static void render_image_update_pass_and_layer(RenderJob *rj, RenderResult *rr, ImageUser *iuser)
 {
-  wmWindowManager *wm;
   ScrArea *first_area = nullptr, *matched_area = nullptr;
 
   /* image window, compo node users */
-  for (wm = static_cast<wmWindowManager *>(rj->main->wm.first); wm && matched_area == nullptr;
-       wm = static_cast<wmWindowManager *>(wm->id.next)) { /* only 1 wm */
+
+  /* Only ever 1 `wm`. */
+  for (wmWindowManager *wm = static_cast<wmWindowManager *>(rj->main->wm.first);
+       wm && matched_area == nullptr;
+       wm = static_cast<wmWindowManager *>(wm->id.next))
+  {
     wmWindow *win;
     for (win = static_cast<wmWindow *>(wm->windows.first); win && matched_area == nullptr;
-         win = win->next) {
+         win = win->next)
+    {
       const bScreen *screen = WM_window_get_active_screen(win);
 
       LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
@@ -623,7 +669,8 @@ static void image_rect_update(void *rjv, RenderResult *rr, rcti *renrect)
      * operate with.
      */
     if (!rj->supports_glsl_draw || ibuf->channels == 1 ||
-        ED_draw_imbuf_method(ibuf) != IMAGE_DRAW_METHOD_GLSL) {
+        ED_draw_imbuf_method(ibuf) != IMAGE_DRAW_METHOD_GLSL)
+    {
       image_buffer_rect_update(rj, rr, ibuf, &rj->iuser, &tile_rect, offset_x, offset_y, viewname);
     }
     ImageTile *image_tile = BKE_image_get_tile(ima, 0);
@@ -654,13 +701,13 @@ static void current_scene_update(void *rjv, Scene *scene)
   rj->iuser.scene = scene;
 }
 
-static void render_startjob(void *rjv, bool *stop, bool *do_update, float *progress)
+static void render_startjob(void *rjv, wmJobWorkerStatus *worker_status)
 {
   RenderJob *rj = static_cast<RenderJob *>(rjv);
 
-  rj->stop = stop;
-  rj->do_update = do_update;
-  rj->progress = progress;
+  rj->stop = &worker_status->stop;
+  rj->do_update = &worker_status->do_update;
+  rj->progress = &worker_status->progress;
 
   RE_SetReports(rj->re, rj->reports);
 
@@ -690,13 +737,11 @@ static void render_startjob(void *rjv, bool *stop, bool *do_update, float *progr
 
 static void render_image_restore_layer(RenderJob *rj)
 {
-  wmWindowManager *wm;
-
   /* image window, compo node users */
-  for (wm = static_cast<wmWindowManager *>(rj->main->wm.first); wm;
-       wm = static_cast<wmWindowManager *>(wm->id.next)) { /* only 1 wm */
-    wmWindow *win;
-    for (win = static_cast<wmWindow *>(wm->windows.first); win; win = win->next) {
+
+  /* Only ever 1 `wm`. */
+  LISTBASE_FOREACH (wmWindowManager *, wm, &rj->main->wm) {
+    LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
       const bScreen *screen = WM_window_get_active_screen(win);
 
       LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
@@ -899,8 +944,9 @@ static void clean_viewport_memory(Main *bmain, Scene *scene)
   BKE_main_id_tag_listbase(&bmain->objects, LIB_TAG_DOIT, true);
 
   /* Go over all the visible objects. */
-  for (wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first); wm;
-       wm = static_cast<wmWindowManager *>(wm->id.next)) {
+
+  /* Only ever 1 `wm`. */
+  LISTBASE_FOREACH (wmWindowManager *, wm, &bmain->wm) {
     LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
       ViewLayer *view_layer = WM_window_get_active_view_layer(win);
       BKE_view_layer_synced_ensure(scene, view_layer);
@@ -933,7 +979,7 @@ static int screen_render_invoke(bContext *C, wmOperator *op, const wmEvent *even
   const bool is_write_still = RNA_boolean_get(op->ptr, "write_still");
   const bool use_viewport = RNA_boolean_get(op->ptr, "use_viewport");
   View3D *v3d = use_viewport ? CTX_wm_view3d(C) : nullptr;
-  struct Object *camera_override = v3d ? V3D_CAMERA_LOCAL(v3d) : nullptr;
+  Object *camera_override = v3d ? V3D_CAMERA_LOCAL(v3d) : nullptr;
   const char *name;
   ScrArea *area;
 
@@ -1082,7 +1128,7 @@ static int screen_render_invoke(bContext *C, wmOperator *op, const wmEvent *even
   RE_current_scene_update_cb(re, rj, current_scene_update);
   RE_stats_draw_cb(re, rj, image_renderinfo_cb);
   RE_progress_cb(re, rj, render_progress_update);
-  RE_gl_context_create(re);
+  RE_system_gpu_context_ensure(re);
 
   rj->re = re;
   G.is_break = false;

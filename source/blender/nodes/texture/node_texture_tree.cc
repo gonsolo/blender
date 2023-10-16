@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2007 Blender Foundation */
+/* SPDX-FileCopyrightText: 2007 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup nodes
@@ -12,31 +13,32 @@
 #include "DNA_texture_types.h"
 
 #include "BLI_listbase.h"
+#include "BLI_string.h"
 #include "BLI_threads.h"
 #include "BLI_utildefines.h"
-
-#include "BLT_translation.h"
 
 #include "BKE_context.h"
 #include "BKE_layer.h"
 #include "BKE_linestyle.h"
-#include "BKE_node.h"
-#include "BKE_paint.h"
+#include "BKE_node.hh"
+#include "BKE_node_runtime.hh"
+#include "BKE_paint.hh"
+#include "BKE_texture.h"
 
 #include "NOD_texture.h"
 #include "node_common.h"
-#include "node_exec.h"
+#include "node_exec.hh"
 #include "node_texture_util.hh"
-#include "node_util.h"
+#include "node_util.hh"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 #include "RNA_prototypes.h"
 
 #include "RE_texture.h"
 
-#include "UI_resources.h"
+#include "UI_resources.hh"
 
 static void texture_get_from_context(
     const bContext *C, bNodeTreeType * /*treetype*/, bNodeTree **r_ntree, ID **r_id, ID **r_from)
@@ -49,7 +51,7 @@ static void texture_get_from_context(
   Tex *tx = nullptr;
 
   if (snode->texfrom == SNODE_TEX_BRUSH) {
-    struct Brush *brush = nullptr;
+    Brush *brush = nullptr;
 
     if (ob && (ob->mode & OB_MODE_SCULPT)) {
       brush = BKE_paint_brush(&scene->toolsettings->sculpt->paint);
@@ -107,8 +109,8 @@ static void localize(bNodeTree *localtree, bNodeTree * /*ntree*/)
     node_next = node->next;
 
     if (node->flag & NODE_MUTED || node->type == NODE_REROUTE) {
-      nodeInternalRelink(localtree, node);
-      ntreeFreeLocalNode(localtree, node);
+      blender::bke::nodeInternalRelink(localtree, node);
+      blender::bke::ntreeFreeLocalNode(localtree, node);
     }
   }
 }
@@ -124,7 +126,7 @@ static void update(bNodeTree *ntree)
 static bool texture_node_tree_socket_type_valid(bNodeTreeType * /*ntreetype*/,
                                                 bNodeSocketType *socket_type)
 {
-  return nodeIsStaticSocketType(socket_type) &&
+  return blender::bke::nodeIsStaticSocketType(socket_type) &&
          ELEM(socket_type->type, SOCK_FLOAT, SOCK_VECTOR, SOCK_RGBA);
 }
 
@@ -135,11 +137,11 @@ void register_node_tree_type_tex()
   bNodeTreeType *tt = ntreeType_Texture = MEM_cnew<bNodeTreeType>("texture node tree type");
 
   tt->type = NTREE_TEXTURE;
-  strcpy(tt->idname, "TextureNodeTree");
-  strcpy(tt->group_idname, "TextureNodeGroup");
-  strcpy(tt->ui_name, N_("Texture Node Editor"));
-  tt->ui_icon = ICON_NODE_TEXTURE; /* Defined in `drawnode.c`. */
-  strcpy(tt->ui_description, N_("Texture nodes"));
+  STRNCPY(tt->idname, "TextureNodeTree");
+  STRNCPY(tt->group_idname, "TextureNodeGroup");
+  STRNCPY(tt->ui_name, N_("Texture Node Editor"));
+  tt->ui_icon = ICON_NODE_TEXTURE; /* Defined in `drawnode.cc`. */
+  STRNCPY(tt->ui_description, N_("Texture nodes"));
 
   tt->foreach_nodeclass = foreach_nodeclass;
   tt->update = update;
@@ -214,7 +216,6 @@ bNodeTreeExec *ntreeTexBeginExecTree_internal(bNodeExecContext *context,
                                               bNodeInstanceKey parent_key)
 {
   bNodeTreeExec *exec;
-  bNode *node;
 
   /* common base initialization */
   exec = ntree_exec_begin(context, ntree, parent_key);
@@ -222,7 +223,7 @@ bNodeTreeExec *ntreeTexBeginExecTree_internal(bNodeExecContext *context,
   /* allocate the thread stack listbase array */
   exec->threadstack = MEM_cnew_array<ListBase>(BLENDER_MAX_THREADS, "thread stack array");
 
-  for (node = static_cast<bNode *>(exec->nodetree->nodes.first); node; node = node->next) {
+  LISTBASE_FOREACH (bNode *, node, &exec->nodetree->nodes) {
     node->runtime->need_exec = 1;
   }
 
@@ -256,13 +257,11 @@ bNodeTreeExec *ntreeTexBeginExecTree(bNodeTree *ntree)
 /* free texture delegates */
 static void tex_free_delegates(bNodeTreeExec *exec)
 {
-  bNodeThreadStack *nts;
   bNodeStack *ns;
   int th, a;
 
   for (th = 0; th < BLENDER_MAX_THREADS; th++) {
-    for (nts = static_cast<bNodeThreadStack *>(exec->threadstack[th].first); nts;
-         nts = nts->next) {
+    LISTBASE_FOREACH (bNodeThreadStack *, nts, &exec->threadstack[th]) {
       for (ns = nts->stack, a = 0; a < exec->stacksize; a++, ns++) {
         if (ns->data && !ns->is_copy) {
           MEM_freeN(ns->data);
@@ -274,15 +273,13 @@ static void tex_free_delegates(bNodeTreeExec *exec)
 
 void ntreeTexEndExecTree_internal(bNodeTreeExec *exec)
 {
-  bNodeThreadStack *nts;
   int a;
 
   if (exec->threadstack) {
     tex_free_delegates(exec);
 
     for (a = 0; a < BLENDER_MAX_THREADS; a++) {
-      for (nts = static_cast<bNodeThreadStack *>(exec->threadstack[a].first); nts;
-           nts = nts->next) {
+      LISTBASE_FOREACH (bNodeThreadStack *, nts, &exec->threadstack[a]) {
         if (nts->stack) {
           MEM_freeN(nts->stack);
         }

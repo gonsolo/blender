@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bke
@@ -31,11 +32,12 @@
 #include "BKE_curves.hh"
 #include "BKE_customdata.h"
 #include "BKE_editmesh.h"
+#include "BKE_grease_pencil.hh"
 #include "BKE_mesh.hh"
 #include "BKE_pointcloud.h"
 #include "BKE_report.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
 using blender::IndexRange;
 
@@ -70,14 +72,14 @@ static void get_domains(const ID *id, DomainInfo info[ATTR_DOMAIN_NUM])
         info[ATTR_DOMAIN_FACE].length = bm->totface;
       }
       else {
-        info[ATTR_DOMAIN_POINT].customdata = &mesh->vdata;
+        info[ATTR_DOMAIN_POINT].customdata = &mesh->vert_data;
         info[ATTR_DOMAIN_POINT].length = mesh->totvert;
-        info[ATTR_DOMAIN_EDGE].customdata = &mesh->edata;
+        info[ATTR_DOMAIN_EDGE].customdata = &mesh->edge_data;
         info[ATTR_DOMAIN_EDGE].length = mesh->totedge;
-        info[ATTR_DOMAIN_CORNER].customdata = &mesh->ldata;
+        info[ATTR_DOMAIN_CORNER].customdata = &mesh->loop_data;
         info[ATTR_DOMAIN_CORNER].length = mesh->totloop;
-        info[ATTR_DOMAIN_FACE].customdata = &mesh->pdata;
-        info[ATTR_DOMAIN_FACE].length = mesh->totpoly;
+        info[ATTR_DOMAIN_FACE].customdata = &mesh->face_data;
+        info[ATTR_DOMAIN_FACE].length = mesh->faces_num;
       }
       break;
     }
@@ -87,6 +89,12 @@ static void get_domains(const ID *id, DomainInfo info[ATTR_DOMAIN_NUM])
       info[ATTR_DOMAIN_POINT].length = curves->geometry.point_num;
       info[ATTR_DOMAIN_CURVE].customdata = &curves->geometry.curve_data;
       info[ATTR_DOMAIN_CURVE].length = curves->geometry.curve_num;
+      break;
+    }
+    case ID_GP: {
+      GreasePencil *grease_pencil = (GreasePencil *)id;
+      info[ATTR_DOMAIN_LAYER].customdata = &grease_pencil->layers_data;
+      info[ATTR_DOMAIN_LAYER].length = grease_pencil->layers().size();
       break;
     }
     default:
@@ -114,6 +122,10 @@ static std::optional<blender::bke::MutableAttributeAccessor> get_attribute_acces
       Curves &curves_id = reinterpret_cast<Curves &>(id);
       CurvesGeometry &curves = curves_id.geometry.wrap();
       return curves.attributes_for_write();
+    }
+    case ID_GP: {
+      GreasePencil &grease_pencil = reinterpret_cast<GreasePencil &>(id);
+      return grease_pencil.attributes_for_write();
     }
     default: {
       BLI_assert_unreachable();
@@ -173,10 +185,10 @@ bool BKE_id_attribute_rename(ID *id,
    * is clamped to it's maximum length, otherwise assigning an over-long name multiple times
    * will add `.001` suffix unnecessarily. */
   {
-    const int maxlength = CustomData_name_max_length_calc(new_name);
+    const int new_name_maxncpy = CustomData_name_maxncpy_calc(new_name);
     /* NOTE: A function that performs a clamped comparison without copying would be handy here. */
     char new_name_clamped[MAX_CUSTOMDATA_LAYER_NAME];
-    BLI_strncpy_utf8(new_name_clamped, new_name, maxlength);
+    BLI_strncpy_utf8(new_name_clamped, new_name, new_name_maxncpy);
     if (STREQ(old_name, new_name_clamped)) {
       return false;
     }
@@ -217,7 +229,7 @@ bool BKE_id_attribute_rename(ID *id,
     BKE_id_attributes_default_color_set(id, result_name);
   }
 
-  BLI_strncpy_utf8(layer->name, result_name, sizeof(layer->name));
+  STRNCPY_UTF8(layer->name, result_name);
 
   return true;
 }
@@ -254,18 +266,15 @@ static bool unique_name_cb(void *arg, const char *name)
 bool BKE_id_attribute_calc_unique_name(ID *id, const char *name, char *outname)
 {
   AttrUniqueData data{id};
-  const int maxlength = CustomData_name_max_length_calc(name);
+
+  const int name_maxncpy = CustomData_name_maxncpy_calc(name);
 
   /* Set default name if none specified.
    * NOTE: We only call IFACE_() if needed to avoid locale lookup overhead. */
-  if (!name || name[0] == '\0') {
-    BLI_strncpy(outname, IFACE_("Attribute"), maxlength);
-  }
-  else {
-    BLI_strncpy_utf8(outname, name, maxlength);
-  }
+  BLI_strncpy_utf8(outname, (name && name[0]) ? name : IFACE_("Attribute"), name_maxncpy);
 
-  return BLI_uniquename_cb(unique_name_cb, &data, nullptr, '.', outname, maxlength);
+  const char *defname = ""; /* Dummy argument, never used as `name` is never zero length. */
+  return BLI_uniquename_cb(unique_name_cb, &data, defname, '.', outname, name_maxncpy);
 }
 
 CustomDataLayer *BKE_id_attribute_new(ID *id,
@@ -304,6 +313,10 @@ CustomDataLayer *BKE_id_attribute_new(ID *id,
   attributes->add(uniquename, domain, eCustomDataType(type), AttributeInitDefaultValue());
 
   const int index = CustomData_get_named_layer_index(customdata, type, uniquename);
+  if (index == -1) {
+    BKE_reportf(reports, RPT_WARNING, "Layer '%s' could not be created", uniquename);
+  }
+
   return (index == -1) ? nullptr : &(customdata->layers[index]);
 }
 
@@ -539,7 +552,8 @@ CustomDataLayer *BKE_id_attribute_search(ID *id,
   get_domains(id, info);
 
   for (eAttrDomain domain = ATTR_DOMAIN_POINT; domain < ATTR_DOMAIN_NUM;
-       domain = static_cast<eAttrDomain>(int(domain) + 1)) {
+       domain = static_cast<eAttrDomain>(int(domain) + 1))
+  {
     if (!(domain_mask & ATTR_DOMAIN_AS_MASK(domain))) {
       continue;
     }
@@ -704,6 +718,9 @@ int *BKE_id_attributes_active_index_p(ID *id)
     case ID_CV: {
       return &((Curves *)id)->attributes_active_index;
     }
+    case ID_GP: {
+      return &((GreasePencil *)id)->attributes_active_index;
+    }
     default:
       return nullptr;
   }
@@ -752,7 +769,8 @@ CustomDataLayer *BKE_id_attribute_from_index(ID *id,
 
     for (int i = 0; i < customdata->totlayer; i++) {
       if (!(layer_mask & CD_TYPE_AS_MASK(customdata->layers[i].type)) ||
-          (customdata->layers[i].flag & CD_FLAG_TEMPORARY)) {
+          (customdata->layers[i].flag & CD_FLAG_TEMPORARY))
+      {
         continue;
       }
 
@@ -767,7 +785,8 @@ CustomDataLayer *BKE_id_attribute_from_index(ID *id,
   return nullptr;
 }
 
-/** Get list of domain types but with ATTR_DOMAIN_FACE and
+/**
+ * Get list of domain types but with ATTR_DOMAIN_FACE and
  * ATTR_DOMAIN_CORNER swapped.
  */
 static void get_domains_types(eAttrDomain domains[ATTR_DOMAIN_NUM])
@@ -868,24 +887,10 @@ void BKE_id_attributes_default_color_set(ID *id, const char *name)
   }
 }
 
-CustomDataLayer *BKE_id_attributes_color_find(const ID *id, const char *name)
+const CustomDataLayer *BKE_id_attributes_color_find(const ID *id, const char *name)
 {
-  if (CustomDataLayer *layer = BKE_id_attribute_find(id, name, CD_PROP_COLOR, ATTR_DOMAIN_POINT)) {
-    return layer;
-  }
-  if (CustomDataLayer *layer = BKE_id_attribute_find(
-          id, name, CD_PROP_COLOR, ATTR_DOMAIN_CORNER)) {
-    return layer;
-  }
-  if (CustomDataLayer *layer = BKE_id_attribute_find(
-          id, name, CD_PROP_BYTE_COLOR, ATTR_DOMAIN_POINT)) {
-    return layer;
-  }
-  if (CustomDataLayer *layer = BKE_id_attribute_find(
-          id, name, CD_PROP_BYTE_COLOR, ATTR_DOMAIN_CORNER)) {
-    return layer;
-  }
-  return nullptr;
+  return BKE_id_attribute_search(
+      const_cast<ID *>(id), name, CD_MASK_COLOR_ALL, ATTR_DOMAIN_MASK_COLOR);
 }
 
 const char *BKE_uv_map_vert_select_name_get(const char *uv_map_name, char *buffer)

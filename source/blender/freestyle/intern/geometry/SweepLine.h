@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -109,7 +111,7 @@ template<class T, class Point> class Segment {
     _Intersections.clear();
   }
 
-  inline Point operator[](const unsigned short int &i) const
+  inline Point operator[](const ushort &i) const
   {
     return (i % 2 == 0) ? A : B;
   }
@@ -196,7 +198,8 @@ template<class T, class Point> class SweepLine {
     for (typename vector<Intersection<Segment<T, Point>> *>::iterator i = _Intersections.begin(),
                                                                       iend = _Intersections.end();
          i != iend;
-         i++) {
+         i++)
+    {
       delete (*i);
     }
   }
@@ -253,7 +256,8 @@ template<class T, class Point> class SweepLine {
     }
     for (typename std::list<Segment<T, Point> *>::iterator s = _set.begin(), send = _set.end();
          s != send;
-         s++) {
+         s++)
+    {
       Segment<T, Point> *currentS = (*s);
       if (true != binrule(*S, *currentS)) {
         continue;
@@ -276,7 +280,8 @@ template<class T, class Point> class SweepLine {
       }
 
       if (GeomUtils::intersect2dSeg2dSegParametric(v0, v1, v2, v3, t, u, epsilon) ==
-          GeomUtils::DO_INTERSECT) {
+          GeomUtils::DO_INTERSECT)
+      {
         // create the intersection
         Intersection<Segment<T, Point>> *inter = new Intersection<Segment<T, Point>>(
             S, t, currentS, u);

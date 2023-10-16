@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2021-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup GHOST
@@ -51,7 +53,8 @@ static void validate_accessor(const tinygltf::Accessor &accessor,
 {
   /* Make sure the accessor does not go out of range of the buffer view. */
   if (accessor.byteOffset + (accessor.count - 1) * byte_stride + element_size >
-      buffer_view.byteLength) {
+      buffer_view.byteLength)
+  {
     throw GHOST_XrException("glTF: Accessor goes out of range of bufferview.");
   }
 
@@ -141,9 +144,8 @@ static void read_indices(const tinygltf::Accessor &accessor,
   }
 
   constexpr size_t component_size_bytes = sizeof(TSrcIndex);
-  if (buffer_view.byteStride != 0 &&
-      buffer_view.byteStride !=
-          component_size_bytes) { /* Index buffer must be packed per glTF spec. */
+  /* Index buffer must be packed per glTF spec. */
+  if (buffer_view.byteStride != 0 && buffer_view.byteStride != component_size_bytes) {
     throw GHOST_XrException(
         "glTF: Accessor for indices uses bufferview with invalid 'byteStride'.");
   }
@@ -302,7 +304,8 @@ static void load_node(const tinygltf::Model &gltf_model,
 
   for (size_t i = 0; i < node_properties.size(); ++i) {
     if ((node_state_indices[i] < 0) && (parent_name == node_properties[i].parentNodeName) &&
-        (gltf_node.name == node_properties[i].nodeName)) {
+        (gltf_node.name == node_properties[i].nodeName))
+    {
       node_state_indices[i] = node_idx;
       break;
     }

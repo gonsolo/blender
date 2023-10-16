@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/colorspace.h"
 
@@ -72,7 +73,8 @@ ColorSpaceProcessor *ColorSpaceManager::get_processor(ustring colorspace)
 bool ColorSpaceManager::colorspace_is_data(ustring colorspace)
 {
   if (colorspace == u_colorspace_auto || colorspace == u_colorspace_raw ||
-      colorspace == u_colorspace_srgb) {
+      colorspace == u_colorspace_srgb)
+  {
     return false;
   }
 
@@ -200,14 +202,16 @@ void ColorSpaceManager::is_builtin_colorspace(ustring colorspace,
 
     /* Make sure that there is no channel crosstalk. */
     if (fabsf(cR[1]) > 1e-5f || fabsf(cR[2]) > 1e-5f || fabsf(cG[0]) > 1e-5f ||
-        fabsf(cG[2]) > 1e-5f || fabsf(cB[0]) > 1e-5f || fabsf(cB[1]) > 1e-5f) {
+        fabsf(cG[2]) > 1e-5f || fabsf(cB[0]) > 1e-5f || fabsf(cB[1]) > 1e-5f)
+    {
       is_scene_linear = false;
       is_srgb = false;
       break;
     }
     /* Make sure that the three primaries combine linearly. */
     if (!compare_floats(cR[0], cW[0], 1e-6f, 64) || !compare_floats(cG[1], cW[1], 1e-6f, 64) ||
-        !compare_floats(cB[2], cW[2], 1e-6f, 64)) {
+        !compare_floats(cB[2], cW[2], 1e-6f, 64))
+    {
       is_scene_linear = false;
       is_srgb = false;
       break;
@@ -223,7 +227,7 @@ void ColorSpaceManager::is_builtin_colorspace(ustring colorspace,
     if (!compare_floats(v, out_v, 1e-6f, 64)) {
       is_scene_linear = false;
     }
-    if (!compare_floats(color_srgb_to_linear(v), out_v, 1e-6f, 64)) {
+    if (!compare_floats(color_srgb_to_linear(v), out_v, 1e-4f, 64)) {
       is_srgb = false;
     }
   }

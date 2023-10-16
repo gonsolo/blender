@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bgpencil
@@ -8,6 +9,7 @@
 #include "BLI_math_matrix.hh"
 #include "BLI_path_util.h"
 #include "BLI_span.hh"
+#include "BLI_string.h"
 
 #include "DNA_gpencil_legacy_types.h"
 #include "DNA_layer_types.h"
@@ -24,12 +26,12 @@
 #include "BKE_material.h"
 #include "BKE_scene.h"
 
-#include "UI_view2d.h"
+#include "UI_view2d.hh"
 
-#include "ED_view3d.h"
+#include "ED_view3d.hh"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_query.hh"
 
 #include "gpencil_io_base.hh"
 
@@ -177,7 +179,7 @@ void GpencilIO::create_object_list()
 
 void GpencilIO::filepath_set(const char *filepath)
 {
-  BLI_strncpy(filepath_, filepath, FILE_MAX);
+  STRNCPY(filepath_, filepath);
   BLI_path_abs(filepath_, BKE_main_blendfile_path(bmain_));
 }
 

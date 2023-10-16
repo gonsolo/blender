@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2021 Tangent Animation and. NVIDIA Corporation. All rights reserved. */
+/* SPDX-FileCopyrightText: 2021 Tangent Animation and. NVIDIA Corporation. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "usd_reader_stage.h"
 #include "usd_reader_camera.h"
@@ -10,6 +11,7 @@
 #include "usd_reader_nurbs.h"
 #include "usd_reader_prim.h"
 #include "usd_reader_shape.h"
+#include "usd_reader_skeleton.h"
 #include "usd_reader_volume.h"
 #include "usd_reader_xform.h"
 
@@ -41,8 +43,11 @@
 #include "BLI_string.h"
 
 #include "BKE_lib_id.h"
+#include "BKE_modifier.h"
 
 #include "DNA_material_types.h"
+
+#include "WM_api.hh"
 
 namespace blender::io::usd {
 
@@ -88,8 +93,9 @@ USDPrimReader *USDStageReader::create_reader_if_allowed(const pxr::UsdPrim &prim
     return new USDMeshReader(prim, params_, settings_);
   }
 #if PXR_VERSION >= 2111
-  if (params_.import_lights && (prim.IsA<pxr::UsdLuxBoundableLightBase>() ||
-                                prim.IsA<pxr::UsdLuxNonboundableLightBase>())) {
+  if (params_.import_lights &&
+      (prim.IsA<pxr::UsdLuxBoundableLightBase>() || prim.IsA<pxr::UsdLuxNonboundableLightBase>()))
+  {
 #else
   if (params_.import_lights && prim.IsA<pxr::UsdLuxLight>()) {
 #endif
@@ -97,6 +103,9 @@ USDPrimReader *USDStageReader::create_reader_if_allowed(const pxr::UsdPrim &prim
   }
   if (params_.import_volumes && prim.IsA<pxr::UsdVolVolume>()) {
     return new USDVolumeReader(prim, params_, settings_);
+  }
+  if (params_.import_skeletons && prim.IsA<pxr::UsdSkelSkeleton>()) {
+    return new USDSkeletonReader(prim, params_, settings_);
   }
   if (prim.IsA<pxr::UsdGeomImageable>()) {
     return new USDXformReader(prim, params_, settings_);
@@ -132,6 +141,9 @@ USDPrimReader *USDStageReader::create_reader(const pxr::UsdPrim &prim)
   if (prim.IsA<pxr::UsdVolVolume>()) {
     return new USDVolumeReader(prim, params_, settings_);
   }
+  if (prim.IsA<pxr::UsdSkelSkeleton>()) {
+    return new USDSkeletonReader(prim, params_, settings_);
+  }
   if (prim.IsA<pxr::UsdGeomImageable>()) {
     return new USDXformReader(prim, params_, settings_);
   }
@@ -165,6 +177,11 @@ bool USDStageReader::include_by_visibility(const pxr::UsdGeomImageable &imageabl
 
 bool USDStageReader::include_by_purpose(const pxr::UsdGeomImageable &imageable) const
 {
+  if (params_.import_skeletons && imageable.GetPrim().IsA<pxr::UsdSkelSkeleton>()) {
+    /* Always include skeletons, if requested by the user, regardless of purpose. */
+    return true;
+  }
+
   if (params_.import_guide && params_.import_proxy && params_.import_render) {
     /* The options allow any purpose, so we trivially include the prim. */
     return true;
@@ -312,21 +329,50 @@ void USDStageReader::collect_readers(Main *bmain)
   /* Iterate through the stage. */
   pxr::UsdPrim root = stage_->GetPseudoRoot();
 
-  std::string prim_path_mask(params_.prim_path_mask);
+  stage_->SetInterpolationType(pxr::UsdInterpolationType::UsdInterpolationTypeHeld);
+  collect_readers(bmain, root);
+}
 
-  if (!prim_path_mask.empty()) {
-    pxr::UsdPrim prim = stage_->GetPrimAtPath(pxr::SdfPath(prim_path_mask));
-    if (prim.IsValid()) {
-      root = prim;
-    }
-    else {
-      std::cerr << "WARNING: Prim Path Mask " << prim_path_mask
-                << " does not specify a valid prim.\n";
+void USDStageReader::process_armature_modifiers() const
+{
+  /* Iterate over the skeleton readers to create the
+   * armature object map, which maps a USD skeleton prim
+   * path to the corresponding armature object. */
+  std::map<std::string, Object *> usd_path_to_armature;
+  for (const USDPrimReader *reader : readers_) {
+    if (dynamic_cast<const USDSkeletonReader *>(reader) && reader->object()) {
+      usd_path_to_armature.insert(std::make_pair(reader->prim_path(), reader->object()));
     }
   }
 
-  stage_->SetInterpolationType(pxr::UsdInterpolationType::UsdInterpolationTypeHeld);
-  collect_readers(bmain, root);
+  /* Iterate over the mesh readers and set armature objects on armature modifiers. */
+  for (const USDPrimReader *reader : readers_) {
+    if (!reader->object()) {
+      continue;
+    }
+    const USDMeshReader *mesh_reader = dynamic_cast<const USDMeshReader *>(reader);
+    if (!mesh_reader) {
+      continue;
+    }
+    /* Check if the mesh object has an armature modifier. */
+    ModifierData *md = BKE_modifiers_findby_type(reader->object(), eModifierType_Armature);
+    if (!md) {
+      continue;
+    }
+
+    ArmatureModifierData *amd = reinterpret_cast<ArmatureModifierData *>(md);
+
+    /* Assign the armature based on the bound USD skeleton path of the skinned mesh. */
+    std::string skel_path = mesh_reader->get_skeleton_path();
+    std::map<std::string, Object *>::const_iterator it = usd_path_to_armature.find(skel_path);
+    if (it == usd_path_to_armature.end()) {
+      WM_reportf(RPT_WARNING,
+                 "%s: Couldn't find armature object corresponding to USD skeleton %s",
+                 __func__,
+                 skel_path.c_str());
+    }
+    amd->object = it->second;
+  }
 }
 
 void USDStageReader::import_all_materials(Main *bmain)
@@ -349,7 +395,8 @@ void USDStageReader::import_all_materials(Main *bmain)
     }
 
     if (blender::io::usd::find_existing_material(
-            prim.GetPath(), params_, settings_.mat_name_to_mat, settings_.usd_path_to_mat_name)) {
+            prim.GetPath(), params_, settings_.mat_name_to_mat, settings_.usd_path_to_mat_name))
+    {
       /* The material already exists. */
       continue;
     }
@@ -375,7 +422,8 @@ void USDStageReader::fake_users_for_unused_materials()
   /* Iterate over the imported materials and set a fake user for any unused
    * materials. */
   for (const std::pair<const std::string, std::string> &path_mat_pair :
-       settings_.usd_path_to_mat_name) {
+       settings_.usd_path_to_mat_name)
+  {
 
     std::map<std::string, Material *>::iterator mat_it = settings_.mat_name_to_mat.find(
         path_mat_pair.second);

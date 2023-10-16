@@ -1,7 +1,11 @@
-#pragma BLENDER_REQUIRE(common_view_lib.glsl)
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /* Two variants, split pass, generates either 2 triangles or 6 triangles depending on input
  * geometry manifold type */
+
+#pragma BLENDER_REQUIRE(common_view_lib.glsl)
 
 #ifdef DOUBLE_MANIFOLD
 #  define vert_len 12 /* Triangle Strip with 6 verts = 4 triangles = 12 verts. */
@@ -31,7 +35,7 @@ VertexData vData[4];
 
 void extrude_edge(bool invert, int output_vertex_id)
 {
-  /* Reverse order if backfacing the light. */
+  /* Reverse order if back-facing the light. */
   ivec2 idx = (invert) ? ivec2(1, 2) : ivec2(2, 1);
 
   /* Either outputs first or second quad, depending on double manifold status. */
@@ -56,6 +60,19 @@ void extrude_edge(bool invert, int output_vertex_id)
 
   /* Apply depth bias. Prevents Z-fighting artifacts when fast-math is enabled. */
   gl_Position.z += 0.00005;
+}
+
+vec3 extrude_offset(vec3 ls_P)
+{
+  vec3 ws_P = point_object_to_world(ls_P);
+  float extrude_distance = 1e5f;
+  float L_dot_FP = dot(pass_data.light_direction_ws, pass_data.far_plane.xyz);
+  if (L_dot_FP > 0.0) {
+    float signed_distance = dot(pass_data.far_plane.xyz, ws_P) - pass_data.far_plane.w;
+    extrude_distance = -signed_distance / L_dot_FP;
+  }
+  vec3 ls_light_direction = normal_world_to_object(vec3(pass_data.light_direction_ws));
+  return ls_light_direction * extrude_distance;
 }
 
 void main()
@@ -83,16 +100,16 @@ void main()
 
   /* Calculate front/back Positions. */
   vData[0].frontPosition = point_object_to_ndc(vData[0].pos);
-  vData[0].backPosition = point_object_to_ndc(vData[0].pos + lightDirection * lightDistance);
+  vData[0].backPosition = point_object_to_ndc(vData[0].pos + extrude_offset(vData[0].pos));
 
   vData[1].frontPosition = point_object_to_ndc(vData[1].pos);
-  vData[1].backPosition = point_object_to_ndc(vData[1].pos + lightDirection * lightDistance);
+  vData[1].backPosition = point_object_to_ndc(vData[1].pos + extrude_offset(vData[1].pos));
 
   vData[2].frontPosition = point_object_to_ndc(vData[2].pos);
-  vData[2].backPosition = point_object_to_ndc(vData[2].pos + lightDirection * lightDistance);
+  vData[2].backPosition = point_object_to_ndc(vData[2].pos + extrude_offset(vData[2].pos));
 
   vData[3].frontPosition = point_object_to_ndc(vData[3].pos);
-  vData[3].backPosition = point_object_to_ndc(vData[3].pos + lightDirection * lightDistance);
+  vData[3].backPosition = point_object_to_ndc(vData[3].pos + extrude_offset(vData[3].pos));
 
   /* Geometry shader equivalent path. */
   vec3 v10 = vData[0].pos - vData[1].pos;
@@ -111,6 +128,8 @@ void main()
     DISCARD_VERTEX
   }
 #endif
+
+  vec3 lightDirection = normal_world_to_object(vec3(pass_data.light_direction_ws));
 
   vec2 facing = vec2(dot(n1, lightDirection), dot(n2, lightDirection));
 

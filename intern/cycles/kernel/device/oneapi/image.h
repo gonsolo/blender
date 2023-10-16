@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2021-2022 Intel Corporation */
+/* SPDX-FileCopyrightText: 2021-2022 Intel Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 CCL_NAMESPACE_BEGIN
 
@@ -14,8 +15,9 @@ template<typename T> ccl_device_forceinline T tex_fetch(const TextureInfo &info,
 ccl_device_inline int svm_image_texture_wrap_periodic(int x, int width)
 {
   x %= width;
-  if (x < 0)
+  if (x < 0) {
     x += width;
+  }
   return x;
 }
 
@@ -27,8 +29,9 @@ ccl_device_inline int svm_image_texture_wrap_clamp(int x, int width)
 ccl_device_inline int svm_image_texture_wrap_mirror(int x, int width)
 {
   const int m = abs(x + (x < 0)) % (2 * width);
-  if (m >= width)
+  if (m >= width) {
     return 2 * width - m - 1;
+  }
   return m;
 }
 
@@ -330,7 +333,8 @@ ccl_device float4 kernel_tex_image_interp_3d(KernelGlobals, int id, float3 P, in
   if (info.data_type == IMAGE_DATA_TYPE_NANOVDB_FLOAT ||
       info.data_type == IMAGE_DATA_TYPE_NANOVDB_FLOAT3 ||
       info.data_type == IMAGE_DATA_TYPE_NANOVDB_FPN ||
-      info.data_type == IMAGE_DATA_TYPE_NANOVDB_FP16) {
+      info.data_type == IMAGE_DATA_TYPE_NANOVDB_FP16)
+  {
     return make_float4(
         TEX_IMAGE_MISSING_R, TEX_IMAGE_MISSING_G, TEX_IMAGE_MISSING_B, TEX_IMAGE_MISSING_A);
   }

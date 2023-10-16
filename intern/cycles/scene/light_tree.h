@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifndef __LIGHT_TREE_H__
 #define __LIGHT_TREE_H__
@@ -100,6 +101,10 @@ struct LightTreeMeasure {
   /* Taken from Eq. 2 in the paper. */
   __forceinline float calculate()
   {
+    if (is_zero()) {
+      return 0.0f;
+    }
+
     float area = bbox.area();
     float area_measure = area == 0 ? len(bbox.size()) : area;
     return energy * area_measure * bcone.calculate_measure();
@@ -127,6 +132,48 @@ LightTreeMeasure operator+(const LightTreeMeasure &a, const LightTreeMeasure &b)
 
 struct LightTreeNode;
 
+/* Light Linking. */
+struct LightTreeLightLink {
+  /* Bitmask for membership of primitives in this node. */
+  uint64_t set_membership = 0;
+
+  /* When all primitives below this node have identical light set membership, this
+   * part of the light tree can be shared between specialized trees. */
+  bool shareable = true;
+  int shared_node_index = -1;
+
+  LightTreeLightLink() = default;
+  LightTreeLightLink(const uint64_t set_membership) : set_membership(set_membership) {}
+
+  void add(const uint64_t prim_set_membership)
+  {
+    if (set_membership == 0) {
+      set_membership = prim_set_membership;
+    }
+    else if (prim_set_membership != set_membership) {
+      set_membership |= prim_set_membership;
+      shareable = false;
+    }
+  }
+
+  void add(const LightTreeLightLink &other)
+  {
+    if (set_membership == 0) {
+      set_membership = other.set_membership;
+      shareable = other.shareable;
+    }
+    else if (other.set_membership != set_membership) {
+      set_membership |= other.set_membership;
+      shareable = false;
+    }
+    else if (!other.shareable) {
+      shareable = false;
+    }
+  }
+};
+
+LightTreeLightLink operator+(const LightTreeLightLink &a, const LightTreeLightLink &b);
+
 /* Light Tree Emitter
  * An emitter is a built-in light, an emissive mesh, or an emissive triangle. */
 struct LightTreeEmitter {
@@ -140,6 +187,7 @@ struct LightTreeEmitter {
 
   int object_id;
   float3 centroid;
+  uint64_t light_set_membership;
 
   LightTreeMeasure measure;
 
@@ -166,19 +214,23 @@ struct LightTreeEmitter {
  * Struct used to determine splitting costs in the light BVH. */
 struct LightTreeBucket {
   LightTreeMeasure measure;
+  LightTreeLightLink light_link;
   int count = 0;
   static const int num_buckets = 12;
 
   LightTreeBucket() = default;
 
-  LightTreeBucket(const LightTreeMeasure &measure, const int &count)
-      : measure(measure), count(count)
+  LightTreeBucket(const LightTreeMeasure &measure,
+                  const LightTreeLightLink &light_link,
+                  const int &count)
+      : measure(measure), light_link(light_link), count(count)
   {
   }
 
   void add(const LightTreeEmitter &emitter)
   {
     measure.add(emitter.measure);
+    light_link.add(emitter.light_set_membership);
     count++;
   }
 };
@@ -188,6 +240,7 @@ LightTreeBucket operator+(const LightTreeBucket &a, const LightTreeBucket &b);
 /* Light Tree Node */
 struct LightTreeNode {
   LightTreeMeasure measure;
+  LightTreeLightLink light_link;
   uint bit_trail;
   int object_id;
 
@@ -224,9 +277,15 @@ struct LightTreeNode {
   __forceinline void add(const LightTreeEmitter &emitter)
   {
     measure.add(emitter.measure);
+    light_link.add(emitter.light_set_membership);
   }
 
   __forceinline Leaf &get_leaf()
+  {
+    return std::get<Leaf>(variant_type);
+  }
+
+  __forceinline const Leaf &get_leaf() const
   {
     return std::get<Leaf>(variant_type);
   }
@@ -236,12 +295,22 @@ struct LightTreeNode {
     return std::get<Inner>(variant_type);
   }
 
+  __forceinline const Inner &get_inner() const
+  {
+    return std::get<Inner>(variant_type);
+  }
+
   __forceinline Instance &get_instance()
   {
     return std::get<Instance>(variant_type);
   }
 
-  void make_leaf(const int &first_emitter_index, const int &num_emitters)
+  __forceinline const Instance &get_instance() const
+  {
+    return std::get<Instance>(variant_type);
+  }
+
+  void make_leaf(const int first_emitter_index, const int num_emitters)
   {
     variant_type = Leaf();
     Leaf &leaf = get_leaf();
@@ -251,7 +320,7 @@ struct LightTreeNode {
     type = LIGHT_TREE_LEAF;
   }
 
-  void make_distant(const int &first_emitter_index, const int &num_emitters)
+  void make_distant(const int first_emitter_index, const int num_emitters)
   {
     variant_type = Leaf();
     Leaf &leaf = get_leaf();
@@ -261,7 +330,7 @@ struct LightTreeNode {
     type = LIGHT_TREE_DISTANT;
   }
 
-  void make_instance(LightTreeNode *reference, const int &object_id)
+  void make_instance(LightTreeNode *reference, const int object_id)
   {
     variant_type = Instance();
     Instance &instance = get_instance();
@@ -325,6 +394,9 @@ class LightTree {
   std::atomic<int> num_nodes = 0;
   size_t num_triangles = 0;
 
+  /* Bitmask of receiver light sets used. Default set is always used. */
+  uint64_t light_link_receiver_used = 1;
+
   /* An inner node itself or its left and right child. */
   enum Child {
     self = -1,
@@ -349,9 +421,9 @@ class LightTree {
     return emitters_.size();
   }
 
-  const LightTreeEmitter &get_emitter(int index) const
+  const LightTreeEmitter *get_emitters() const
   {
-    return emitters_.at(index);
+    return emitters_.data();
   }
 
  private:
@@ -373,6 +445,7 @@ class LightTree {
                     int &middle,
                     const int end,
                     LightTreeMeasure &measure,
+                    LightTreeLightLink &light_link,
                     int &split_dim);
 
   /* Check whether the light tree can use this triangle as light-emissive. */

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -264,6 +267,20 @@ DEPS_CRITICAL_SUBPACKAGES = (
                                   DISTRO_ID_FEDORA: "dbus-devel",
                                   DISTRO_ID_SUSE: "dbus-1-devel",
                                   DISTRO_ID_ARCH: "dbus",
+                                  },
+            ),
+    Package(name="OpenGL Library",
+            distro_package_names={DISTRO_ID_DEBIAN: "libgl-dev",
+                                  DISTRO_ID_FEDORA: "mesa-libGL-devel",
+                                  DISTRO_ID_SUSE: "Mesa-libGL-devel",
+                                  DISTRO_ID_ARCH: "libglvnd",
+                                  },
+            ),
+    Package(name="EGL Library",
+            distro_package_names={DISTRO_ID_DEBIAN: "libegl-dev",
+                                  DISTRO_ID_FEDORA: "mesa-libEGL-devel",
+                                  DISTRO_ID_SUSE: "Mesa-libEGL-devel",
+                                  DISTRO_ID_ARCH: None,  # Included in `libglvnd`.
                                   },
             ),
 )
@@ -689,7 +706,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "clang",  # clang-format is part of the main clang package.
                                   },
             ),
-    Package(name="Python", is_mandatory=True, version="3.10.9", version_short="3.10", version_min="3.10", version_mex="3.12",
+    Package(name="Python", is_mandatory=True, version="3.10.12", version_short="3.10", version_min="3.10", version_mex="3.12",
             sub_packages=PYTHON_SUBPACKAGES,
             distro_package_names={DISTRO_ID_DEBIAN: "python3-dev",
                                   DISTRO_ID_FEDORA: "python3-devel",
@@ -721,7 +738,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "opencolorio",
                                   },
             ),
-    Package(name="IMath Library", is_mandatory=False, version="3.1.5", version_short="3.1", version_min="3.0", version_mex="4.0",
+    Package(name="IMath Library", is_mandatory=False, version="3.1.7", version_short="3.1", version_min="3.0", version_mex="4.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: "libimath-dev",
                                   DISTRO_ID_FEDORA: "imath-devel",
@@ -729,7 +746,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "imath",
                                   },
             ),
-    Package(name="OpenEXR Library", is_mandatory=False, version="3.1.5", version_short="3.1", version_min="3.0", version_mex="4.0",
+    Package(name="OpenEXR Library", is_mandatory=False, version="3.1.7", version_short="3.1", version_min="3.0", version_mex="4.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: "libopenexr-dev",
                                   DISTRO_ID_FEDORA: "openexr-devel",
@@ -737,7 +754,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "openexr",
                                   },
             ),
-    Package(name="OpenImageIO Library", is_mandatory=True, version="2.4.9.0", version_short="2.4", version_min="2.2.0", version_mex="2.5.0",
+    Package(name="OpenImageIO Library", is_mandatory=True, version="2.4.11.0", version_short="2.4", version_min="2.2.0", version_mex="2.5.0",
             sub_packages=(
                 Package(name="OpenImageIO Tools", is_mandatory=False,
                         distro_package_names={DISTRO_ID_DEBIAN: "openimageio-tools",
@@ -836,7 +853,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "materialx-git",
                                   },
             ),
-    Package(name="USD Library", is_mandatory=False, version="22.11", version_short="22.11", version_min="20.05", version_mex="23.00",
+    Package(name="USD Library", is_mandatory=False, version="23.05", version_short="23.05", version_min="20.05", version_mex="24.00",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: None,
                                   DISTRO_ID_FEDORA: "usd-devel",
@@ -851,7 +868,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "opencollada",
                                   },
             ),
-    Package(name="Embree Library", is_mandatory=False, version="3.13.4", version_short="3.13", version_min="3.13", version_mex="5.0",
+    Package(name="Embree Library", is_mandatory=False, version="4.1.0", version_short="4.1", version_min="3.13", version_mex="5.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: "libembree-dev",
                                   DISTRO_ID_FEDORA: "embree-devel",
@@ -867,7 +884,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "openimagedenoise",
                                   },
             ),
-    Package(name="Level Zero Library", is_mandatory=False, version="1.7.15", version_short="1.7", version_min="1.7", version_mex="2.0",
+    Package(name="Level Zero Library", is_mandatory=False, version="1.8.8", version_short="1.8", version_min="1.7", version_mex="2.0",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: None,
                                   DISTRO_ID_FEDORA: "oneapi-level-zero-devel",
@@ -875,7 +892,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "level-zero-headers",  # ???
                                   },
             ),
-    Package(name="OpenPGL Library", is_mandatory=False, version="0.4.1", version_short="0.4", version_min="0.4.1", version_mex="0.5",
+    Package(name="OpenPGL Library", is_mandatory=False, version="0.5.0", version_short="0.5", version_min="0.5.0", version_mex="0.6",
             sub_packages=(),
             distro_package_names={DISTRO_ID_DEBIAN: None,
                                   DISTRO_ID_FEDORA: "openpgl-devel",
@@ -891,7 +908,7 @@ PACKAGES_ALL = (
                                   DISTRO_ID_ARCH: "openxr",
                                   },
             ),
-    Package(name="FFMPEG Library", is_mandatory=False, version="5.1.2", version_short="5.1", version_min="4.0", version_mex="7.0",
+    Package(name="FFMPEG Library", is_mandatory=False, version="6.0", version_short="6.0", version_min="4.0", version_mex="7.0",
             sub_packages=(
                 Package(name="AVDevice FFMPEG Library", is_mandatory=False,
                         distro_package_names={DISTRO_ID_DEBIAN: "libavdevice-dev",
@@ -1630,22 +1647,43 @@ def get_distro(settings):
         settings.logger.info(f"Distribution identifier forced by user to {settings.distro_id}.")
         return settings.distro_id
     import platform
-    info = platform.freedesktop_os_release()
-    ids = [info["ID"]]
-    if "ID_LIKE" in info:
-        # ids are space separated and ordered by precedence.
-        ids.extend(info["ID_LIKE"].split())
-    for distro_id in ids:
-        if distro_id in DISTRO_IDS_INSTALLERS:
-            settings.distro_id = distro_id
-            return distro_id
-    settings.logger.warning(f"Distribution IDs do not match any supported one by this script ({ids})")
+    if hasattr(platform, "freedesktop_os_release"):
+        info = platform.freedesktop_os_release()
+        ids = [info["ID"]]
+        if "ID_LIKE" in info:
+            # ids are space separated and ordered by precedence.
+            ids.extend(info["ID_LIKE"].split())
+        for distro_id in ids:
+            if distro_id in DISTRO_IDS_INSTALLERS:
+                settings.distro_id = distro_id
+                return distro_id
+        settings.logger.warning(f"Distribution IDs do not match any supported one by this script ({ids})")
+
+    settings.logger.warning("A valid distribution ID could not be found using `platform.freedesktop_os_release`, "
+                            "now trying a lower-level check for specific files")
+    if os.path.exists("/etc/debian_version"):
+        distro_id = DISTRO_ID_DEBIAN
+    elif os.path.exists("/etc/redhat-release"):
+        distro_id = DISTRO_ID_FEDORA
+    elif os.path.exists("/etc/SuSE-release"):
+        distro_id = DISTRO_ID_SUSE
+    elif os.path.exists("/etc/arch-release"):
+        distro_id = DISTRO_ID_ARCH
+    if distro_id in DISTRO_IDS_INSTALLERS:
+        settings.distro_id = distro_id
+        return distro_id
+
     settings.distro_id = ...
     return ...
 
 
 def get_distro_package_installer(settings):
-    return DISTRO_IDS_INSTALLERS[get_distro(settings)](settings)
+    distro_id = get_distro(settings)
+    if distro_id is ...:
+        settings.logger.warning("No valid distribution ID found, please try to set it using the `--distro-id` option")
+    else:
+        settings.logger.info(f"Distribution identified as '{distro_id}'")
+    return DISTRO_IDS_INSTALLERS[distro_id](settings)
 
 
 def argparse_create():

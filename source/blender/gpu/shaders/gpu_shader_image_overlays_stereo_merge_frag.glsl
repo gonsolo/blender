@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2020-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 #define S3D_DISPLAY_ANAGLYPH 0
 #define S3D_DISPLAY_INTERLACE 1
 
@@ -27,8 +31,8 @@ void main()
 {
   ivec2 texel = ivec2(gl_FragCoord.xy);
 
-  if (stereo_display_mode == S3D_DISPLAY_INTERLACE &&
-      (interlace(texel) == stereo_interlace_swap)) {
+  if (stereo_display_mode == S3D_DISPLAY_INTERLACE && (interlace(texel) == stereo_interlace_swap))
+  {
     discard;
   }
 

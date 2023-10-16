@@ -1,5 +1,6 @@
+# SPDX-FileCopyrightText: 2016 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2016 Blender Foundation
 
 # Libraries configuration for Windows.
 
@@ -39,8 +40,14 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(WITH_WINDOWS_STRIPPED_PDB OFF)
   endif()
 else()
-  if(WITH_BLENDER AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28.29921) # MSVC 2019 16.9.16
-    message(FATAL_ERROR "Compiler is unsupported, MSVC 2019 16.9.16 or newer is required for building blender.")
+  if(WITH_BLENDER)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28.29921) # MSVC 2019 16.9.16
+      message(FATAL_ERROR "Compiler is unsupported, MSVC 2019 16.9.16 or newer is required for building blender.")
+    endif()
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.36.32532 AND # MSVC 2022 17.6.0 has a bad codegen
+       CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.37.32705)             # But it is fixed in 2022 17.7 preview 1
+      message(FATAL_ERROR "Compiler is unsupported, MSVC 2022 17.6.x has codegen issues and cannot be used to build blender. Please use MSVC 17.5 for the time being.")
+    endif()
   endif()
 endif()
 
@@ -147,8 +154,11 @@ if(NOT WITH_PYTHON_MODULE)
 endif()
 configure_file(${CMAKE_SOURCE_DIR}/release/windows/manifest/blender.exe.manifest.in ${CMAKE_CURRENT_BINARY_DIR}/blender.exe.manifest @ONLY)
 
-
-remove_cc_flag("/MDd" "/MD" "/Zi")
+remove_cc_flag(
+  "/MDd"
+  "/MD"
+  "/Zi"
+)
 
 if(MSVC_CLANG) # Clangs version of cl doesn't support all flags
   string(APPEND CMAKE_CXX_FLAGS " ${CXX_WARN_FLAGS} /nologo /J /Gd /EHsc -Wno-unused-command-line-argument -Wno-microsoft-enum-forward-reference ")
@@ -176,8 +186,6 @@ endif()
 # C++ standards conformace (/permissive-) is available on msvc 15.5 (1912) and up
 if(NOT MSVC_CLANG)
   string(APPEND CMAKE_CXX_FLAGS " /permissive-")
-  # Two-phase name lookup does not place nicely with OpenMP yet, so disable for now
-  string(APPEND CMAKE_CXX_FLAGS " /Zc:twoPhase-")
 endif()
 
 if(WITH_WINDOWS_SCCACHE AND CMAKE_VS_MSBUILD_COMMAND)
@@ -218,7 +226,7 @@ else()
   endif()
 endif()
 
-if(WITH_WINDOWS_PDB)
+if(WITH_WINDOWS_RELEASE_PDB)
   set(PDB_INFO_OVERRIDE_FLAGS "${SYMBOL_FORMAT_RELEASE}")
   set(PDB_INFO_OVERRIDE_LINKER_FLAGS "/DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
 endif()
@@ -241,7 +249,7 @@ endif()
 
 string(APPEND PLATFORM_LINKFLAGS " /SUBSYSTEM:CONSOLE /STACK:2097152")
 set(PLATFORM_LINKFLAGS_RELEASE "/NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
-string(APPEND PLATFORM_LINKFLAGS_DEBUG " /IGNORE:4099 /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcmtd.lib")
+string(APPEND PLATFORM_LINKFLAGS_DEBUG "/debug:fastlink /IGNORE:4099 /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcmtd.lib")
 
 # Ignore meaningless for us linker warnings.
 string(APPEND PLATFORM_LINKFLAGS " /ignore:4049 /ignore:4217 /ignore:4221")
@@ -270,7 +278,9 @@ if(NOT DEFINED LIBDIR)
     set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_BASE}_vc15)
   endif()
 else()
-  message(STATUS "Using pre-compiled LIBDIR: ${LIBDIR}")
+  if(FIRST_RUN)
+    message(STATUS "Using pre-compiled LIBDIR: ${LIBDIR}")
+  endif()
 endif()
 if(NOT EXISTS "${LIBDIR}/")
   message(FATAL_ERROR "\n\nWindows requires pre-compiled libs at: '${LIBDIR}'. Please run `make update` in the blender source folder to obtain them.")
@@ -356,14 +366,23 @@ set(FREETYPE_INCLUDE_DIRS
 )
 set(FREETYPE_LIBRARIES
   ${LIBDIR}/freetype/lib/freetype2ST.lib
+)
+set(BROTLI_LIBRARIES
   ${LIBDIR}/brotli/lib/brotlidec-static.lib
   ${LIBDIR}/brotli/lib/brotlicommon-static.lib
 )
+
 windows_find_package(Freetype REQUIRED)
 
 if(WITH_FFTW3)
   set(FFTW3 ${LIBDIR}/fftw3)
-  set(FFTW3_LIBRARIES ${FFTW3}/lib/libfftw.lib)
+  if(EXISTS ${FFTW3}/lib/libfftw3-3.lib) # 3.6 libraries
+    set(FFTW3_LIBRARIES ${FFTW3}/lib/libfftw3-3.lib ${FFTW3}/lib/libfftw3f.lib)
+  elseif(EXISTS ${FFTW3}/lib/libfftw.lib)
+    set(FFTW3_LIBRARIES ${FFTW3}/lib/libfftw.lib) # 3.5 Libraries
+  else()
+    set(FFTW3_LIBRARIES ${FFTW3}/lib/fftw3.lib ${FFTW3}/lib/fftw3f.lib) # msys2+MSVC Libraries
+  endif()
   set(FFTW3_INCLUDE_DIRS ${FFTW3}/include)
   set(FFTW3_LIBPATH ${FFTW3}/lib)
 endif()
@@ -371,7 +390,20 @@ endif()
 if(WITH_IMAGE_WEBP)
   set(WEBP_INCLUDE_DIRS ${LIBDIR}/webp/include)
   set(WEBP_ROOT_DIR ${LIBDIR}/webp)
-  set(WEBP_LIBRARIES ${LIBDIR}/webp/lib/webp.lib ${LIBDIR}/webp/lib/webpdemux.lib ${LIBDIR}/webp/lib/webpmux.lib)
+  if(EXISTS ${LIBDIR}/webp/lib/libsharpyuv.lib) # webp 1.3.x+
+    set(WEBP_LIBRARIES
+      ${LIBDIR}/webp/lib/libwebp.lib
+      ${LIBDIR}/webp/lib/libwebpdemux.lib
+      ${LIBDIR}/webp/lib/libwebpmux.lib
+      ${LIBDIR}/webp/lib/libsharpyuv.lib
+    )
+  else()
+    set(WEBP_LIBRARIES
+      ${LIBDIR}/webp/lib/webp.lib
+      ${LIBDIR}/webp/lib/webpdemux.lib
+      ${LIBDIR}/webp/lib/webpmux.lib
+    )
+  endif()
   set(WEBP_FOUND ON)
 endif()
 
@@ -503,25 +535,29 @@ if(WITH_JACK)
   set(JACK_LIBRARIES optimized ${LIBDIR}/jack/lib/libjack.lib debug ${LIBDIR}/jack/lib/libjack_d.lib)
 endif()
 
+set(_PYTHON_VERSION "3.10")
+string(REPLACE "." "" _PYTHON_VERSION_NO_DOTS ${_PYTHON_VERSION})
+# Python executable is needed as part of the build-process,
+# note that building without Python is quite unusual.
+set(PYTHON_EXECUTABLE ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/bin/python$<$<CONFIG:Debug>:_d>.exe)
+
 if(WITH_PYTHON)
   # Cache version for make_bpy_wheel.py to detect.
   unset(PYTHON_VERSION CACHE)
-  set(PYTHON_VERSION "3.10" CACHE STRING "Python version")
+  set(PYTHON_VERSION "${_PYTHON_VERSION}" CACHE STRING "Python version")
 
-  string(REPLACE "." "" _PYTHON_VERSION_NO_DOTS ${PYTHON_VERSION})
   set(PYTHON_LIBRARY ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/libs/python${_PYTHON_VERSION_NO_DOTS}.lib)
   set(PYTHON_LIBRARY_DEBUG ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/libs/python${_PYTHON_VERSION_NO_DOTS}_d.lib)
-
-  set(PYTHON_EXECUTABLE ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/bin/python$<$<CONFIG:Debug>:_d>.exe)
 
   set(PYTHON_INCLUDE_DIR ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/include)
   set(PYTHON_NUMPY_INCLUDE_DIRS ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/lib/site-packages/numpy/core/include)
   set(NUMPY_FOUND ON)
-  unset(_PYTHON_VERSION_NO_DOTS)
   # uncached vars
   set(PYTHON_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
   set(PYTHON_LIBRARIES debug "${PYTHON_LIBRARY_DEBUG}" optimized "${PYTHON_LIBRARY}" )
 endif()
+unset(_PYTHON_VERSION)
+unset(_PYTHON_VERSION_NO_DOTS)
 
 if(NOT WITH_WINDOWS_FIND_MODULES)
   # even if boost is off, we still need to install the dlls when we use our lib folder since
@@ -800,7 +836,11 @@ if(WITH_CODEC_SNDFILE)
   set(LIBSNDFILE ${LIBDIR}/sndfile)
   set(LIBSNDFILE_INCLUDE_DIRS ${LIBSNDFILE}/include)
   set(LIBSNDFILE_LIBPATH ${LIBSNDFILE}/lib) # TODO, deprecate
-  set(LIBSNDFILE_LIBRARIES ${LIBSNDFILE_LIBPATH}/libsndfile-1.lib)
+  if(EXISTS ${LIBSNDFILE_LIBPATH}/sndfile.lib)
+    set(LIBSNDFILE_LIBRARIES ${LIBSNDFILE_LIBPATH}/sndfile.lib)
+  else()
+    set(LIBSNDFILE_LIBRARIES ${LIBSNDFILE_LIBPATH}/libsndfile-1.lib)
+  endif()
 endif()
 
 if(WITH_CYCLES AND WITH_CYCLES_OSL)
@@ -839,10 +879,14 @@ if(WITH_CYCLES AND WITH_CYCLES_OSL)
        REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_MAJOR[ \t]+[0-9]+.*$")
   file(STRINGS "${OSL_INCLUDE_DIR}/OSL/oslversion.h" OSL_LIBRARY_VERSION_MINOR
        REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_MINOR[ \t]+[0-9]+.*$")
+  file(STRINGS "${OSL_INCLUDE_DIR}/OSL/oslversion.h" OSL_LIBRARY_VERSION_PATCH
+       REGEX "^[ \t]*#define[ \t]+OSL_LIBRARY_VERSION_PATCH[ \t]+[0-9]+.*$")
   string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_MAJOR[ \t]+([.0-9]+).*"
          "\\1" OSL_LIBRARY_VERSION_MAJOR ${OSL_LIBRARY_VERSION_MAJOR})
   string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_MINOR[ \t]+([.0-9]+).*"
          "\\1" OSL_LIBRARY_VERSION_MINOR ${OSL_LIBRARY_VERSION_MINOR})
+  string(REGEX REPLACE ".*#define[ \t]+OSL_LIBRARY_VERSION_PATCH[ \t]+([.0-9]+).*"
+         "\\1" OSL_LIBRARY_VERSION_PATCH ${OSL_LIBRARY_VERSION_PATCH})
 endif()
 
 if(WITH_CYCLES AND WITH_CYCLES_EMBREE)
@@ -947,6 +991,12 @@ if(WITH_USD)
   endif()
 endif()
 
+if(WITH_MATERIALX)
+  include("${LIBDIR}/MaterialX/lib/cmake/MaterialX/MaterialXTargets.cmake")
+  set_target_properties(MaterialXCore PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+  set_target_properties(MaterialXFormat PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+endif()
+
 if(WINDOWS_PYTHON_DEBUG)
   # Include the system scripts in the blender_python_system_scripts project.
   file(GLOB_RECURSE inFiles "${CMAKE_SOURCE_DIR}/scripts/*.*" )
@@ -1010,7 +1060,12 @@ endif()
 
 if(WITH_GMP)
   set(GMP_INCLUDE_DIRS ${LIBDIR}/gmp/include)
-  set(GMP_LIBRARIES ${LIBDIR}/gmp/lib/libgmp-10.lib optimized ${LIBDIR}/gmp/lib/libgmpxx.lib debug ${LIBDIR}/gmp/lib/libgmpxx_d.lib)
+  if(EXISTS ${LIBDIR}/gmp/lib/gmp.dll.lib)
+    set(GMP_DLL_LIB_NAME gmp.dll.lib)
+  else()
+    set(GMP_DLL_LIB_NAME libgmp-10.lib)
+  endif()
+  set(GMP_LIBRARIES ${LIBDIR}/gmp/lib/${GMP_DLL_LIB_NAME} optimized ${LIBDIR}/gmp/lib/libgmpxx.lib debug ${LIBDIR}/gmp/lib/libgmpxx_d.lib)
   set(GMP_ROOT_DIR ${LIBDIR}/gmp)
   set(GMP_FOUND ON)
 endif()
@@ -1030,7 +1085,7 @@ endif()
 
 if(WITH_VULKAN_BACKEND)
   if(EXISTS ${LIBDIR}/vulkan)
-    set(VULKAN_FOUND On)
+    set(VULKAN_FOUND ON)
     set(VULKAN_ROOT_DIR ${LIBDIR}/vulkan)
     set(VULKAN_INCLUDE_DIR ${VULKAN_ROOT_DIR}/include)
     set(VULKAN_INCLUDE_DIRS ${VULKAN_INCLUDE_DIR})
@@ -1044,7 +1099,7 @@ endif()
 
 if(WITH_VULKAN_BACKEND)
   if(EXISTS ${LIBDIR}/shaderc)
-    set(SHADERC_FOUND On)
+    set(SHADERC_FOUND ON)
     set(SHADERC_ROOT_DIR ${LIBDIR}/shaderc)
     set(SHADERC_INCLUDE_DIR ${SHADERC_ROOT_DIR}/include)
     set(SHADERC_INCLUDE_DIRS ${SHADERC_INCLUDE_DIR})
@@ -1078,6 +1133,7 @@ set(ZSTD_LIBRARIES ${LIBDIR}/zstd/lib/zstd_static.lib)
 if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_SYCL_SUPPORT)))
   set(LEVEL_ZERO_ROOT_DIR ${LIBDIR}/level_zero)
   set(CYCLES_SYCL ${LIBDIR}/dpcpp CACHE PATH "Path to oneAPI DPC++ compiler")
+  mark_as_advanced(CYCLES_SYCL)
   if(EXISTS ${CYCLES_SYCL} AND NOT SYCL_ROOT_DIR)
     set(SYCL_ROOT_DIR ${CYCLES_SYCL})
   endif()
@@ -1108,7 +1164,7 @@ endif()
 
 # Environment variables to run precompiled executables that needed libraries.
 list(JOIN PLATFORM_BUNDLED_LIBRARY_DIRS ";" _library_paths)
-set(PLATFORM_ENV_BUILD_DIRS "${LIBDIR}/tbb/bin\;${LIBDIR}/OpenImageIO/bin\;${LIBDIR}/boost/lib\;${LIBDIR}/openexr/bin\;${LIBDIR}/imath/bin\;${PATH}")
+set(PLATFORM_ENV_BUILD_DIRS "${LIBDIR}/epoxy/bin\;${LIBDIR}/tbb/bin\;${LIBDIR}/OpenImageIO/bin\;${LIBDIR}/boost/lib\;${LIBDIR}/openexr/bin\;${LIBDIR}/imath/bin\;${PATH}")
 set(PLATFORM_ENV_BUILD "PATH=${PLATFORM_ENV_BUILD_DIRS}")
 # Install needs the additional folders from PLATFORM_ENV_BUILD_DIRS as well, as tools like idiff and abcls use the release mode dlls
 set(PLATFORM_ENV_INSTALL "PATH=${CMAKE_INSTALL_PREFIX_WITH_CONFIG}/blender.shared/\;${PLATFORM_ENV_BUILD_DIRS}\;$ENV{PATH}")

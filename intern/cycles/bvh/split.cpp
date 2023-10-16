@@ -1,6 +1,9 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Adapted from code copyright 2009-2010 NVIDIA Corporation
- * Modifications Copyright 2011-2022 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2009-2010 NVIDIA Corporation
+ * SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Adapted code from NVIDIA Corporation. */
 
 #include "bvh/split.h"
 
@@ -352,15 +355,17 @@ void BVHSpatialSplit::split_triangle_primitive(const Mesh *mesh,
     float v1p = v1[dim];
 
     /* insert vertex to the boxes it belongs to. */
-    if (v0p <= pos)
+    if (v0p <= pos) {
       left_bounds.grow(v0);
+    }
 
-    if (v0p >= pos)
+    if (v0p >= pos) {
       right_bounds.grow(v0);
+    }
 
     /* edge intersects the plane => insert intersection to both boxes. */
     if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos)) {
-      float3 t = lerp(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
+      float3 t = mix(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
       left_bounds.grow(t);
       right_bounds.grow(t);
     }
@@ -394,21 +399,25 @@ void BVHSpatialSplit::split_curve_primitive(const Hair *hair,
   float v1p = v1[dim];
 
   /* insert vertex to the boxes it belongs to. */
-  if (v0p <= pos)
+  if (v0p <= pos) {
     left_bounds.grow(v0);
+  }
 
-  if (v0p >= pos)
+  if (v0p >= pos) {
     right_bounds.grow(v0);
+  }
 
-  if (v1p <= pos)
+  if (v1p <= pos) {
     left_bounds.grow(v1);
+  }
 
-  if (v1p >= pos)
+  if (v1p >= pos) {
     right_bounds.grow(v1);
+  }
 
   /* edge intersects the plane => insert intersection to both boxes. */
   if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos)) {
-    float3 t = lerp(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
+    float3 t = mix(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
     left_bounds.grow(t);
     right_bounds.grow(t);
   }
@@ -425,6 +434,7 @@ void BVHSpatialSplit::split_point_primitive(const PointCloud *pointcloud,
   /* No real splitting support for points, assume they are small enough for it
    * not to matter. */
   float3 point = pointcloud->get_points()[prim_index];
+  float radius = pointcloud->get_radius()[prim_index];
 
   if (tfm != NULL) {
     point = transform_point(tfm, point);
@@ -432,11 +442,11 @@ void BVHSpatialSplit::split_point_primitive(const PointCloud *pointcloud,
   point = get_unaligned_point(point);
 
   if (point[dim] <= pos) {
-    left_bounds.grow(point);
+    left_bounds.grow(point, radius);
   }
 
   if (point[dim] >= pos) {
-    right_bounds.grow(point);
+    right_bounds.grow(point, radius);
   }
 }
 

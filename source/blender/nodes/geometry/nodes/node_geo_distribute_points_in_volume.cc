@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #ifdef WITH_OPENVDB
 #  include <openvdb/openvdb.h>
@@ -11,11 +13,16 @@
 
 #include "BKE_pointcloud.h"
 #include "BKE_volume.h"
+#include "BKE_volume_openvdb.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "NOD_rna_define.hh"
 
-#include "DEG_depsgraph_query.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
+
+#include "DEG_depsgraph_query.hh"
+
+#include "GEO_randomize.hh"
 
 #include "node_geometry_util.hh"
 
@@ -25,35 +32,33 @@ NODE_STORAGE_FUNCS(NodeGeometryDistributePointsInVolume)
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Geometry>(CTX_N_(BLT_I18NCONTEXT_ID_ID, "Volume"))
-      .supported_type(GEO_COMPONENT_TYPE_VOLUME)
+  b.add_input<decl::Geometry>("Volume")
+      .supported_type(GeometryComponent::Type::Volume)
       .translation_context(BLT_I18NCONTEXT_ID_ID);
-  b.add_input<decl::Float>(N_("Density"))
+  b.add_input<decl::Float>("Density")
       .default_value(1.0f)
       .min(0.0f)
       .max(100000.0f)
       .subtype(PROP_NONE)
-      .description(N_("Number of points to sample per unit volume"));
-  b.add_input<decl::Int>(N_("Seed"))
-      .min(-10000)
-      .max(10000)
-      .description(N_("Seed used by the random number generator to generate random points"));
-  b.add_input<decl::Vector>(N_("Spacing"))
+      .description("Number of points to sample per unit volume");
+  b.add_input<decl::Int>("Seed").min(-10000).max(10000).description(
+      "Seed used by the random number generator to generate random points");
+  b.add_input<decl::Vector>("Spacing")
       .default_value({0.3, 0.3, 0.3})
       .min(0.0001f)
       .subtype(PROP_XYZ)
-      .description(N_("Spacing between grid points"));
-  b.add_input<decl::Float>(N_("Threshold"))
+      .description("Spacing between grid points");
+  b.add_input<decl::Float>("Threshold")
       .default_value(0.1f)
       .min(0.0f)
       .max(FLT_MAX)
-      .description(N_("Minimum density of a volume cell to contain a grid point"));
-  b.add_output<decl::Geometry>(N_("Points")).propagate_all();
+      .description("Minimum density of a volume cell to contain a grid point");
+  b.add_output<decl::Geometry>("Points").propagate_all();
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
-  uiItemR(layout, ptr, "mode", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "mode", UI_ITEM_NONE, "", ICON_NONE);
 }
 
 static void node_init(bNodeTree * /*tree*/, bNode *node)
@@ -75,13 +80,13 @@ static void node_update(bNodeTree *ntree, bNode *node)
   bNodeSocket *sock_spacing = sock_seed->next;
   bNodeSocket *sock_threshold = sock_spacing->next;
 
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_density, mode == GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_RANDOM);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_seed, mode == GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_RANDOM);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_spacing, mode == GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_GRID);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, sock_threshold, mode == GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_GRID);
 }
 
@@ -205,11 +210,11 @@ static void node_geo_exec(GeoNodeExecParams params)
 
   geometry_set.modify_geometry_sets([&](GeometrySet &geometry_set) {
     if (!geometry_set.has_volume()) {
-      geometry_set.keep_only({GEO_COMPONENT_TYPE_POINT_CLOUD, GEO_COMPONENT_TYPE_INSTANCES});
+      geometry_set.keep_only_during_modify({GeometryComponent::Type::PointCloud});
       return;
     }
-    const VolumeComponent *component = geometry_set.get_component_for_read<VolumeComponent>();
-    const Volume *volume = component->get_for_read();
+    const VolumeComponent *component = geometry_set.get_component<VolumeComponent>();
+    const Volume *volume = component->get();
     BKE_volume_load(volume, DEG_get_bmain(params.depsgraph()));
 
     Vector<float3> positions;
@@ -250,8 +255,10 @@ static void node_geo_exec(GeoNodeExecParams params)
     point_radii.span.fill(0.05f);
     point_radii.finish();
 
+    geometry::debug_randomize_point_order(pointcloud);
+
     geometry_set.replace_pointcloud(pointcloud);
-    geometry_set.keep_only_during_modify({GEO_COMPONENT_TYPE_POINT_CLOUD});
+    geometry_set.keep_only_during_modify({GeometryComponent::Type::PointCloud});
   });
 
   params.set_output("Points", std::move(geometry_set));
@@ -262,12 +269,34 @@ static void node_geo_exec(GeoNodeExecParams params)
                            TIP_("Disabled, Blender was compiled without OpenVDB"));
 #endif
 }
-}  // namespace blender::nodes::node_geo_distribute_points_in_volume_cc
 
-void register_node_type_geo_distribute_points_in_volume()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_geo_distribute_points_in_volume_cc;
+  static const EnumPropertyItem mode_items[] = {
+      {GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_RANDOM,
+       "DENSITY_RANDOM",
+       0,
+       "Random",
+       "Distribute points randomly inside of the volume"},
+      {GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_GRID,
+       "DENSITY_GRID",
+       0,
+       "Grid",
+       "Distribute the points in a grid pattern inside of the volume"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
 
+  RNA_def_node_enum(srna,
+                    "mode",
+                    "Distribution Method",
+                    "Method to use for scattering points",
+                    mode_items,
+                    NOD_storage_enum_accessors(mode),
+                    GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME_DENSITY_RANDOM);
+}
+
+static void node_register()
+{
   static bNodeType ntype;
   geo_node_type_base(&ntype,
                      GEO_NODE_DISTRIBUTE_POINTS_IN_VOLUME,
@@ -277,11 +306,16 @@ void register_node_type_geo_distribute_points_in_volume()
                     "NodeGeometryDistributePointsInVolume",
                     node_free_standard_storage,
                     node_copy_standard_storage);
-  ntype.initfunc = file_ns::node_init;
-  ntype.updatefunc = file_ns::node_update;
-  node_type_size(&ntype, 170, 100, 320);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.draw_buttons = file_ns::node_layout;
+  ntype.initfunc = node_init;
+  ntype.updatefunc = node_update;
+  blender::bke::node_type_size(&ntype, 170, 100, 320);
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_distribute_points_in_volume_cc

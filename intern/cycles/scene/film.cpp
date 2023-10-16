@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/film.h"
 #include "device/device.h"
@@ -135,8 +136,9 @@ void Film::add_default(Scene *scene)
 
 void Film::device_update(Device *device, DeviceScene *dscene, Scene *scene)
 {
-  if (!is_modified())
+  if (!is_modified()) {
     return;
+  }
 
   scoped_callback_timer timer([scene](double time) {
     if (scene->update_stats) {
@@ -471,7 +473,8 @@ void Film::update_passes(Scene *scene, bool add_sample_count_pass)
   Integrator *integrator = scene->integrator;
 
   if (!is_modified() && !object_manager->need_update() && !integrator->is_modified() &&
-      !background->is_modified()) {
+      !background->is_modified())
+  {
     return;
   }
 
@@ -669,7 +672,8 @@ void Film::finalize_passes(Scene *scene, const bool use_denoise)
       /* If both passes have a name and the names are different, don't merge.
        * If either pass has a name, we'll use that name. */
       if (!pass->get_name().empty() && !new_pass->get_name().empty() &&
-          pass->get_name() != new_pass->get_name()) {
+          pass->get_name() != new_pass->get_name())
+      {
         continue;
       }
 
@@ -711,7 +715,8 @@ uint Film::get_kernel_features(const Scene *scene) const
     const PassMode pass_mode = pass->get_mode();
 
     if (pass_mode == PassMode::DENOISED || pass_type == PASS_DENOISING_NORMAL ||
-        pass_type == PASS_DENOISING_ALBEDO || pass_type == PASS_DENOISING_DEPTH) {
+        pass_type == PASS_DENOISING_ALBEDO || pass_type == PASS_DENOISING_DEPTH)
+    {
       kernel_features |= KERNEL_FEATURE_DENOISING;
     }
 

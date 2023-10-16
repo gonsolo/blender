@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "testing/testing.h"
 
@@ -145,7 +147,7 @@ static void test_shader_compute_vbo()
   GPU_shader_bind(shader);
 
   /* Construct VBO. */
-  static GPUVertFormat format = {0};
+  GPUVertFormat format = {0};
   GPU_vertformat_attr_add(&format, "pos", GPU_COMP_F32, 4, GPU_FETCH_FLOAT);
   GPUVertBuf *vbo = GPU_vertbuf_create_with_format_ex(&format, GPU_USAGE_DEVICE_ONLY);
   GPU_vertbuf_data_alloc(vbo, SIZE);
@@ -219,7 +221,7 @@ GPU_TEST(shader_compute_ibo)
 static void test_shader_compute_ssbo()
 {
 
-  if (!GPU_compute_shader_support() && !GPU_shader_storage_buffer_objects_support()) {
+  if (!GPU_compute_shader_support()) {
     /* We can't test as a the platform does not support compute shaders. */
     std::cout << "Skipping compute shader test: platform not supported";
     return;
@@ -243,7 +245,7 @@ static void test_shader_compute_ssbo()
   /* Check if compute has been done. */
   GPU_memory_barrier(GPU_BARRIER_BUFFER_UPDATE);
 
-  /* Download the index buffer. */
+  /* Download the storage buffer. */
   uint32_t data[SIZE];
   GPU_storagebuf_read(ssbo, data);
   for (int index = 0; index < SIZE; index++) {

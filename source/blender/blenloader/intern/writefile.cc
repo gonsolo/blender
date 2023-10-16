@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup blenloader
@@ -20,7 +21,7 @@
  *
  * data-blocks: (also see struct #BHead).
  * <pre>
- * `bh.code`       `char[4]` see `BLO_blend_defs.h` for a list of known types.
+ * `bh.code`       `char[4]` see `BLO_blend_defs.hh` for a list of known types.
  * `bh.len`        `int32` length data after #BHead in bytes.
  * `bh.old`        `void *` old pointer (the address at the time of writing the file).
  * `bh.SDNAnr`     `int32` struct index of structs stored in #DNA1 data.
@@ -49,10 +50,12 @@
  *   - write library block
  *   - per LibBlock
  *     - write the ID of LibBlock
- * - write #TEST (#RenderInfo struct. 128x128 blend file preview is optional).
- * - write #GLOB (#FileGlobal struct) (some global vars).
- * - write #DNA1 (#SDNA struct)
- * - write #USER (#UserDef struct) if filename is `~/.config/blender/X.XX/config/startup.blend`.
+ * - write #BLO_CODE_GLOB (#RenderInfo struct. 128x128 blend file preview is optional).
+ * - write #BLO_CODE_GLOB (#FileGlobal struct) (some global vars).
+ * - write #BLO_CODE_DNA1 (#SDNA struct)
+ * - write #BLO_CODE_USER (#UserDef struct) for file paths:
+ *   - #BLENDER_STARTUP_FILE (on UNIX `~/.config/blender/X.X/config/startup.blend`).
+ *   - #BLENDER_USERPREF_FILE (on UNIX `~/.config/blender/X.X/config/userpref.blend`).
  */
 
 #include <cerrno>
@@ -81,6 +84,7 @@
 #include "DNA_collection_types.h"
 #include "DNA_fileglobal_types.h"
 #include "DNA_genfile.h"
+#include "DNA_key_types.h"
 #include "DNA_sdna_types.h"
 
 #include "BLI_bitmap.h"
@@ -92,6 +96,7 @@
 #include "BLI_math_base.h"
 #include "BLI_mempool.h"
 #include "BLI_threads.h"
+
 #include "MEM_guardedalloc.h" /* MEM_freeN */
 
 #include "BKE_blender_version.h"
@@ -101,22 +106,23 @@
 #include "BKE_idtype.h"
 #include "BKE_layer.h"
 #include "BKE_lib_id.h"
-#include "BKE_lib_override.h"
+#include "BKE_lib_override.hh"
 #include "BKE_lib_query.h"
 #include "BKE_main.h"
-#include "BKE_node.h"
+#include "BKE_main_namemap.h"
+#include "BKE_node.hh"
 #include "BKE_packedFile.h"
 #include "BKE_report.h"
 #include "BKE_workspace.h"
 
-#include "BLO_blend_defs.h"
-#include "BLO_blend_validate.h"
-#include "BLO_read_write.h"
+#include "BLO_blend_defs.hh"
+#include "BLO_blend_validate.hh"
+#include "BLO_read_write.hh"
 #include "BLO_readfile.h"
-#include "BLO_undofile.h"
-#include "BLO_writefile.h"
+#include "BLO_undofile.hh"
+#include "BLO_writefile.hh"
 
-#include "readfile.h"
+#include "readfile.hh"
 
 #include <zstd.h>
 
@@ -149,7 +155,7 @@ enum eWriteWrapType {
 };
 
 struct ZstdFrame {
-  struct ZstdFrame *next, *prev;
+  ZstdFrame *next, *prev;
 
   uint32_t compressed_size;
   uint32_t uncompressed_size;
@@ -624,7 +630,8 @@ static void mywrite_id_begin(WriteData *wd, ID *id)
     if (wd->mem.id_session_uuid_mapping != nullptr &&
         (curr_memchunk == nullptr || curr_memchunk->id_session_uuid != id->session_uuid ||
          (prev_memchunk != nullptr &&
-          (prev_memchunk->id_session_uuid == curr_memchunk->id_session_uuid)))) {
+          (prev_memchunk->id_session_uuid == curr_memchunk->id_session_uuid))))
+    {
       void *ref = BLI_ghash_lookup(wd->mem.id_session_uuid_mapping,
                                    POINTER_FROM_UINT(id->session_uuid));
       if (ref != nullptr) {
@@ -738,7 +745,7 @@ static void writelist_id(WriteData *wd, int filecode, const char *structname, co
   const Link *link = lb->first;
   if (link) {
 
-    const int struct_nr = DNA_struct_find_nr(wd->sdna, structname);
+    const int struct_nr = DNA_struct_find_with_alias(wd->sdna, structname);
     if (struct_nr == -1) {
       printf("error: can't find SDNA code <%s>\n", structname);
       return;
@@ -839,7 +846,7 @@ static void write_renderinfo(WriteData *wd, Main *mainvar)
       data.efra = sce->r.efra;
       memset(data.scene_name, 0, sizeof(data.scene_name));
 
-      BLI_strncpy(data.scene_name, sce->id.name + 2, sizeof(data.scene_name));
+      STRNCPY(data.scene_name, sce->id.name + 2);
 
       writedata(wd, BLO_CODE_REND, sizeof(data), &data);
     }
@@ -930,6 +937,10 @@ static void write_userdef(BlendWriter *writer, const UserDef *userdef)
     BLO_write_struct(writer, bUserAssetLibrary, asset_library_ref);
   }
 
+  LISTBASE_FOREACH (const bUserExtensionRepo *, repo_ref, &userdef->extension_repos) {
+    BLO_write_struct(writer, bUserExtensionRepo, repo_ref);
+  }
+
   LISTBASE_FOREACH (const uiStyle *, style, &userdef->uistyles) {
     BLO_write_struct(writer, uiStyle, style);
   }
@@ -959,9 +970,9 @@ static void write_libraries(WriteData *wd, Main *main)
       found_one = false;
       while (!found_one && tot--) {
         for (id = static_cast<ID *>(lbarray[tot]->first); id; id = static_cast<ID *>(id->next)) {
-          if (id->us > 0 &&
-              ((id->tag & LIB_TAG_EXTERN) ||
-               ((id->tag & LIB_TAG_INDIRECT) && (id->flag & LIB_INDIRECT_WEAK_LINK)))) {
+          if (id->us > 0 && ((id->tag & LIB_TAG_EXTERN) || ((id->tag & LIB_TAG_INDIRECT) &&
+                                                            (id->flag & LIB_INDIRECT_WEAK_LINK))))
+          {
             found_one = true;
             break;
           }
@@ -969,10 +980,10 @@ static void write_libraries(WriteData *wd, Main *main)
       }
     }
 
-    /* To be able to restore 'quit.blend' and temp saves,
+    /* To be able to restore `quit.blend` and temp saves,
      * the packed blend has to be in undo buffers... */
     /* XXX needs rethink, just like save UI in undo files now -
-     * would be nice to append things only for the 'quit.blend' and temp saves. */
+     * would be nice to append things only for the `quit.blend` and temp saves. */
     if (found_one) {
       /* Not overridable. */
 
@@ -995,9 +1006,9 @@ static void write_libraries(WriteData *wd, Main *main)
       /* Write link placeholders for all direct linked IDs. */
       while (a--) {
         for (id = static_cast<ID *>(lbarray[a]->first); id; id = static_cast<ID *>(id->next)) {
-          if (id->us > 0 &&
-              ((id->tag & LIB_TAG_EXTERN) ||
-               ((id->tag & LIB_TAG_INDIRECT) && (id->flag & LIB_INDIRECT_WEAK_LINK)))) {
+          if (id->us > 0 && ((id->tag & LIB_TAG_EXTERN) || ((id->tag & LIB_TAG_INDIRECT) &&
+                                                            (id->flag & LIB_INDIRECT_WEAK_LINK))))
+          {
             if (!BKE_idtype_idcode_is_linkable(GS(id->name))) {
               CLOG_ERROR(&LOG,
                          "Data-block '%s' from lib '%s' is not linkable, but is flagged as "
@@ -1016,7 +1027,7 @@ static void write_libraries(WriteData *wd, Main *main)
 }
 
 #ifdef WITH_BUILDINFO
-extern "C" unsigned long build_commit_timestamp;
+extern "C" ulong build_commit_timestamp;
 extern "C" char build_hash[];
 #endif
 
@@ -1053,7 +1064,7 @@ static void write_global(WriteData *wd, int fileflags, Main *mainvar)
   if (fileflags & G_FILE_RECOVER_WRITE) {
     STRNCPY(fg.filepath, mainvar->filepath);
   }
-  BLI_snprintf(subvstr, sizeof(subvstr), "%4d", BLENDER_FILE_SUBVERSION);
+  SNPRINTF(subvstr, "%4d", BLENDER_FILE_SUBVERSION);
   memcpy(fg.subvstr, subvstr, 4);
 
   fg.subversion = BLENDER_FILE_SUBVERSION;
@@ -1062,10 +1073,10 @@ static void write_global(WriteData *wd, int fileflags, Main *mainvar)
 #ifdef WITH_BUILDINFO
   /* TODO(sergey): Add branch name to file as well? */
   fg.build_commit_timestamp = build_commit_timestamp;
-  BLI_strncpy(fg.build_hash, build_hash, sizeof(fg.build_hash));
+  STRNCPY(fg.build_hash, build_hash);
 #else
   fg.build_commit_timestamp = 0;
-  BLI_strncpy(fg.build_hash, "unknown", sizeof(fg.build_hash));
+  STRNCPY(fg.build_hash, "unknown");
 #endif
   writestruct(wd, BLO_CODE_GLOB, FileGlobal, 1, &fg);
 }
@@ -1090,11 +1101,11 @@ static void write_thumb(WriteData *wd, const BlendThumbnail *thumb)
 
 #define ID_BUFFER_STATIC_SIZE 8192
 
-typedef struct BLO_Write_IDBuffer {
-  const struct IDTypeInfo *id_type;
+struct BLO_Write_IDBuffer {
+  const IDTypeInfo *id_type;
   ID *temp_id;
   char id_buffer_static[ID_BUFFER_STATIC_SIZE];
-} BLO_Write_IDBuffer;
+};
 
 static void id_buffer_init_for_id_type(BLO_Write_IDBuffer *id_buffer, const IDTypeInfo *id_type)
 {
@@ -1156,7 +1167,7 @@ static void id_buffer_init_from_id(BLO_Write_IDBuffer *id_buffer, ID *id, const 
   temp_id->newid = nullptr;
   /* Even though in theory we could be able to preserve this python instance across undo even
    * when we need to re-read the ID into its original address, this is currently cleared in
-   * #direct_link_id_common in `readfile.c` anyway. */
+   * #direct_link_id_common in `readfile.cc` anyway. */
   temp_id->py_instance = nullptr;
 }
 
@@ -1164,17 +1175,17 @@ static void id_buffer_init_from_id(BLO_Write_IDBuffer *id_buffer, ID *id, const 
  * linked data is tagged accordingly. */
 static int write_id_direct_linked_data_process_cb(LibraryIDLinkCallbackData *cb_data)
 {
-  ID *id_self = cb_data->id_self;
+  ID *self_id = cb_data->self_id;
   ID *id = *cb_data->id_pointer;
   const int cb_flag = cb_data->cb_flag;
 
   if (id == nullptr || !ID_IS_LINKED(id)) {
     return IDWALK_RET_NOP;
   }
-  BLI_assert(!ID_IS_LINKED(id_self));
+  BLI_assert(!ID_IS_LINKED(self_id));
   BLI_assert((cb_flag & IDWALK_CB_INDIRECT_USAGE) == 0);
 
-  if (id_self->tag & LIB_TAG_RUNTIME) {
+  if (self_id->tag & LIB_TAG_RUNTIME) {
     return IDWALK_RET_NOP;
   }
 
@@ -1217,16 +1228,6 @@ static bool write_file_handle(Main *mainvar,
            * asap afterward. */
           id_lib_extern(id_iter);
         }
-        else if (ID_FAKE_USERS(id_iter) > 0 && id_iter->asset_data == nullptr) {
-          /* Even though fake user is not directly editable by the user on linked data, it is a
-           * common 'work-around' to set it in library files on data-blocks that need to be linked
-           * but typically do not have an actual real user (e.g. texts, etc.).
-           * See e.g. #105687 and #103867.
-           *
-           * Would be good to find a better solution, but for now consider these as directly linked
-           * as well. */
-          id_lib_extern(id_iter);
-        }
         else {
           id_iter->tag |= LIB_TAG_INDIRECT;
           id_iter->tag &= ~LIB_TAG_EXTERN;
@@ -1238,12 +1239,11 @@ static bool write_file_handle(Main *mainvar,
 
   blo_split_main(&mainlist, mainvar);
 
-  BLI_snprintf(buf,
-               sizeof(buf),
-               "BLENDER%c%c%.3d",
-               (sizeof(void *) == 8) ? '-' : '_',
-               (ENDIAN_ORDER == B_ENDIAN) ? 'V' : 'v',
-               BLENDER_FILE_VERSION);
+  SNPRINTF(buf,
+           "BLENDER%c%c%.3d",
+           (sizeof(void *) == 8) ? '-' : '_',
+           (ENDIAN_ORDER == B_ENDIAN) ? 'V' : 'v',
+           BLENDER_FILE_VERSION);
 
   mywrite(wd, buf, 12);
 
@@ -1283,12 +1283,31 @@ static bool write_file_handle(Main *mainvar,
         BLI_assert(
             (id->tag & (LIB_TAG_NO_MAIN | LIB_TAG_NO_USER_REFCOUNT | LIB_TAG_NOT_ALLOCATED)) == 0);
 
-        /* We only write unused IDs in undo case.
-         * NOTE: All Scenes, WindowManagers and WorkSpaces should always be written to disk, so
-         * their user-count should never be zero currently. */
-        if (id->us == 0 && !wd->use_memfile) {
-          BLI_assert(!ELEM(GS(id->name), ID_SCE, ID_WM, ID_WS));
-          continue;
+        /* We only write unused IDs in undo case. */
+        if (!wd->use_memfile) {
+          /* NOTE: All Scenes, WindowManagers and WorkSpaces should always be written to disk, so
+           * their user-count should never be zero currently. */
+          if (id->us == 0) {
+            BLI_assert(!ELEM(GS(id->name), ID_SCE, ID_WM, ID_WS));
+            continue;
+          }
+
+          /* XXX Special handling for ShapeKeys, as having unused shapekeys is not a good thing
+           * (and reported as error by e.g. `BLO_main_validate_shapekeys`), skip writing shapekeys
+           * when their 'owner' is not written.
+           *
+           * NOTE: Since ShapeKeys are conceptually embedded IDs (like root node trees e.g.), this
+           * behavior actually makes sense anyway. This remains more of a temp hack until topic of
+           * how to handle unused data on save is properly tackled. */
+          if (GS(id->name) == ID_KE) {
+            Key *shape_key = reinterpret_cast<Key *>(id);
+            /* NOTE: Here we are accessing the real owner ID data, not it's 'proxy' shallow copy
+             * generated for its file-writing. This is not expected to be an issue, but is worth
+             * noting. */
+            if (shape_key->from == nullptr || shape_key->from->us == 0) {
+              continue;
+            }
+          }
         }
 
         if ((id->tag & LIB_TAG_RUNTIME) != 0 && !wd->use_memfile) {
@@ -1362,46 +1381,86 @@ static bool write_file_handle(Main *mainvar,
   return mywrite_end(wd);
 }
 
-/* do reverse file history: .blend1 -> .blend2, .blend -> .blend1 */
-/* return: success(0), failure(1) */
-static bool do_history(const char *name, ReportList *reports)
+/**
+ * Do reverse file history: `.blend1` -> `.blend2`, `.blend` -> `.blend1` ... etc.
+ * \return True on success.
+ */
+static bool do_history(const char *filepath, ReportList *reports)
 {
-  char tempname1[FILE_MAX], tempname2[FILE_MAX];
-  int hisnr = U.versions;
+  /* Add 2 because version number maximum is double-digits. */
+  char filepath_tmp1[FILE_MAX + 2], filepath_tmp2[FILE_MAX + 2];
+  int version_number = min_ii(99, U.versions);
 
-  if (U.versions == 0) {
-    return false;
-  }
-
-  if (strlen(name) < 2) {
-    BKE_report(reports, RPT_ERROR, "Unable to make version backup: filename too short");
+  if (version_number == 0) {
     return true;
   }
 
-  while (hisnr > 1) {
-    BLI_snprintf(tempname1, sizeof(tempname1), "%s%d", name, hisnr - 1);
-    if (BLI_exists(tempname1)) {
-      BLI_snprintf(tempname2, sizeof(tempname2), "%s%d", name, hisnr);
+  if (strlen(filepath) < 2) {
+    BKE_report(reports, RPT_ERROR, "Unable to make version backup: filename too short");
+    return false;
+  }
 
-      if (BLI_rename(tempname1, tempname2)) {
+  while (version_number > 1) {
+    SNPRINTF(filepath_tmp1, "%s%d", filepath, version_number - 1);
+    if (BLI_exists(filepath_tmp1)) {
+      SNPRINTF(filepath_tmp2, "%s%d", filepath, version_number);
+
+      if (BLI_rename_overwrite(filepath_tmp1, filepath_tmp2)) {
         BKE_report(reports, RPT_ERROR, "Unable to make version backup");
-        return true;
+        return false;
       }
     }
-    hisnr--;
+    version_number--;
   }
 
-  /* is needed when hisnr==1 */
-  if (BLI_exists(name)) {
-    BLI_snprintf(tempname1, sizeof(tempname1), "%s%d", name, hisnr);
+  /* Needed when `version_number == 1`. */
+  if (BLI_exists(filepath)) {
+    SNPRINTF(filepath_tmp1, "%s%d", filepath, version_number);
 
-    if (BLI_rename(name, tempname1)) {
+    if (BLI_rename_overwrite(filepath, filepath_tmp1)) {
       BKE_report(reports, RPT_ERROR, "Unable to make version backup");
-      return true;
+      return false;
     }
   }
 
-  return false;
+  return true;
+}
+
+static void write_file_main_validate_pre(Main *bmain, ReportList *reports)
+{
+  if (!bmain->lock) {
+    return;
+  }
+
+  if (G.debug & G_DEBUG_IO) {
+    BKE_report(
+        reports, RPT_DEBUG, "Checking validity of current .blend file *BEFORE* save to disk");
+  }
+
+  BLO_main_validate_shapekeys(bmain, reports);
+  if (!BKE_main_namemap_validate_and_fix(bmain)) {
+    BKE_report(reports,
+               RPT_ERROR,
+               "Critical data corruption: Conflicts and/or otherwise invalid data-blocks names "
+               "(see console for details)");
+  }
+
+  if (G.debug & G_DEBUG_IO) {
+    BLO_main_validate_libraries(bmain, reports);
+  }
+}
+
+static void write_file_main_validate_post(Main *bmain, ReportList *reports)
+{
+  if (!bmain->lock) {
+    return;
+  }
+
+  if (G.debug & G_DEBUG_IO) {
+    BKE_report(
+        reports, RPT_DEBUG, "Checking validity of current .blend file *BEFORE* save to disk");
+    BLO_main_validate_libraries(bmain, reports);
+  }
 }
 
 /** \} */
@@ -1413,7 +1472,7 @@ static bool do_history(const char *name, ReportList *reports)
 bool BLO_write_file(Main *mainvar,
                     const char *filepath,
                     const int write_flags,
-                    const struct BlendFileWriteParams *params,
+                    const BlendFileWriteParams *params,
                     ReportList *reports)
 {
   BLI_assert(!BLI_path_is_rel(filepath));
@@ -1434,14 +1493,10 @@ bool BLO_write_file(Main *mainvar,
   const eBPathForeachFlag path_list_flag = (BKE_BPATH_FOREACH_PATH_SKIP_LINKED |
                                             BKE_BPATH_FOREACH_PATH_SKIP_MULTIFILE);
 
-  if (G.debug & G_DEBUG_IO && mainvar->lock != nullptr) {
-    BKE_report(reports, RPT_INFO, "Checking sanity of current .blend file *BEFORE* save to disk");
-    BLO_main_validate_libraries(mainvar, reports);
-    BLO_main_validate_shapekeys(mainvar, reports);
-  }
+  write_file_main_validate_pre(mainvar, reports);
 
   /* open temporary file, so we preserve the original in case we crash */
-  BLI_snprintf(tempname, sizeof(tempname), "%s@", filepath);
+  SNPRINTF(tempname, "%s@", filepath);
 
   ww_handle_init((write_flags & G_FILE_COMPRESS) ? WW_WRAP_ZSTD : WW_WRAP_NONE, &ww);
 
@@ -1473,14 +1528,14 @@ bool BLO_write_file(Main *mainvar,
 
     /* Normalize the paths in case there is some subtle difference (so they can be compared). */
     if (relbase_valid) {
-      BLI_split_dir_part(mainvar->filepath, dir_src, sizeof(dir_src));
-      BLI_path_normalize(nullptr, dir_src);
+      BLI_path_split_dir_part(mainvar->filepath, dir_src, sizeof(dir_src));
+      BLI_path_normalize(dir_src);
     }
     else {
       dir_src[0] = '\0';
     }
-    BLI_split_dir_part(filepath, dir_dst, sizeof(dir_dst));
-    BLI_path_normalize(nullptr, dir_dst);
+    BLI_path_split_dir_part(filepath, dir_dst, sizeof(dir_dst));
+    BLI_path_normalize(dir_dst);
 
     /* Only for relative, not relative-all, as this means making existing paths relative. */
     if (remap_mode == BLO_WRITE_PATH_REMAP_RELATIVE) {
@@ -1555,22 +1610,18 @@ bool BLO_write_file(Main *mainvar,
   /* file save to temporary file was successful */
   /* now do reverse file history (move .blend1 -> .blend2, .blend -> .blend1) */
   if (use_save_versions) {
-    const bool err_hist = do_history(filepath, reports);
-    if (err_hist) {
+    if (!do_history(filepath, reports)) {
       BKE_report(reports, RPT_ERROR, "Version backup failed (file saved with @)");
       return false;
     }
   }
 
-  if (BLI_rename(tempname, filepath) != 0) {
+  if (BLI_rename_overwrite(tempname, filepath) != 0) {
     BKE_report(reports, RPT_ERROR, "Cannot change old file (file saved with @)");
     return false;
   }
 
-  if (G.debug & G_DEBUG_IO && mainvar->lock != nullptr) {
-    BKE_report(reports, RPT_INFO, "Checking sanity of current .blend file *AFTER* save to disk");
-    BLO_main_validate_libraries(mainvar, reports);
-  }
+  write_file_main_validate_post(mainvar, reports);
 
   return true;
 }
@@ -1697,7 +1748,7 @@ void blo_write_id_struct(BlendWriter *writer, int struct_id, const void *id_addr
 
 int BLO_get_struct_id_by_name(BlendWriter *writer, const char *struct_name)
 {
-  int struct_id = DNA_struct_find_nr(writer->wd->sdna, struct_name);
+  int struct_id = DNA_struct_find_with_alias(writer->wd->sdna, struct_name);
   return struct_id;
 }
 

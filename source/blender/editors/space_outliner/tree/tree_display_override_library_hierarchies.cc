@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup spoutliner
@@ -15,7 +17,7 @@
 
 #include "BLT_translation.h"
 
-#include "BKE_lib_override.h"
+#include "BKE_lib_override.hh"
 #include "BKE_lib_query.h"
 #include "BKE_main.h"
 
@@ -33,13 +35,13 @@ TreeDisplayOverrideLibraryHierarchies::TreeDisplayOverrideLibraryHierarchies(
 {
 }
 
-ListBase TreeDisplayOverrideLibraryHierarchies::buildTree(const TreeSourceData &source_data)
+ListBase TreeDisplayOverrideLibraryHierarchies::build_tree(const TreeSourceData &source_data)
 {
   ListBase tree = {nullptr};
 
   /* First step: Build "Current File" hierarchy. */
-  TreeElement *current_file_te = outliner_add_element(
-      &space_outliner_, &tree, source_data.bmain, nullptr, TSE_ID_BASE, -1);
+  TreeElement *current_file_te = AbstractTreeDisplay::add_element(
+      &space_outliner_, &tree, nullptr, source_data.bmain, nullptr, TSE_ID_BASE, -1);
   current_file_te->name = IFACE_("Current File");
   AbstractTreeElement::uncollapse_by_default(current_file_te);
   {
@@ -47,17 +49,23 @@ ListBase TreeDisplayOverrideLibraryHierarchies::buildTree(const TreeSourceData &
 
     /* Add dummy child if there's nothing to display. */
     if (BLI_listbase_is_empty(&current_file_te->subtree)) {
-      TreeElement *dummy_te = outliner_add_element(
-          &space_outliner_, &current_file_te->subtree, nullptr, current_file_te, TSE_ID_BASE, 0);
+      TreeElement *dummy_te = AbstractTreeDisplay::add_element(&space_outliner_,
+                                                               &current_file_te->subtree,
+                                                               nullptr,
+                                                               nullptr,
+                                                               current_file_te,
+                                                               TSE_ID_BASE,
+                                                               0);
       dummy_te->name = IFACE_("No Library Overrides");
     }
   }
 
   /* Second step: Build hierarchies for external libraries. */
   for (Library *lib = (Library *)source_data.bmain->libraries.first; lib;
-       lib = (Library *)lib->id.next) {
-    TreeElement *tenlib = outliner_add_element(
-        &space_outliner_, &tree, lib, nullptr, TSE_SOME_ID, 0);
+       lib = (Library *)lib->id.next)
+  {
+    TreeElement *tenlib = AbstractTreeDisplay::add_element(
+        &space_outliner_, &tree, reinterpret_cast<ID *>(lib), nullptr, nullptr, TSE_SOME_ID, 0);
     build_hierarchy_for_lib_or_main(source_data.bmain, *tenlib, lib);
   }
 
@@ -141,18 +149,25 @@ ListBase TreeDisplayOverrideLibraryHierarchies::build_hierarchy_for_lib_or_main(
     }
 
     TreeElement *new_base_te = id_base_te_map.lookup_or_add_cb(GS(iter_id->name), [&]() {
-      TreeElement *new_te = outliner_add_element(&space_outliner_,
-                                                 &parent_te.subtree,
-                                                 lib ? (void *)lib : bmain,
-                                                 &parent_te,
-                                                 TSE_ID_BASE,
-                                                 base_index++);
+      TreeElement *new_te = AbstractTreeDisplay::add_element(&space_outliner_,
+                                                             &parent_te.subtree,
+                                                             reinterpret_cast<ID *>(lib),
+                                                             bmain,
+                                                             &parent_te,
+                                                             TSE_ID_BASE,
+                                                             base_index++);
       new_te->name = outliner_idcode_to_plural(GS(iter_id->name));
       return new_te;
     });
 
-    TreeElement *new_id_te = outliner_add_element(
-        &space_outliner_, &new_base_te->subtree, iter_id, new_base_te, TSE_SOME_ID, 0, false);
+    TreeElement *new_id_te = AbstractTreeDisplay::add_element(&space_outliner_,
+                                                              &new_base_te->subtree,
+                                                              iter_id,
+                                                              nullptr,
+                                                              new_base_te,
+                                                              TSE_SOME_ID,
+                                                              0,
+                                                              false);
 
     builder.build_hierarchy_for_ID(*iter_id, *new_id_te);
   }
@@ -219,8 +234,14 @@ void OverrideIDHierarchyBuilder::build_hierarchy_for_ID_recursive(const ID &pare
       return FOREACH_BREAK;
     }
 
-    TreeElement *new_te = outliner_add_element(
-        &space_outliner_, &te_to_expand.subtree, &id, &te_to_expand, TSE_SOME_ID, 0, false);
+    TreeElement *new_te = AbstractTreeDisplay::add_element(&space_outliner_,
+                                                           &te_to_expand.subtree,
+                                                           &id,
+                                                           nullptr,
+                                                           &te_to_expand,
+                                                           TSE_SOME_ID,
+                                                           0,
+                                                           false);
 
     build_data.sibling_ids.add(&id);
 
@@ -264,7 +285,8 @@ static void foreach_natural_hierarchy_child(const MainIDRelations &id_relations,
 
   /* Iterate over all IDs used by the parent ID (e.g. the child-collections of a collection). */
   for (MainIDRelationsEntryItem *to_id_entry = relations_of_id->to_ids; to_id_entry;
-       to_id_entry = to_id_entry->next) {
+       to_id_entry = to_id_entry->next)
+  {
     /* An ID pointed to (used) by the ID to recurse into. */
     ID &target_id = **to_id_entry->id_pointer.to;
 
@@ -293,7 +315,8 @@ static void foreach_natural_hierarchy_child(const MainIDRelations &id_relations,
   /* If the ID is an object, find and iterate over any child objects. */
   if (GS(parent_id.name) == ID_OB) {
     for (MainIDRelationsEntryItem *from_id_entry = relations_of_id->from_ids; from_id_entry;
-         from_id_entry = from_id_entry->next) {
+         from_id_entry = from_id_entry->next)
+    {
       ID &potential_child_id = *from_id_entry->id_pointer.from;
 
       if (GS(potential_child_id.name) != ID_OB) {

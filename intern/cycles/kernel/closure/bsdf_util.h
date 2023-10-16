@@ -1,52 +1,51 @@
-/* SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-FileCopyrightText: 2009-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.
+ * SPDX-FileCopyrightText: 2011-2022 Blender Foundation
  *
- * Adapted from Open Shading Language
- * Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
- * All Rights Reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
  *
- * Modifications Copyright 2011-2022 Blender Foundation. */
+ * Adapted code from Open Shading Language. */
 
 #pragma once
 
 CCL_NAMESPACE_BEGIN
 
-ccl_device float fresnel_dielectric(
-    float eta, const float3 N, const float3 I, ccl_private float3 *T, ccl_private bool *is_inside)
+/* Compute fresnel reflectance. Also return the dot product of the refracted ray and the normal as
+ * `cos_theta_t`, as it is used when computing the direction of the refracted ray. */
+ccl_device float fresnel_dielectric(float cos_theta_i, float eta, ccl_private float *r_cos_theta_t)
 {
-  float cos = dot(N, I), neta;
-  float3 Nn;
+  kernel_assert(!isnan_safe(cos_theta_i));
 
-  // check which side of the surface we are on
-  if (cos > 0) {
-    // we are on the outside of the surface, going in
-    neta = 1 / eta;
-    Nn = N;
-    *is_inside = false;
-  }
-  else {
-    // we are inside the surface
-    cos = -cos;
-    neta = eta;
-    Nn = -N;
-    *is_inside = true;
+  /* Using Snell's law, calculate the squared cosine of the angle between the surface normal and
+   * the transmitted ray. */
+  const float eta_cos_theta_t_sq = sqr(eta) - (1.0f - sqr(cos_theta_i));
+  if (eta_cos_theta_t_sq <= 0) {
+    /* Total internal reflection. */
+    return 1.0f;
   }
 
-  float arg = 1 - (neta * neta * (1 - (cos * cos)));
-  if (arg < 0) {
-    *T = make_float3(0.0f, 0.0f, 0.0f);
-    return 1;  // total internal reflection
+  cos_theta_i = fabsf(cos_theta_i);
+  /* Relative to the surface normal. */
+  const float cos_theta_t = -safe_sqrtf(eta_cos_theta_t_sq) / eta;
+
+  if (r_cos_theta_t) {
+    *r_cos_theta_t = cos_theta_t;
   }
-  else {
-    float dnp = max(sqrtf(arg), 1e-7f);
-    float nK = (neta * cos) - dnp;
-    *T = -(neta * I) + (nK * Nn);
-    // compute Fresnel terms
-    float cosTheta1 = cos;  // N.R
-    float cosTheta2 = -dot(Nn, *T);
-    float pPara = (cosTheta1 - eta * cosTheta2) / (cosTheta1 + eta * cosTheta2);
-    float pPerp = (eta * cosTheta1 - cosTheta2) / (eta * cosTheta1 + cosTheta2);
-    return 0.5f * (pPara * pPara + pPerp * pPerp);
-  }
+
+  /* Amplitudes of reflected waves. */
+  const float r_s = (cos_theta_i + eta * cos_theta_t) / (cos_theta_i - eta * cos_theta_t);
+  const float r_p = (cos_theta_t + eta * cos_theta_i) / (cos_theta_t - eta * cos_theta_i);
+
+  return 0.5f * (sqr(r_s) + sqr(r_p));
+}
+
+/* Refract the incident ray, given the cosine of the refraction angle and the relative refractive
+ * index of the incoming medium w.r.t. the outgoing medium. */
+ccl_device_inline float3 refract_angle(const float3 incident,
+                                       const float3 normal,
+                                       const float cos_theta_t,
+                                       const float inv_eta)
+{
+  return (inv_eta * dot(normal, incident) + cos_theta_t) * normal - inv_eta * incident;
 }
 
 ccl_device float fresnel_dielectric_cos(float cosi, float eta)
@@ -75,10 +74,15 @@ ccl_device Spectrum fresnel_conductor(float cosi, const Spectrum eta, const Spec
   return (Rparl2 + Rperp2) * 0.5f;
 }
 
-ccl_device float ior_from_F0(Spectrum f0)
+ccl_device float ior_from_F0(float f0)
 {
-  const float sqrt_f0 = sqrtf(clamp(average(f0), 0.0f, 0.99f));
+  const float sqrt_f0 = sqrtf(clamp(f0, 0.0f, 0.99f));
   return (1.0f + sqrt_f0) / (1.0f - sqrt_f0);
+}
+
+ccl_device float F0_from_ior(float ior)
+{
+  return sqr((ior - 1.0f) / (ior + 1.0f));
 }
 
 ccl_device float schlick_fresnel(float u)
@@ -96,7 +100,7 @@ ccl_device_forceinline Spectrum interpolate_fresnel_color(float3 L,
 {
   /* Compute the real Fresnel term and remap it from real_F0..1 to F0..1.
    * The reason why we use this remapping instead of directly doing the
-   * Schlick approximation lerp(F0, 1.0, (1.0-cosLH)^5) is that for cases
+   * Schlick approximation mix(F0, 1.0, (1.0-cosLH)^5) is that for cases
    * with similar IORs (e.g. ice in water), the relative IOR can be close
    * enough to 1.0 that the Schlick approximation becomes inaccurate. */
   float real_F = fresnel_dielectric_cos(dot(L, H), ior);
@@ -187,10 +191,39 @@ ccl_device float3 ensure_valid_specular_reflection(float3 Ng, float3 I, float3 N
  * normal and the shading normal is the same. */
 ccl_device float3 maybe_ensure_valid_specular_reflection(ccl_private ShaderData *sd, float3 N)
 {
+  if ((sd->flag & SD_USE_BUMP_MAP_CORRECTION) == 0) {
+    return N;
+  }
   if ((sd->type & PRIMITIVE_CURVE) || isequal(sd->Ng, N)) {
     return N;
   }
   return ensure_valid_specular_reflection(sd->Ng, sd->wi, N);
+}
+
+/* Principled Hair albedo and absorption coefficients. */
+ccl_device_inline float bsdf_principled_hair_albedo_roughness_scale(
+    const float azimuthal_roughness)
+{
+  const float x = azimuthal_roughness;
+  return (((((0.245f * x) + 5.574f) * x - 10.73f) * x + 2.532f) * x - 0.215f) * x + 5.969f;
+}
+
+ccl_device_inline Spectrum
+bsdf_principled_hair_sigma_from_reflectance(const Spectrum color, const float azimuthal_roughness)
+{
+  const Spectrum sigma = log(color) /
+                         bsdf_principled_hair_albedo_roughness_scale(azimuthal_roughness);
+  return sigma * sigma;
+}
+
+ccl_device_inline Spectrum bsdf_principled_hair_sigma_from_concentration(const float eumelanin,
+                                                                         const float pheomelanin)
+{
+  const float3 eumelanin_color = make_float3(0.506f, 0.841f, 1.653f);
+  const float3 pheomelanin_color = make_float3(0.343f, 0.733f, 1.924f);
+
+  return eumelanin * rgb_to_spectrum(eumelanin_color) +
+         pheomelanin * rgb_to_spectrum(pheomelanin_color);
 }
 
 CCL_NAMESPACE_END

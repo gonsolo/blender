@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #pragma once
 
@@ -144,7 +145,8 @@ ccl_device float3 sky_radiance_nishita(KernelGlobals kg,
     /* If the ray is inside the sun disc, render it, otherwise render the sky.
      * Alternatively, ignore the sun if we're evaluating the background texture. */
     if (sun_disc && sun_dir_angle < half_angular &&
-        !((path_flag & PATH_RAY_IMPORTANCE_BAKE) && kernel_data.background.use_sun_guiding)) {
+        !((path_flag & PATH_RAY_IMPORTANCE_BAKE) && kernel_data.background.use_sun_guiding))
+    {
       /* get 2 pixels data */
       float y;
 

@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 #pragma BLENDER_REQUIRE(gpu_shader_common_color_utils.glsl)
 
 /* ** Combine/Separate XYZ ** */
@@ -34,6 +38,7 @@ void node_composite_separate_rgba(vec4 color, out float r, out float g, out floa
 void node_composite_combine_hsva(float h, float s, float v, float a, out vec4 color)
 {
   hsv_to_rgb(vec4(h, s, v, a), color);
+  color.rgb = max(color.rgb, vec3(0.0));
 }
 
 void node_composite_separate_hsva(vec4 color, out float h, out float s, out float v, out float a)
@@ -51,6 +56,7 @@ void node_composite_separate_hsva(vec4 color, out float h, out float s, out floa
 void node_composite_combine_hsla(float h, float s, float l, float a, out vec4 color)
 {
   hsl_to_rgb(vec4(h, s, l, a), color);
+  color.rgb = max(color.rgb, vec3(0.0));
 }
 
 void node_composite_separate_hsla(vec4 color, out float h, out float s, out float l, out float a)

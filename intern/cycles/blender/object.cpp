@@ -1,6 +1,8 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
+#include "blender/light_linking.h"
 #include "blender/object_cull.h"
 #include "blender/sync.h"
 #include "blender/util.h"
@@ -63,7 +65,8 @@ bool BlenderSync::object_is_geometry(BObjectInfo &b_ob_info)
   BL::Object::type_enum type = b_ob_info.iter_object.type();
 
   if (type == BL::Object::type_VOLUME || type == BL::Object::type_CURVES ||
-      type == BL::Object::type_POINTCLOUD) {
+      type == BL::Object::type_POINTCLOUD)
+  {
     /* Will be exported attached to mesh. */
     return true;
   }
@@ -257,9 +260,10 @@ Object *BlenderSync::sync_object(BL::Depsgraph &b_depsgraph,
       }
 
       /* mesh deformation */
-      if (object->get_geometry())
+      if (object->get_geometry()) {
         sync_geometry_motion(
             b_depsgraph, b_ob_info, object, motion_time, use_particle_hair, object_geom_task_pool);
+      }
     }
 
     return object;
@@ -325,7 +329,8 @@ Object *BlenderSync::sync_object(BL::Depsgraph &b_depsgraph,
    * transform comparison should not be needed, but duplis don't work perfect
    * in the depsgraph and may not signal changes, so this is a workaround */
   if (object->is_modified() || object_updated ||
-      (object->get_geometry() && object->get_geometry()->is_modified())) {
+      (object->get_geometry() && object->get_geometry()->is_modified()))
+  {
     object->name = b_ob.name().c_str();
     object->set_pass_id(b_ob.pass_index());
     const BL::Array<float, 4> object_color = b_ob.color();
@@ -346,8 +351,17 @@ Object *BlenderSync::sync_object(BL::Depsgraph &b_depsgraph,
       object->set_random_id(hash_uint2(hash_string(object->name.c_str()), 0));
     }
 
-    /* lightgroup */
-    object->set_lightgroup(ustring(b_ob.lightgroup()));
+    /* Light group and linking. */
+    string lightgroup = b_ob.lightgroup();
+    if (lightgroup.empty()) {
+      lightgroup = b_parent.lightgroup();
+    }
+    object->set_lightgroup(ustring(lightgroup));
+
+    object->set_light_set_membership(BlenderLightLink::get_light_set_membership(b_parent, b_ob));
+    object->set_receiver_light_set(BlenderLightLink::get_receiver_light_set(b_parent, b_ob));
+    object->set_shadow_set_membership(BlenderLightLink::get_shadow_set_membership(b_parent, b_ob));
+    object->set_blocker_shadow_set(BlenderLightLink::get_blocker_shadow_set(b_parent, b_ob));
 
     object->tag_update(scene);
   }
@@ -408,7 +422,8 @@ bool BlenderSync::sync_object_attributes(BL::DepsgraphObjectInstance &b_instance
     BlenderAttributeType type = blender_attribute_name_split_type(name, &real_name);
 
     if (type == BL::ShaderNodeAttribute::attribute_type_OBJECT ||
-        type == BL::ShaderNodeAttribute::attribute_type_INSTANCER) {
+        type == BL::ShaderNodeAttribute::attribute_type_INSTANCER)
+    {
       bool use_instancer = (type == BL::ShaderNodeAttribute::attribute_type_INSTANCER);
       float4 value = lookup_instance_property(b_instance, real_name, use_instancer);
 
@@ -556,7 +571,8 @@ void BlenderSync::sync_objects(BL::Depsgraph &b_depsgraph,
 
   for (b_depsgraph.object_instances.begin(b_instance_iter);
        b_instance_iter != b_depsgraph.object_instances.end() && !cancel;
-       ++b_instance_iter) {
+       ++b_instance_iter)
+  {
     BL::DepsgraphObjectInstance b_instance = *b_instance_iter;
     BL::Object b_ob = b_instance.object();
 
@@ -654,20 +670,23 @@ void BlenderSync::sync_motion(BL::RenderSettings &b_render,
                               int height,
                               void **python_thread_state)
 {
-  if (scene->need_motion() == Scene::MOTION_NONE)
+  if (scene->need_motion() == Scene::MOTION_NONE) {
     return;
+  }
 
   /* get camera object here to deal with camera switch */
   BL::Object b_cam = b_scene.camera();
-  if (b_override)
+  if (b_override) {
     b_cam = b_override;
+  }
 
   int frame_center = b_scene.frame_current();
   float subframe_center = b_scene.frame_subframe();
   float frame_center_delta = 0.0f;
 
   if (scene->need_motion() != Scene::MOTION_PASS &&
-      scene->camera->get_motion_position() != MOTION_POSITION_CENTER) {
+      scene->camera->get_motion_position() != MOTION_POSITION_CENTER)
+  {
     float shuttertime = scene->camera->get_shuttertime();
     if (scene->camera->get_motion_position() == MOTION_POSITION_END) {
       frame_center_delta = -shuttertime * 0.5f;

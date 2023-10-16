@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2017 Blender Foundation */
+/* SPDX-FileCopyrightText: 2017 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup depsgraph
@@ -16,20 +17,21 @@
 #include "BKE_geometry_set.hh"
 #include "BKE_idprop.h"
 #include "BKE_layer.h"
-#include "BKE_node.h"
-#include "BKE_object.h"
+#include "BKE_node.hh"
+#include "BKE_object.hh"
 
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_vector.h"
 #include "BLI_utildefines.h"
 
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_query.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_query.hh"
 
-#include "intern/depsgraph.h"
-#include "intern/node/deg_node_id.h"
+#include "intern/depsgraph.hh"
+#include "intern/node/deg_node_id.hh"
 
 #ifndef NDEBUG
 #  include "intern/eval/deg_eval_copy_on_write.h"
@@ -271,7 +273,8 @@ bool deg_iterator_objects_step(DEGObjectIterData *data)
 
     if (ob_visibility & OB_VISIBLE_INSTANCES) {
       if ((data->flag & DEG_ITER_OBJECT_FLAG_DUPLI) &&
-          ((object->transflag & OB_DUPLI) || object->runtime.geometry_set_eval != nullptr)) {
+          ((object->transflag & OB_DUPLI) || object->runtime.geometry_set_eval != nullptr))
+      {
         ListBase *duplis = object_duplilist(data->graph, data->scene, object);
         deg_iterator_duplis_init(data, object, duplis);
       }

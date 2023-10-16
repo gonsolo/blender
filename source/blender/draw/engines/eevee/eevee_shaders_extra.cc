@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2022 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup EEVEE
@@ -14,6 +15,8 @@
 #include "gpu_shader_create_info.hh"
 
 #include "eevee_private.h"
+
+#include <sstream>
 
 using blender::gpu::shader::StageInterfaceInfo;
 
@@ -52,6 +55,8 @@ void eevee_shader_material_create_info_amend(GPUMaterial *gpumat,
 
   info.auto_resource_location(true);
 
+  info.define("UNI_ATTR(a)", "a");
+
   if (GPU_material_flag_get(gpumat, GPU_MATFLAG_SUBSURFACE)) {
     info.define("USE_SSS");
   }
@@ -59,7 +64,8 @@ void eevee_shader_material_create_info_amend(GPUMaterial *gpumat,
     info.define("USE_SHADER_TO_RGBA");
   }
   if (GPU_material_flag_get(gpumat, GPU_MATFLAG_BARYCENTRIC) && !is_volume && !is_hair &&
-      !is_point_cloud && !is_background) {
+      !is_point_cloud && !is_background)
+  {
     info.define("USE_BARYCENTRICS");
     info.builtins(BuiltinBits::BARYCENTRIC_COORD);
   }

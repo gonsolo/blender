@@ -1,10 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup asset_system
  */
 
 #include <fstream>
+#include <iostream>
 #include <set>
 
 #include "AS_asset_catalog.hh"
@@ -18,6 +21,8 @@
 #ifdef WIN32
 #  include "BLI_winstuff.h"
 #endif
+
+#include "asset_library_service.hh"
 
 #include "CLG_log.h"
 
@@ -233,6 +238,7 @@ void AssetCatalogService::prune_catalogs_by_path(const AssetCatalogPath &path)
   }
 
   this->rebuild_tree();
+  AssetLibraryService::get()->rebuild_all_library();
 }
 
 void AssetCatalogService::prune_catalogs_by_id(const CatalogID catalog_id)
@@ -267,6 +273,7 @@ void AssetCatalogService::update_catalog_path(const CatalogID catalog_id,
   }
 
   this->rebuild_tree();
+  AssetLibraryService::get()->rebuild_all_library();
 }
 
 AssetCatalog *AssetCatalogService::create_catalog(const AssetCatalogPath &catalog_path)
@@ -292,6 +299,8 @@ AssetCatalog *AssetCatalogService::create_catalog(const AssetCatalogPath &catalo
 
   BLI_assert_msg(catalog_tree_, "An Asset Catalog tree should always exist.");
   catalog_tree_->insert_item(*catalog_ptr);
+
+  AssetLibraryService::get()->rebuild_all_library();
 
   return catalog_ptr;
 }
@@ -542,7 +551,7 @@ CatalogFilePath AssetCatalogService::find_suitable_cdf_path_for_writing(
 
   /* Determine the default CDF path in the same directory of the blend file. */
   char blend_dir_path[PATH_MAX];
-  BLI_split_dir_part(blend_file_path.c_str(), blend_dir_path, sizeof(blend_dir_path));
+  BLI_path_split_dir_part(blend_file_path.c_str(), blend_dir_path, sizeof(blend_dir_path));
   const CatalogFilePath cdf_path_next_to_blend = asset_definition_default_file_path_from_dir(
       blend_dir_path);
   return cdf_path_next_to_blend;
@@ -641,6 +650,7 @@ void AssetCatalogService::undo()
   redo_snapshots_.append(std::move(catalog_collection_));
   catalog_collection_ = undo_snapshots_.pop_last();
   rebuild_tree();
+  AssetLibraryService::get()->rebuild_all_library();
 }
 
 void AssetCatalogService::redo()
@@ -651,6 +661,7 @@ void AssetCatalogService::redo()
   undo_snapshots_.append(std::move(catalog_collection_));
   catalog_collection_ = redo_snapshots_.pop_last();
   rebuild_tree();
+  AssetLibraryService::get()->rebuild_all_library();
 }
 
 void AssetCatalogService::undo_push()
@@ -840,12 +851,12 @@ bool AssetCatalogDefinitionFile::write_to_disk(const CatalogFilePath &dest_file_
     return false;
   }
   if (BLI_exists(dest_file_path.c_str())) {
-    if (BLI_rename(dest_file_path.c_str(), backup_path.c_str())) {
+    if (BLI_rename_overwrite(dest_file_path.c_str(), backup_path.c_str())) {
       /* TODO: communicate what went wrong. */
       return false;
     }
   }
-  if (BLI_rename(writable_path.c_str(), dest_file_path.c_str())) {
+  if (BLI_rename_overwrite(writable_path.c_str(), dest_file_path.c_str())) {
     /* TODO: communicate what went wrong. */
     return false;
   }
@@ -856,7 +867,7 @@ bool AssetCatalogDefinitionFile::write_to_disk(const CatalogFilePath &dest_file_
 bool AssetCatalogDefinitionFile::write_to_disk_unsafe(const CatalogFilePath &dest_file_path) const
 {
   char directory[PATH_MAX];
-  BLI_split_dir_part(dest_file_path.c_str(), directory, sizeof(directory));
+  BLI_path_split_dir_part(dest_file_path.c_str(), directory, sizeof(directory));
   if (!ensure_directory_exists(directory)) {
     /* TODO(Sybren): pass errors to the UI somehow. */
     return false;

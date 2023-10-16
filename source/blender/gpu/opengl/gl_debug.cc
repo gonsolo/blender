@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -68,13 +69,14 @@ static void APIENTRY debug_callback(GLenum /*source*/,
    *       In this case invoking `GPU_type_matches` would fail and
    *       therefore the message is checked before the platform matching. */
   if (TRIM_NVIDIA_BUFFER_INFO && STRPREFIX(message, "Buffer detailed info") &&
-      GPU_type_matches(GPU_DEVICE_NVIDIA, GPU_OS_ANY, GPU_DRIVER_OFFICIAL)) {
-    /** Suppress buffer infos flooding the output. */
+      GPU_type_matches(GPU_DEVICE_NVIDIA, GPU_OS_ANY, GPU_DRIVER_OFFICIAL))
+  {
+    /* Suppress buffer infos flooding the output. */
     return;
   }
 
   if (TRIM_SHADER_STATS_INFO && STRPREFIX(message, "Shader Stats")) {
-    /** Suppress buffer infos flooding the output. */
+    /* Suppress buffer infos flooding the output. */
     return;
   }
 
@@ -92,7 +94,7 @@ static void APIENTRY debug_callback(GLenum /*source*/,
     CLG_Severity clog_severity;
 
     if (GPU_debug_group_match(GPU_DEBUG_SHADER_COMPILATION_GROUP)) {
-      /** Do not duplicate shader compilation error/warnings. */
+      /* Do not duplicate shader compilation error/warnings. */
       return;
     }
 
@@ -327,7 +329,8 @@ static const char *to_str_suffix(GLenum type)
 void object_label(GLenum type, GLuint object, const char *name)
 {
   if ((G.debug & G_DEBUG_GPU) &&
-      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug"))) {
+      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug")))
+  {
     char label[64];
     SNPRINTF(label, "%s%s%s", to_str_prefix(type), name, to_str_suffix(type));
     /* Small convenience for caller. */
@@ -366,7 +369,8 @@ namespace blender::gpu {
 void GLContext::debug_group_begin(const char *name, int index)
 {
   if ((G.debug & G_DEBUG_GPU) &&
-      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug"))) {
+      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug")))
+  {
     /* Add 10 to avoid collision with other indices from other possible callback layers. */
     index += 10;
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, index, -1, name);
@@ -376,7 +380,8 @@ void GLContext::debug_group_begin(const char *name, int index)
 void GLContext::debug_group_end()
 {
   if ((G.debug & G_DEBUG_GPU) &&
-      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug"))) {
+      (epoxy_gl_version() >= 43 || epoxy_has_gl_extension("GL_KHR_debug")))
+  {
     glPopDebugGroup();
   }
 }

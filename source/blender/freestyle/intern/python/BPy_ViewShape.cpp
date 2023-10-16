@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -73,7 +75,8 @@ static int ViewShape_init(BPy_ViewShape *self, PyObject *args, PyObject *kwds)
     }
   }
   else if ((void)PyErr_Clear(),
-           PyArg_ParseTupleAndKeywords(args, kwds, "O!", (char **)kwlist_2, &SShape_Type, &obj)) {
+           PyArg_ParseTupleAndKeywords(args, kwds, "O!", (char **)kwlist_2, &SShape_Type, &obj))
+  {
     BPy_SShape *py_ss = (BPy_SShape *)obj;
     self->vs = new ViewShape(py_ss->ss);
     self->py_ss = (!py_ss->borrowed) ? py_ss : nullptr;
@@ -338,7 +341,7 @@ static PyGetSetDef BPy_ViewShape_getseters[] = {
 /*-----------------------BPy_ViewShape type definition ------------------------------*/
 
 PyTypeObject ViewShape_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ViewShape",
     /*tp_basicsize*/ sizeof(BPy_ViewShape),
     /*tp_itemsize*/ 0,

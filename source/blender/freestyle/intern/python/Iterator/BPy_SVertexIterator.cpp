@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -25,7 +27,7 @@ PyDoc_STRVAR(
     "Class hierarchy: :class:`Iterator` > :class:`SVertexIterator`\n"
     "\n"
     "Class representing an iterator over :class:`SVertex` of a\n"
-    ":class:`ViewEdge`.  An instance of an SVertexIterator can be obtained\n"
+    ":class:`ViewEdge`. An instance of an SVertexIterator can be obtained\n"
     "from a ViewEdge by calling verticesBegin() or verticesEnd().\n"
     "\n"
     ".. method:: __init__()\n"
@@ -56,7 +58,8 @@ static int SVertexIterator_init(BPy_SVertexIterator *self, PyObject *args, PyObj
   float t;
 
   if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "|O!", (char **)kwlist_1, &SVertexIterator_Type, &obj1)) {
+          args, kwds, "|O!", (char **)kwlist_1, &SVertexIterator_Type, &obj1))
+  {
     if (!obj1) {
       self->sv_it = new ViewEdgeInternal::SVertexIterator();
     }
@@ -77,7 +80,8 @@ static int SVertexIterator_init(BPy_SVertexIterator *self, PyObject *args, PyObj
                                        &obj3,
                                        &FEdge_Type,
                                        &obj4,
-                                       &t)) {
+                                       &t))
+  {
     self->sv_it = new ViewEdgeInternal::SVertexIterator(((BPy_SVertex *)obj1)->sv,
                                                         ((BPy_SVertex *)obj2)->sv,
                                                         ((BPy_FEdge *)obj3)->fe,
@@ -146,7 +150,7 @@ static PyGetSetDef BPy_SVertexIterator_getseters[] = {
 /*-----------------------BPy_SVertexIterator type definition ------------------------------*/
 
 PyTypeObject SVertexIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "SVertexIterator",
     /*tp_basicsize*/ sizeof(BPy_SVertexIterator),
     /*tp_itemsize*/ 0,

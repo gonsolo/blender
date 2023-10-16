@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bke
@@ -30,8 +31,9 @@ typedef enum eAttrDomain {
   ATTR_DOMAIN_CORNER = 3,   /* Mesh Corner */
   ATTR_DOMAIN_CURVE = 4,    /* A single curve in a larger curve data-block */
   ATTR_DOMAIN_INSTANCE = 5, /* Instance */
+  ATTR_DOMAIN_LAYER = 6,    /* A layer in a grease pencil data-block */
 } eAttrDomain;
-#define ATTR_DOMAIN_NUM 6
+#define ATTR_DOMAIN_NUM 7
 
 typedef enum eAttrDomainMask {
   ATTR_DOMAIN_MASK_POINT = (1 << 0),
@@ -39,7 +41,8 @@ typedef enum eAttrDomainMask {
   ATTR_DOMAIN_MASK_FACE = (1 << 2),
   ATTR_DOMAIN_MASK_CORNER = (1 << 3),
   ATTR_DOMAIN_MASK_CURVE = (1 << 4),
-  ATTR_DOMAIN_MASK_ALL = (1 << 5) - 1
+  ATTR_DOMAIN_MASK_GREASE_PENCIL_LAYER = (1 << 6),
+  ATTR_DOMAIN_MASK_ALL = (1 << 7) - 1
 } eAttrDomainMask;
 ENUM_OPERATORS(eAttrDomainMask, ATTR_DOMAIN_MASK_ALL);
 
@@ -114,7 +117,7 @@ const char *BKE_id_attributes_default_color_name(const struct ID *id);
 void BKE_id_attributes_active_color_set(struct ID *id, const char *name);
 void BKE_id_attributes_default_color_set(struct ID *id, const char *name);
 
-struct CustomDataLayer *BKE_id_attributes_color_find(const struct ID *id, const char *name);
+const struct CustomDataLayer *BKE_id_attributes_color_find(const struct ID *id, const char *name);
 
 bool BKE_id_attribute_calc_unique_name(struct ID *id, const char *name, char *outname);
 

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup GHOST
@@ -35,7 +36,7 @@ class GHOST_CallbackEventConsumer : public GHOST_IEventConsumer {
    * \param event: The event that can be handled or ignored.
    * \return Indication as to whether the event was handled.
    */
-  bool processEvent(GHOST_IEvent *event);
+  bool processEvent(const GHOST_IEvent *event);
 
  protected:
   /** The call-back routine invoked. */

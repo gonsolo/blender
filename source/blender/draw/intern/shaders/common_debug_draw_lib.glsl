@@ -1,10 +1,15 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Debugging drawing library
  *
  * Quick way to draw debug geometry. All input should be in world space and
  * will be rendered in the default view. No additional setup required.
- **/
+ */
+
+#ifdef DRW_DEBUG_DRAW
 
 /** Global switch option. */
 bool drw_debug_draw_enable = true;
@@ -34,9 +39,9 @@ uint drw_debug_color_pack(vec4 v_color)
 
 void drw_debug_line(inout uint vertid, vec3 v1, vec3 v2, uint v_color)
 {
-  drw_debug_verts_buf[vertid++] = DRWDebugVert(
+  drw_debug_verts_buf[vertid++] = debug_vert_make(
       floatBitsToUint(v1.x), floatBitsToUint(v1.y), floatBitsToUint(v1.z), v_color);
-  drw_debug_verts_buf[vertid++] = DRWDebugVert(
+  drw_debug_verts_buf[vertid++] = debug_vert_make(
       floatBitsToUint(v2.x), floatBitsToUint(v2.y), floatBitsToUint(v2.z), v_color);
 }
 
@@ -211,5 +216,7 @@ void drw_debug_matrix_as_bbox(mat4 mat)
 {
   drw_debug_matrix_as_bbox(mat, drw_debug_default_color);
 }
+
+#endif
 
 /** \} */

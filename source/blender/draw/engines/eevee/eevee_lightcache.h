@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2018 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2018 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup eevee
@@ -17,6 +18,7 @@ struct LightCache;
 struct Scene;
 struct SceneEEVEE;
 struct ViewLayer;
+struct wmJobWorkerStatus;
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +44,7 @@ void *EEVEE_lightbake_job_data_alloc(struct Main *bmain,
                                      int frame);
 void EEVEE_lightbake_job_data_free(void *custom_data);
 void EEVEE_lightbake_update(void *custom_data);
-void EEVEE_lightbake_job(void *custom_data, bool *stop, bool *do_update, float *progress);
+void EEVEE_lightbake_job(void *custom_data, wmJobWorkerStatus *worker_status);
 
 /**
  * This is to update the world irradiance and reflection contribution from

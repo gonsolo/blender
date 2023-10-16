@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -8,6 +9,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_math_matrix.h"
+#include "BLI_string.h"
 #include "BLI_string_utils.h"
 
 #include "GPU_capabilities.h"
@@ -52,7 +54,7 @@ using namespace blender::gpu;
 
 Shader::Shader(const char *sh_name)
 {
-  BLI_strncpy(this->name, sh_name, sizeof(this->name));
+  STRNCPY(this->name, sh_name);
 }
 
 Shader::~Shader()
@@ -273,8 +275,8 @@ GPUShader *GPU_shader_create_from_info_name(const char *info_name)
   const GPUShaderCreateInfo *_info = gpu_shader_create_info_get(info_name);
   const ShaderCreateInfo &info = *reinterpret_cast<const ShaderCreateInfo *>(_info);
   if (!info.do_static_compilation_) {
-    printf("Warning: Trying to compile \"%s\" which was not marked for static compilation.\n",
-           info.name_.c_str());
+    std::cerr << "Warning: Trying to compile \"" << info.name_.c_str()
+              << "\" which was not marked for static compilation.\n";
   }
   return GPU_shader_create_from_info(_info);
 }
@@ -290,7 +292,7 @@ GPUShader *GPU_shader_create_from_info(const GPUShaderCreateInfo *_info)
 
   const std::string error = info.check_error();
   if (!error.empty()) {
-    printf("%s\n", error.c_str());
+    std::cerr << error.c_str() << "\n";
     BLI_assert(false);
   }
 

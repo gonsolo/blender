@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edtransform
@@ -8,22 +10,23 @@
  * Used for 3D View
  */
 
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_vector.h"
 
 #include "BKE_context.h"
 #include "BKE_global.h"
 #include "BKE_scene.h"
 
-#include "ED_gizmo_library.h"
-#include "ED_gizmo_utils.h"
-#include "ED_screen.h"
-#include "WM_api.h"
+#include "ED_gizmo_library.hh"
+#include "ED_gizmo_utils.hh"
+#include "ED_screen.hh"
+#include "WM_api.hh"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
 /* local module include */
-#include "transform.h"
-#include "transform_gizmo.h"
+#include "transform.hh"
+#include "transform_gizmo.hh"
 
 /* -------------------------------------------------------------------- */
 /** \name Scale Cage Gizmo
@@ -111,8 +114,9 @@ static void WIDGETGROUP_xform_cage_refresh(const bContext *C, wmGizmoGroup *gzgr
   TransformCalcParams calc_params{};
   calc_params.use_local_axis = true;
   calc_params.orientation_index = orient_index + 1;
-  if ((ED_transform_calc_gizmo_stats(C, &calc_params, &tbounds) == 0) ||
-      equals_v3v3(rv3d->tw_axis_min, rv3d->tw_axis_max)) {
+  if ((ED_transform_calc_gizmo_stats(C, &calc_params, &tbounds, rv3d) == 0) ||
+      equals_v3v3(rv3d->tw_axis_min, rv3d->tw_axis_max))
+  {
     WM_gizmo_set_flag(gz, WM_GIZMO_HIDDEN, true);
   }
   else {

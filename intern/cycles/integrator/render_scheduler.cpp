@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "integrator/render_scheduler.h"
 
@@ -465,7 +466,8 @@ void RenderScheduler::report_work_begin(const RenderWork &render_work)
    * because it might be wrongly 0. Check for whether path tracing is actually happening as it is
    * expected to happen in the first work. */
   if (render_work.resolution_divider == pixel_size_ && render_work.path_trace.num_samples != 0 &&
-      render_work.path_trace.start_sample == get_start_sample()) {
+      render_work.path_trace.start_sample == get_start_sample())
+  {
     state_.start_render_time = time_dt();
   }
 }

@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup spoutliner
@@ -21,20 +23,20 @@
 #include "BKE_main.h"
 #include "BKE_report.h"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_build.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_build.hh"
 
-#include "ED_object.h"
-#include "ED_outliner.h"
-#include "ED_screen.h"
+#include "ED_object.hh"
+#include "ED_outliner.hh"
+#include "ED_screen.hh"
 
-#include "WM_api.h"
-#include "WM_message.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_message.hh"
+#include "WM_types.hh"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
-#include "RNA_enum_types.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
+#include "RNA_enum_types.hh"
 
 #include "outliner_intern.hh" /* own include */
 
@@ -52,10 +54,9 @@ bool outliner_is_collection_tree_element(const TreeElement *te)
     return false;
   }
 
-  if (ELEM(tselem->type,
-           TSE_LAYER_COLLECTION,
-           TSE_SCENE_COLLECTION_BASE,
-           TSE_VIEW_COLLECTION_BASE)) {
+  if (ELEM(
+          tselem->type, TSE_LAYER_COLLECTION, TSE_SCENE_COLLECTION_BASE, TSE_VIEW_COLLECTION_BASE))
+  {
     return true;
   }
   if ((tselem->type == TSE_SOME_ID) && te->idcode == ID_GR) {
@@ -90,7 +91,7 @@ Collection *outliner_collection_from_tree_element(const TreeElement *te)
 
 TreeTraversalAction outliner_collect_selected_collections(TreeElement *te, void *customdata)
 {
-  struct IDsSelectedData *data = static_cast<IDsSelectedData *>(customdata);
+  IDsSelectedData *data = static_cast<IDsSelectedData *>(customdata);
   TreeStoreElem *tselem = TREESTORE(te);
 
   if (outliner_is_collection_tree_element(te)) {
@@ -107,15 +108,15 @@ TreeTraversalAction outliner_collect_selected_collections(TreeElement *te, void 
 
 TreeTraversalAction outliner_collect_selected_objects(TreeElement *te, void *customdata)
 {
-  struct IDsSelectedData *data = static_cast<IDsSelectedData *>(customdata);
+  IDsSelectedData *data = static_cast<IDsSelectedData *>(customdata);
   TreeStoreElem *tselem = TREESTORE(te);
 
   if (outliner_is_collection_tree_element(te)) {
     return TRAVERSE_CONTINUE;
   }
 
-  if ((tselem->type != TSE_SOME_ID) || (tselem->id == nullptr) ||
-      (GS(tselem->id->name) != ID_OB)) {
+  if ((tselem->type != TSE_SOME_ID) || (tselem->id == nullptr) || (GS(tselem->id->name) != ID_OB))
+  {
     return TRAVERSE_SKIP_CHILDS;
   }
 
@@ -131,7 +132,7 @@ void ED_outliner_selected_objects_get(const bContext *C, ListBase *objects)
   using namespace blender::ed::outliner;
 
   SpaceOutliner *space_outliner = CTX_wm_space_outliner(C);
-  struct IDsSelectedData data = {{nullptr}};
+  IDsSelectedData data = {{nullptr}};
   outliner_tree_traverse(space_outliner,
                          &space_outliner->tree,
                          0,
@@ -196,7 +197,7 @@ struct CollectionNewData {
 
 static TreeTraversalAction collection_find_selected_to_add(TreeElement *te, void *customdata)
 {
-  struct CollectionNewData *data = static_cast<CollectionNewData *>(customdata);
+  CollectionNewData *data = static_cast<CollectionNewData *>(customdata);
   Collection *collection = outliner_collection_from_tree_element(te);
 
   if (!collection) {
@@ -239,7 +240,8 @@ static int collection_new_exec(bContext *C, wmOperator *op)
   }
 
   if (data.collection == nullptr || ID_IS_LINKED(data.collection) ||
-      ID_IS_OVERRIDE_LIBRARY(data.collection)) {
+      ID_IS_OVERRIDE_LIBRARY(data.collection))
+  {
     data.collection = scene->master_collection;
   }
 
@@ -410,7 +412,7 @@ static int collection_hierarchy_delete_exec(bContext *C, wmOperator *op)
   Main *bmain = CTX_data_main(C);
   Scene *scene = CTX_data_scene(C);
   ViewLayer *view_layer = CTX_data_view_layer(C);
-  struct wmMsgBus *mbus = CTX_wm_message_bus(C);
+  wmMsgBus *mbus = CTX_wm_message_bus(C);
   BKE_view_layer_synced_ensure(scene, view_layer);
   const Base *basact_prev = BKE_view_layer_active_base_get(view_layer);
 
@@ -699,7 +701,8 @@ static int collection_link_exec(bContext *C, wmOperator *op)
 
   if ((ID_IS_LINKED(active_collection) || ID_IS_OVERRIDE_LIBRARY(active_collection)) ||
       ((active_collection->flag & COLLECTION_IS_MASTER) &&
-       (ID_IS_LINKED(scene) || ID_IS_OVERRIDE_LIBRARY(scene)))) {
+       (ID_IS_LINKED(scene) || ID_IS_OVERRIDE_LIBRARY(scene))))
+  {
     BKE_report(
         op->reports, RPT_ERROR, "Cannot add a collection to a linked/override collection/scene");
     return OPERATOR_CANCELLED;
@@ -1095,9 +1098,8 @@ static int collection_isolate_exec(bContext *C, wmOperator *op)
       BKE_layer_collection_isolate_global(scene, view_layer, layer_collection, true);
     }
     else {
-      PointerRNA ptr;
       PropertyRNA *prop = RNA_struct_type_find_property(&RNA_LayerCollection, "hide_viewport");
-      RNA_pointer_create(&scene->id, &RNA_LayerCollection, layer_collection, &ptr);
+      PointerRNA ptr = RNA_pointer_create(&scene->id, &RNA_LayerCollection, layer_collection);
 
       /* We need to flip the value because the isolate flag routine was designed to work from the
        * outliner as a callback. That means the collection visibility was set before the callback

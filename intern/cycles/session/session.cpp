@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include <limits.h>
 #include <string.h>
@@ -272,10 +273,12 @@ void Session::thread_render()
   profiler.stop();
 
   /* progress update */
-  if (progress.get_cancel())
+  if (progress.get_cancel()) {
     progress.set_status(progress.get_cancel_message());
-  else
+  }
+  else {
     progress.set_update();
+  }
 }
 
 bool Session::is_session_thread_rendering()
@@ -490,7 +493,8 @@ int2 Session::get_effective_tile_size() const
   const int64_t actual_tile_area = static_cast<int64_t>(tile_size) * tile_size;
 
   if (actual_tile_area >= image_area && image_width <= TileManager::MAX_TILE_SIZE &&
-      image_height <= TileManager::MAX_TILE_SIZE) {
+      image_height <= TileManager::MAX_TILE_SIZE)
+  {
     return make_int2(image_width, image_height);
   }
 

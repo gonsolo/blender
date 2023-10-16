@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -130,8 +132,8 @@ static PyObject *Interface0D_get_fedge(BPy_Interface0D *self, PyObject *args, Py
   static const char *kwlist[] = {"inter", nullptr};
   PyObject *py_if0D;
 
-  if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "O!", (char **)kwlist, &Interface0D_Type, &py_if0D)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", (char **)kwlist, &Interface0D_Type, &py_if0D))
+  {
     return nullptr;
   }
   FEdge *fe = self->if0D->getFEdge(*(((BPy_Interface0D *)py_if0D)->if0D));
@@ -297,7 +299,7 @@ static PyGetSetDef BPy_Interface0D_getseters[] = {
 /*-----------------------BPy_Interface0D type definition ------------------------------*/
 
 PyTypeObject Interface0D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "Interface0D",
     /*tp_basicsize*/ sizeof(BPy_Interface0D),
     /*tp_itemsize*/ 0,

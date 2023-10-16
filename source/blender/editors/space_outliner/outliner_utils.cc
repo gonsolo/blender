@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2017 Blender Foundation */
+/* SPDX-FileCopyrightText: 2017 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup spoutliner
@@ -17,14 +18,14 @@
 #include "BKE_armature.h"
 #include "BKE_context.h"
 #include "BKE_layer.h"
-#include "BKE_object.h"
+#include "BKE_object.hh"
 #include "BKE_outliner_treehash.hh"
 
-#include "ED_outliner.h"
-#include "ED_screen.h"
+#include "ED_outliner.hh"
+#include "ED_screen.hh"
 
-#include "UI_interface.h"
-#include "UI_view2d.h"
+#include "UI_interface.hh"
+#include "UI_view2d.hh"
 
 #include "outliner_intern.hh"
 #include "tree/tree_display.hh"
@@ -52,7 +53,8 @@ void outliner_viewcontext_init(const bContext *C, TreeViewContext *tvc)
 
     if ((tvc->obact->type == OB_ARMATURE) ||
         /* This could be made into its own function. */
-        ((tvc->obact->type == OB_MESH) && tvc->obact->mode & OB_MODE_WEIGHT_PAINT)) {
+        ((tvc->obact->type == OB_MESH) && tvc->obact->mode & OB_MODE_WEIGHT_PAINT))
+    {
       tvc->ob_pose = BKE_object_pose_armature_get(tvc->obact);
     }
   }
@@ -294,7 +296,8 @@ bool outliner_tree_traverse(const SpaceOutliner *space_outliner,
       /* skip */
     }
     else if (!outliner_tree_traverse(
-                 space_outliner, &subtree, filter_te_flag, filter_tselem_flag, func, customdata)) {
+                 space_outliner, &subtree, filter_te_flag, filter_tselem_flag, func, customdata))
+    {
       return false;
     }
   }

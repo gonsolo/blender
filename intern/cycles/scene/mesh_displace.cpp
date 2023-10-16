@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "device/device.h"
 
@@ -26,8 +27,9 @@ static float3 compute_face_normal(const Mesh::Triangle &t, float3 *verts)
   float3 norm = cross(v1 - v0, v2 - v0);
   float normlen = len(norm);
 
-  if (normlen == 0.0f)
+  if (normlen == 0.0f) {
     return make_float3(1.0f, 0.0f, 0.0f);
+  }
 
   return norm / normlen;
 }
@@ -61,8 +63,9 @@ static int fill_shader_input(const Scene *scene,
     }
 
     for (int j = 0; j < 3; j++) {
-      if (done[t.v[j]])
+      if (done[t.v[j]]) {
         continue;
+      }
 
       done[t.v[j]] = true;
 
@@ -183,7 +186,8 @@ bool GeometryManager::displace(Device *device, Scene *scene, Mesh *mesh, Progres
                         num_verts,
                         3,
                         function_bind(&fill_shader_input, scene, mesh, object_index, _1),
-                        function_bind(&read_shader_output, scene, mesh, _1))) {
+                        function_bind(&read_shader_output, scene, mesh, _1)))
+  {
     return false;
   }
 
@@ -310,8 +314,9 @@ bool GeometryManager::displace(Device *device, Scene *scene, Mesh *mesh, Progres
           }
 
           vN[vert] = normalize(vN[vert]);
-          if (flip)
+          if (flip) {
             vN[vert] = -vN[vert];
+          }
 
           done[vert] = true;
         }
@@ -380,8 +385,9 @@ bool GeometryManager::displace(Device *device, Scene *scene, Mesh *mesh, Progres
               }
 
               mN[vert] = normalize(mN[vert]);
-              if (flip)
+              if (flip) {
                 mN[vert] = -mN[vert];
+              }
 
               done[vert] = true;
             }

@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Sort the lights by their Z distance to the camera.
@@ -5,12 +8,17 @@
  * One thread processes one Light entity.
  */
 
-#pragma BLENDER_REQUIRE(common_math_lib.glsl)
+#pragma BLENDER_REQUIRE(gpu_shader_math_base_lib.glsl)
 
 shared float zdists_cache[gl_WorkGroupSize.x];
 
 void main()
 {
+  /* Early exit if no lights are present to prevent out of bounds buffer read. */
+  if (light_cull_buf.visible_count == 0) {
+    return;
+  }
+
   uint src_index = gl_GlobalInvocationID.x;
   bool valid_thread = true;
 

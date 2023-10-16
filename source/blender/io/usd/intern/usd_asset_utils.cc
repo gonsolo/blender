@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2023 NVIDIA Corporation. All rights reserved. */
+/* SPDX-FileCopyrightText: 2023 NVIDIA Corporation. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "usd_asset_utils.h"
 
@@ -14,8 +15,8 @@
 #include "BLI_path_util.h"
 #include "BLI_string.h"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 static const char UDIM_PATTERN[] = "<UDIM>";
 static const char UDIM_PATTERN2[] = "%3CUDIM%3E";
@@ -64,10 +65,10 @@ static std::string get_asset_base_name(const char *src_path)
                  src_path);
       return src_path;
     }
-    BLI_split_file_part(split.second.c_str(), base_name, sizeof(base_name));
+    BLI_path_split_file_part(split.second.c_str(), base_name, sizeof(base_name));
   }
   else {
-    BLI_split_file_part(src_path, base_name, sizeof(base_name));
+    BLI_path_split_file_part(src_path, base_name, sizeof(base_name));
   }
 
   return base_name;
@@ -82,7 +83,7 @@ static std::string copy_asset_to_directory(const char *src_path,
 
   char dest_file_path[FILE_MAX];
   BLI_path_join(dest_file_path, sizeof(dest_file_path), dest_dir_path, base_name.c_str());
-  BLI_path_normalize(NULL, dest_file_path);
+  BLI_path_normalize(dest_file_path);
 
   if (name_collision_mode == USD_TEX_NAME_COLLISION_USE_EXISTING && BLI_is_file(dest_file_path)) {
     return dest_file_path;
@@ -111,7 +112,7 @@ static std::string copy_udim_asset_to_directory(const char *src_path,
    * of a directory using the USD resolver, we must take a brute force approach.  We iterate
    * over the allowed range of tile indices and copy any tiles that exist.  The USDPreviewSurface
    * specification stipulates "a maximum of ten tiles in the U direction" and that
-   * "the tiles must be within the range [1001, 1099]".  See
+   * "the tiles must be within the range [1001, 1099]". See
    * https://graphics.pixar.com/usd/release/spec_usdpreviewsurface.html#texture-reader
    */
   for (int i = UDIM_START_TILE; i < UDIM_END_TILE; ++i) {
@@ -268,17 +269,18 @@ std::string import_asset(const char *src,
     if (!basepath || basepath[0] == '\0') {
       WM_reportf(RPT_ERROR,
                  "%s: import directory is relative "
-                 "but the blend file path is empty.  "
+                 "but the blend file path is empty. "
                  "Please save the blend file before importing the USD "
-                 "or provide an absolute import directory path.  "
+                 "or provide an absolute import directory path. "
                  "Can't import %s",
                  __func__,
                  src);
       return src;
     }
+    BLI_path_abs(dest_dir_path, basepath);
   }
 
-  BLI_path_normalize(basepath, dest_dir_path);
+  BLI_path_normalize(dest_dir_path);
 
   if (!BLI_dir_create_recursive(dest_dir_path)) {
     WM_reportf(

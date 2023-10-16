@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2021-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2021-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifdef WITH_METAL
 
@@ -13,9 +14,6 @@
 #  include "util/unique_ptr.h"
 
 CCL_NAMESPACE_BEGIN
-
-/* limit to 2 MTLCompiler instances */
-int max_mtlcompiler_threads = 2;
 
 const char *kernel_type_as_string(MetalPipelineType pso_type)
 {
@@ -32,20 +30,14 @@ const char *kernel_type_as_string(MetalPipelineType pso_type)
   return "";
 }
 
-bool kernel_has_intersection(DeviceKernel device_kernel)
-{
-  return (device_kernel == DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
-          device_kernel == DEVICE_KERNEL_INTEGRATOR_INTERSECT_SHADOW ||
-          device_kernel == DEVICE_KERNEL_INTEGRATOR_INTERSECT_SUBSURFACE ||
-          device_kernel == DEVICE_KERNEL_INTEGRATOR_INTERSECT_VOLUME_STACK ||
-          device_kernel == DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_RAYTRACE ||
-          device_kernel == DEVICE_KERNEL_INTEGRATOR_SHADE_SURFACE_MNEE);
-}
-
 struct ShaderCache {
   ShaderCache(id<MTLDevice> _mtlDevice) : mtlDevice(_mtlDevice)
   {
     /* Initialize occupancy tuning LUT. */
+
+    // TODO: Look into tuning for DEVICE_KERNEL_INTEGRATOR_INTERSECT_DEDICATED_LIGHT and
+    // DEVICE_KERNEL_INTEGRATOR_SHADE_DEDICATED_LIGHT.
+
     if (MetalInfo::get_device_vendor(mtlDevice) == METAL_GPU_APPLE) {
       switch (MetalInfo::get_apple_gpu_architecture(mtlDevice)) {
         default:
@@ -176,7 +168,7 @@ void ShaderCache::wait_for_all()
   }
 }
 
-void ShaderCache::compile_thread_func(int thread_index)
+void ShaderCache::compile_thread_func(int /*thread_index*/)
 {
   while (running) {
 
@@ -263,7 +255,8 @@ bool ShaderCache::should_load_kernel(DeviceKernel device_kernel,
   if (pso_type != PSO_GENERIC) {
     /* Only specialize kernels where it can make an impact. */
     if (device_kernel < DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
-        device_kernel > DEVICE_KERNEL_INTEGRATOR_MEGAKERNEL) {
+        device_kernel > DEVICE_KERNEL_INTEGRATOR_MEGAKERNEL)
+    {
       return false;
     }
 
@@ -296,6 +289,19 @@ void ShaderCache::load_kernel(DeviceKernel device_kernel,
     /* create compiler threads on first run */
     thread_scoped_lock lock(cache_mutex);
     if (compile_threads.empty()) {
+      /* Limit to 2 MTLCompiler instances by default. In macOS >= 13.3 we can query the upper
+       * limit. */
+      int max_mtlcompiler_threads = 2;
+
+#  if defined(MAC_OS_VERSION_13_3)
+      if (@available(macOS 13.3, *)) {
+        /* Subtract one to avoid contention with the real-time GPU module. */
+        max_mtlcompiler_threads = max(2,
+                                      int([mtlDevice maximumConcurrentCompilationTaskCount]) - 1);
+      }
+#  endif
+
+      metal_printf("Spawning %d Cycles kernel compilation threads\n", max_mtlcompiler_threads);
       for (int i = 0; i < max_mtlcompiler_threads; i++) {
         compile_threads.push_back(std::thread([&] { compile_thread_func(i); }));
       }
@@ -342,7 +348,7 @@ void ShaderCache::load_kernel(DeviceKernel device_kernel,
 
 MetalKernelPipeline *ShaderCache::get_best_pipeline(DeviceKernel kernel, const MetalDevice *device)
 {
-  while (running) {
+  while (running && !device->has_error) {
     /* Search all loaded pipelines with matching kernels_md5 checksums. */
     MetalKernelPipeline *best_match = nullptr;
     {
@@ -392,6 +398,11 @@ bool MetalKernelPipeline::should_use_binary_archive() const
       }
     }
 
+    if (use_metalrt && device_kernel_has_intersection(device_kernel)) {
+      /* Binary linked functions aren't supported in binary archives. */
+      return false;
+    }
+
     if (pso_type == PSO_GENERIC) {
       /* Archive the generic kernels. */
       return true;
@@ -400,7 +411,8 @@ bool MetalKernelPipeline::should_use_binary_archive() const
     if ((device_kernel >= DEVICE_KERNEL_INTEGRATOR_SHADE_BACKGROUND &&
          device_kernel <= DEVICE_KERNEL_INTEGRATOR_SHADE_SHADOW) ||
         (device_kernel >= DEVICE_KERNEL_SHADER_EVAL_DISPLACE &&
-         device_kernel <= DEVICE_KERNEL_SHADER_EVAL_CURVE_SHADOW_TRANSPARENCY)) {
+         device_kernel <= DEVICE_KERNEL_SHADER_EVAL_CURVE_SHADOW_TRANSPARENCY))
+    {
       /* Archive all shade kernels - they take a long time to compile. */
       return true;
     }
@@ -477,14 +489,14 @@ void MetalKernelPipeline::compile()
           "__anyhit__cycles_metalrt_visibility_test_box",
           "__anyhit__cycles_metalrt_shadow_all_hit_tri",
           "__anyhit__cycles_metalrt_shadow_all_hit_box",
+          "__anyhit__cycles_metalrt_volume_test_tri",
+          "__anyhit__cycles_metalrt_volume_test_box",
           "__anyhit__cycles_metalrt_local_hit_tri",
           "__anyhit__cycles_metalrt_local_hit_box",
           "__anyhit__cycles_metalrt_local_hit_tri_prim",
           "__anyhit__cycles_metalrt_local_hit_box_prim",
-          "__intersection__curve_ribbon",
-          "__intersection__curve_ribbon_shadow",
-          "__intersection__curve_all",
-          "__intersection__curve_all_shadow",
+          "__intersection__curve",
+          "__intersection__curve_shadow",
           "__intersection__point",
           "__intersection__point_shadow",
       };
@@ -528,17 +540,8 @@ void MetalKernelPipeline::compile()
     id<MTLFunction> point_intersect_default = nil;
     id<MTLFunction> point_intersect_shadow = nil;
     if (kernel_features & KERNEL_FEATURE_HAIR) {
-      /* Add curve intersection programs. */
-      if (kernel_features & KERNEL_FEATURE_HAIR_THICK) {
-        /* Slower programs for thick hair since that also slows down ribbons.
-         * Ideally this should not be needed. */
-        curve_intersect_default = rt_intersection_function[METALRT_FUNC_CURVE_ALL];
-        curve_intersect_shadow = rt_intersection_function[METALRT_FUNC_CURVE_ALL_SHADOW];
-      }
-      else {
-        curve_intersect_default = rt_intersection_function[METALRT_FUNC_CURVE_RIBBON];
-        curve_intersect_shadow = rt_intersection_function[METALRT_FUNC_CURVE_RIBBON_SHADOW];
-      }
+      curve_intersect_default = rt_intersection_function[METALRT_FUNC_CURVE];
+      curve_intersect_shadow = rt_intersection_function[METALRT_FUNC_CURVE_SHADOW];
     }
     if (kernel_features & KERNEL_FEATURE_POINTCLOUD) {
       point_intersect_default = rt_intersection_function[METALRT_FUNC_POINT];
@@ -562,6 +565,11 @@ void MetalKernelPipeline::compile()
                              point_intersect_shadow :
                              rt_intersection_function[METALRT_FUNC_SHADOW_BOX],
                          nil];
+    table_functions[METALRT_TABLE_VOLUME] = [NSArray
+        arrayWithObjects:rt_intersection_function[METALRT_FUNC_VOLUME_TRI],
+                         rt_intersection_function[METALRT_FUNC_VOLUME_BOX],
+                         rt_intersection_function[METALRT_FUNC_VOLUME_BOX],
+                         nil];
     table_functions[METALRT_TABLE_LOCAL] = [NSArray
         arrayWithObjects:rt_intersection_function[METALRT_FUNC_LOCAL_TRI],
                          rt_intersection_function[METALRT_FUNC_LOCAL_BOX],
@@ -573,13 +581,14 @@ void MetalKernelPipeline::compile()
                          rt_intersection_function[METALRT_FUNC_LOCAL_BOX_PRIM],
                          nil];
 
-    NSMutableSet *unique_functions = [NSMutableSet
-        setWithArray:table_functions[METALRT_TABLE_DEFAULT]];
+    NSMutableSet *unique_functions = [[NSMutableSet alloc] init];
+    [unique_functions addObjectsFromArray:table_functions[METALRT_TABLE_DEFAULT]];
     [unique_functions addObjectsFromArray:table_functions[METALRT_TABLE_SHADOW]];
+    [unique_functions addObjectsFromArray:table_functions[METALRT_TABLE_VOLUME]];
     [unique_functions addObjectsFromArray:table_functions[METALRT_TABLE_LOCAL]];
     [unique_functions addObjectsFromArray:table_functions[METALRT_TABLE_LOCAL_PRIM]];
 
-    if (kernel_has_intersection(device_kernel)) {
+    if (device_kernel_has_intersection(device_kernel)) {
       linked_functions = [[NSArray arrayWithArray:[unique_functions allObjects]]
           sortedArrayUsingComparator:^NSComparisonResult(id<MTLFunction> f1, id<MTLFunction> f2) {
             return [f1.label compare:f2.label];
@@ -680,7 +689,7 @@ void MetalKernelPipeline::compile()
     __block bool compilation_finished = false;
     __block string error_str;
 
-    if (loading_existing_archive) {
+    if (loading_existing_archive || !DebugFlags().metal.use_async_pso_creation) {
       /* Use the blocking variant of newComputePipelineStateWithDescriptor if an archive exists on
        * disk. It should load almost instantaneously, and will fail gracefully when loading a
        * corrupt archive (unlike the async variant). */
@@ -693,35 +702,13 @@ void MetalKernelPipeline::compile()
       error_str = err ? err : "nil";
     }
     else {
-      /* TODO / MetalRT workaround:
-       * Workaround for a crash when addComputePipelineFunctionsWithDescriptor is called *after*
-       * newComputePipelineStateWithDescriptor with linked functions (i.e. with MetalRT enabled).
-       * Ideally we would like to call newComputePipelineStateWithDescriptor (async) first so we
-       * can bail out if needed, but we can stop the crash by flipping the order when there are
-       * linked functions. However when addComputePipelineFunctionsWithDescriptor is called first
-       * it will block while it builds the pipeline, offering no way of bailing out. */
-      auto addComputePipelineFunctionsWithDescriptor = [&]() {
-        if (creating_new_archive && ShaderCache::running) {
-          NSError *error;
-          if (![archive addComputePipelineFunctionsWithDescriptor:computePipelineStateDescriptor
-                                                            error:&error]) {
-            NSString *errStr = [error localizedDescription];
-            metal_printf("Failed to add PSO to archive:\n%s\n",
-                         errStr ? [errStr UTF8String] : "nil");
-          }
-        }
-      };
-      if (linked_functions) {
-        addComputePipelineFunctionsWithDescriptor();
-      }
-
       /* Use the async variant of newComputePipelineStateWithDescriptor if no archive exists on
        * disk. This allows us to respond to app shutdown. */
       [mtlDevice
           newComputePipelineStateWithDescriptor:computePipelineStateDescriptor
                                         options:pipelineOptions
                               completionHandler:^(id<MTLComputePipelineState> computePipelineState,
-                                                  MTLComputePipelineReflection *reflection,
+                                                  MTLComputePipelineReflection * /*reflection*/,
                                                   NSError *error) {
                                 pipeline = computePipelineState;
 
@@ -742,10 +729,16 @@ void MetalKernelPipeline::compile()
       while (ShaderCache::running && !compilation_finished) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
       }
+    }
 
-      /* Add pipeline into the new archive (unless we did it earlier). */
-      if (pipeline && !linked_functions) {
-        addComputePipelineFunctionsWithDescriptor();
+    if (creating_new_archive && pipeline) {
+      /* Add pipeline into the new archive. */
+      NSError *error;
+      if (![archive addComputePipelineFunctionsWithDescriptor:computePipelineStateDescriptor
+                                                        error:&error])
+      {
+        NSString *errStr = [error localizedDescription];
+        metal_printf("Failed to add PSO to archive:\n%s\n", errStr ? [errStr UTF8String] : "nil");
       }
     }
 

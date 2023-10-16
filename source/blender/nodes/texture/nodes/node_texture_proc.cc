@@ -1,12 +1,18 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup texnodes
  */
 
+#include "BKE_material.h"
+#include "BKE_texture.h"
+#include "BLI_math_vector.h"
+#include "DNA_material_types.h"
 #include "NOD_texture.h"
 #include "node_texture_util.hh"
+#include "node_util.hh"
 
 #include "RE_texture.h"
 
@@ -50,7 +56,7 @@ static void do_proc(float *result,
   }
 }
 
-typedef void (*MapFn)(Tex *tex, bNodeStack **in, TexParams *p, const short thread);
+using MapFn = void (*)(Tex *tex, bNodeStack **in, TexParams *p, const short thread);
 
 static void texfn(
     float *result, TexParams *p, bNode *node, bNodeStack **in, MapFn map_inputs, short thread)
@@ -67,9 +73,8 @@ static void texfn(
 
 static int count_outputs(bNode *node)
 {
-  bNodeSocket *sock;
   int num = 0;
-  for (sock = static_cast<bNodeSocket *>(node->outputs.first); sock; sock = sock->next) {
+  LISTBASE_FOREACH (bNodeSocket *, sock, &node->outputs) {
     num++;
   }
   return num;
@@ -252,8 +257,8 @@ static void init(bNodeTree * /*ntree*/, bNode *node)
     static bNodeType ntype; \
 \
     tex_node_type_base(&ntype, TEX_NODE_PROC + TEXTYPE, Name, NODE_CLASS_TEXTURE); \
-    node_type_socket_templates(&ntype, name##_inputs, outputs); \
-    node_type_size_preset(&ntype, NODE_SIZE_MIDDLE); \
+    blender::bke::node_type_socket_templates(&ntype, name##_inputs, outputs); \
+    blender::bke::node_type_size_preset(&ntype, blender::bke::eNodeSizePreset::MIDDLE); \
     ntype.initfunc = init; \
     node_type_storage(&ntype, "Tex", node_free_standard_storage, node_copy_standard_storage); \
     ntype.exec_fn = name##_exec; \

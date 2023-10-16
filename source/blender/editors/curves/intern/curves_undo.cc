@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edcurves
@@ -9,20 +11,20 @@
 #include "BKE_context.h"
 #include "BKE_curves.hh"
 #include "BKE_main.h"
-#include "BKE_object.h"
+#include "BKE_object.hh"
 #include "BKE_undo_system.h"
 
 #include "CLG_log.h"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
-#include "ED_curves.h"
-#include "ED_undo.h"
+#include "ED_curves.hh"
+#include "ED_undo.hh"
 
 #include "MEM_guardedalloc.h"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 static CLG_LogRef LOG = {"ed.undo.curves"};
 

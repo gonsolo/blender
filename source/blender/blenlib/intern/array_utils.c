@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -30,7 +32,8 @@ void _bli_array_reverse(void *arr_v, uint arr_len, size_t arr_stride)
   char *buf = BLI_array_alloca(buf, arr_stride);
 
   for (i = 0, i_end = (arr_len - 1) * arr_stride_uint; i < arr_half_stride;
-       i += arr_stride_uint, i_end -= arr_stride_uint) {
+       i += arr_stride_uint, i_end -= arr_stride_uint)
+  {
     memcpy(buf, &arr[i], arr_stride);
     memcpy(&arr[i], &arr[i_end], arr_stride);
     memcpy(&arr[i_end], buf, arr_stride);
@@ -97,7 +100,8 @@ uint _bli_array_deduplicate_ordered(void *arr, uint arr_len, size_t arr_stride)
   for (uint i = 0; i < arr_len; i++) {
     if ((i == j) || (memcmp(POINTER_OFFSET(arr, arr_stride_uint * i),
                             POINTER_OFFSET(arr, arr_stride_uint * j),
-                            arr_stride) == 0)) {
+                            arr_stride) == 0))
+    {
       continue;
     }
     j += 1;
@@ -323,9 +327,9 @@ bool _bli_array_iter_spiral_square(const void *arr_v,
 
     bool check_bounds = steps > steps_in;
 
-    /* sign: 0 neg; 1 pos; */
+    /* Sign: 0=negative 1=positive. */
     for (int sign = 2; sign--;) {
-      /* axis: 0 x; 1 y; */
+      /* Axis: 0=x; 1=y. */
       for (int axis = 2; axis--;) {
         int ofs_step = stride[axis];
         if (!sign) {

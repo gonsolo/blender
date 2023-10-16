@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2004 Blender Foundation */
+/* SPDX-FileCopyrightText: 2004 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup blenloader
@@ -27,7 +28,7 @@
 #include "BLI_ghash.h"
 
 #include "BLO_readfile.h"
-#include "BLO_undofile.h"
+#include "BLO_undofile.hh"
 
 #include "BKE_lib_id.h"
 #include "BKE_main.h"
@@ -40,9 +41,7 @@
 
 void BLO_memfile_free(MemFile *memfile)
 {
-  MemFileChunk *chunk;
-
-  while ((chunk = static_cast<MemFileChunk *>(BLI_pophead(&memfile->chunks)))) {
+  while (MemFileChunk *chunk = static_cast<MemFileChunk *>(BLI_pophead(&memfile->chunks))) {
     if (chunk->is_identical == false) {
       MEM_freeN((void *)chunk->buf);
     }
@@ -60,7 +59,8 @@ void BLO_memfile_merge(MemFile *first, MemFile *second)
 
   /* First, detect all memchunks in second memfile that are not owned by it. */
   for (MemFileChunk *sc = static_cast<MemFileChunk *>(second->chunks.first); sc != nullptr;
-       sc = static_cast<MemFileChunk *>(sc->next)) {
+       sc = static_cast<MemFileChunk *>(sc->next))
+  {
     if (sc->is_identical) {
       BLI_ghash_insert(buffer_to_second_memchunk, (void *)sc->buf, sc);
     }
@@ -69,7 +69,8 @@ void BLO_memfile_merge(MemFile *first, MemFile *second)
   /* Now, check all chunks from first memfile (the one we are removing), and if a memchunk owned by
    * it is also used by the second memfile, transfer the ownership. */
   for (MemFileChunk *fc = static_cast<MemFileChunk *>(first->chunks.first); fc != nullptr;
-       fc = static_cast<MemFileChunk *>(fc->next)) {
+       fc = static_cast<MemFileChunk *>(fc->next))
+  {
     if (!fc->is_identical) {
       MemFileChunk *sc = static_cast<MemFileChunk *>(
           BLI_ghash_lookup(buffer_to_second_memchunk, fc->buf));
@@ -121,7 +122,8 @@ void BLO_memfile_write_init(MemFileWriteData *mem_data,
         void **entry;
         if (!BLI_ghash_ensure_p(mem_data->id_session_uuid_mapping,
                                 POINTER_FROM_UINT(current_session_uuid),
-                                &entry)) {
+                                &entry))
+        {
           *entry = mem_chunk;
         }
         else {
@@ -178,11 +180,9 @@ void BLO_memfile_chunk_add(MemFileWriteData *mem_data, const char *buf, size_t s
   }
 }
 
-struct Main *BLO_memfile_main_get(struct MemFile *memfile,
-                                  struct Main *bmain,
-                                  struct Scene **r_scene)
+Main *BLO_memfile_main_get(MemFile *memfile, Main *bmain, Scene **r_scene)
 {
-  struct Main *bmain_undo = nullptr;
+  Main *bmain_undo = nullptr;
   BlendFileReadParams read_params{};
   BlendFileData *bfd = BLO_read_from_memfile(
       bmain, BKE_main_blendfile_path(bmain), memfile, &read_params, nullptr);
@@ -199,16 +199,15 @@ struct Main *BLO_memfile_main_get(struct MemFile *memfile,
   return bmain_undo;
 }
 
-bool BLO_memfile_write_file(struct MemFile *memfile, const char *filepath)
+bool BLO_memfile_write_file(MemFile *memfile, const char *filepath)
 {
   MemFileChunk *chunk;
   int file, oflags;
 
-  /* NOTE: This is currently used for autosave and 'quit.blend',
-   * where _not_ following symlinks is OK,
+  /* NOTE: This is currently used for auto-save and `quit.blend`,
+   * where _not_ following symbolic-links is OK,
    * however if this is ever executed explicitly by the user,
-   * we may want to allow writing to symlinks.
-   */
+   * we may want to allow writing to symbolic-links. */
 
   oflags = O_BINARY | O_WRONLY | O_CREAT | O_TRUNC;
 #ifdef O_NOFOLLOW
@@ -231,7 +230,8 @@ bool BLO_memfile_write_file(struct MemFile *memfile, const char *filepath)
   }
 
   for (chunk = static_cast<MemFileChunk *>(memfile->chunks.first); chunk;
-       chunk = static_cast<MemFileChunk *>(chunk->next)) {
+       chunk = static_cast<MemFileChunk *>(chunk->next))
+  {
 #ifdef _WIN32
     if (size_t(write(file, chunk->buf, uint(chunk->size))) != chunk->size)
 #else
@@ -254,7 +254,7 @@ bool BLO_memfile_write_file(struct MemFile *memfile, const char *filepath)
   return true;
 }
 
-static ssize_t undo_read(FileReader *reader, void *buffer, size_t size)
+static int64_t undo_read(FileReader *reader, void *buffer, size_t size)
 {
   UndoReader *undo = (UndoReader *)reader;
 
@@ -323,7 +323,7 @@ static ssize_t undo_read(FileReader *reader, void *buffer, size_t size)
                                                                       chunk->is_identical_future;
     } while (totread < size);
 
-    return ssize_t(totread);
+    return int64_t(totread);
   }
 
   return 0;

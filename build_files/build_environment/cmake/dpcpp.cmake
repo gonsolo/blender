@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2022-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # LLVM does not switch over to cpp17 until llvm 16 and building ealier versions with
@@ -122,5 +124,6 @@ if(BUILD_MODE STREQUAL Release AND WIN32)
       COMMAND ${CMAKE_COMMAND} -E rm -f ${HARVEST_TARGET}/dpcpp/bin/lld.exe
       COMMAND ${CMAKE_COMMAND} -E rm -f ${HARVEST_TARGET}/dpcpp/bin/lld-link.exe
       COMMAND ${CMAKE_COMMAND} -E rm -f ${HARVEST_TARGET}/dpcpp/bin/wasm-ld.exe
+      DEPENDEES install
   )
 endif()

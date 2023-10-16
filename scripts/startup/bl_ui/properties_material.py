@@ -1,4 +1,7 @@
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
+
 import bpy
 from bpy.types import Menu, Panel, UIList
 from bpy.app.translations import contexts as i18n_contexts
@@ -66,7 +69,7 @@ class MATERIAL_PT_custom_props(MaterialButtonsPanel, PropertyPanel, Panel):
         'BLENDER_EEVEE',
         'BLENDER_EEVEE_NEXT',
         'BLENDER_WORKBENCH',
-        'BLENDER_WORKBENCH_NEXT'}
+    }
     _context_path = "material"
     _property_type = bpy.types.Material
 
@@ -75,7 +78,7 @@ class EEVEE_MATERIAL_PT_context_material(MaterialButtonsPanel, Panel):
     bl_label = ""
     bl_context = "material"
     bl_options = {'HIDE_HEADER'}
-    COMPAT_ENGINES = {'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
+    COMPAT_ENGINES = {'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT', 'BLENDER_WORKBENCH'}
 
     @classmethod
     def poll(cls, context):
@@ -253,7 +256,12 @@ class EEVEE_NEXT_MATERIAL_PT_settings(MaterialButtonsPanel, Panel):
 
         mat = context.material
 
-        layout.prop(mat, "use_backface_culling")
+        col = layout.column(heading="Cull Backfaces")
+        col.prop(mat, "use_backface_culling", text="Camera")
+        col.prop(mat, "use_backface_culling_probe", text="Probe Capture")
+
+        layout.separator()
+
         layout.prop(mat, "blend_method")
         layout.prop(mat, "shadow_method")
 
@@ -262,8 +270,9 @@ class EEVEE_NEXT_MATERIAL_PT_settings(MaterialButtonsPanel, Panel):
         row.prop(mat, "alpha_threshold")
 
         if mat.blend_method not in {'OPAQUE', 'CLIP', 'HASHED'}:
-            layout.prop(mat, "show_transparent_back")
+            col.prop(mat, "show_transparent_back", text="Transparency")
 
+        layout.prop(mat, "use_screen_refraction")
         layout.prop(mat, "pass_index")
 
 

@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -36,7 +38,7 @@ PyDoc_STRVAR(ViewEdgeIterator_doc,
              "   :arg begin: The ViewEdge from where to start the iteration.\n"
              "   :type begin: :class:`ViewEdge` or None\n"
              "   :arg orientation: If true, we'll look for the next ViewEdge among\n"
-             "      the ViewEdges that surround the ending ViewVertex of begin.  If\n"
+             "      the ViewEdges that surround the ending ViewVertex of begin. If\n"
              "      false, we'll search over the ViewEdges surrounding the ending\n"
              "      ViewVertex of begin.\n"
              "   :type orientation: bool\n"
@@ -59,13 +61,15 @@ static int ViewEdgeIterator_init(BPy_ViewEdgeIterator *self, PyObject *args, PyO
   PyObject *obj1 = nullptr, *obj2 = nullptr;
 
   if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "O!", (char **)kwlist_1, &ViewEdgeIterator_Type, &obj1)) {
+          args, kwds, "O!", (char **)kwlist_1, &ViewEdgeIterator_Type, &obj1))
+  {
     self->ve_it = new ViewEdgeInternal::ViewEdgeIterator(*(((BPy_ViewEdgeIterator *)obj1)->ve_it));
   }
   else if ((void)PyErr_Clear(),
            (void)(obj1 = obj2 = nullptr),
            PyArg_ParseTupleAndKeywords(
-               args, kwds, "|O&O!", (char **)kwlist_2, check_begin, &obj1, &PyBool_Type, &obj2)) {
+               args, kwds, "|O&O!", (char **)kwlist_2, check_begin, &obj1, &PyBool_Type, &obj2))
+  {
     ViewEdge *begin = (!obj1 || obj1 == Py_None) ? nullptr : ((BPy_ViewEdge *)obj1)->ve;
     bool orientation = (!obj2) ? true : bool_from_PyBool(obj2);
     self->ve_it = new ViewEdgeInternal::ViewEdgeIterator(begin, orientation);
@@ -146,7 +150,7 @@ static int ViewEdgeIterator_current_edge_set(BPy_ViewEdgeIterator *self,
 PyDoc_STRVAR(ViewEdgeIterator_orientation_doc,
              "The orientation of the pointed ViewEdge in the iteration.\n"
              "If true, the iterator looks for the next ViewEdge among those ViewEdges\n"
-             "that surround the ending ViewVertex of the \"begin\" ViewEdge.  If false,\n"
+             "that surround the ending ViewVertex of the \"begin\" ViewEdge. If false,\n"
              "the iterator searches over the ViewEdges surrounding the ending ViewVertex\n"
              "of the \"begin\" ViewEdge.\n"
              "\n"
@@ -222,7 +226,7 @@ static PyGetSetDef BPy_ViewEdgeIterator_getseters[] = {
 /*-----------------------BPy_ViewEdgeIterator type definition ------------------------------*/
 
 PyTypeObject ViewEdgeIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ViewEdgeIterator",
     /*tp_basicsize*/ sizeof(BPy_ViewEdgeIterator),
     /*tp_itemsize*/ 0,

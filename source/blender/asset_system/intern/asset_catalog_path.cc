@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup asset_system
@@ -7,6 +9,8 @@
 #include "AS_asset_catalog_path.hh"
 
 #include "BLI_path_util.h"
+
+#include <sstream>
 
 namespace blender::asset_system {
 
@@ -174,7 +178,8 @@ void AssetCatalogPath::iterate_components(ComponentIteratorFn callback) const
 
   for (const char *path_component = this->path_.data(); path_component && path_component[0];
        /* Jump to one after the next slash if there is any. */
-       path_component = next_slash_ptr ? next_slash_ptr + 1 : nullptr) {
+       path_component = next_slash_ptr ? next_slash_ptr + 1 : nullptr)
+  {
     /* Note that this also treats backslashes as component separators, which
      * helps in cleaning up backslash-separated paths. */
     next_slash_ptr = BLI_path_slash_find(path_component);

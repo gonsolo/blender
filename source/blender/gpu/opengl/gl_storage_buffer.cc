@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -7,6 +8,7 @@
 
 #include "BLI_string.h"
 
+#include "GPU_capabilities.h"
 #include "gpu_backend.hh"
 #include "gpu_context_private.hh"
 
@@ -26,7 +28,7 @@ GLStorageBuf::GLStorageBuf(size_t size, GPUUsageType usage, const char *name)
 {
   usage_ = usage;
   /* Do not create UBO GL buffer here to allow allocation from any thread. */
-  BLI_assert(size <= GLContext::max_ssbo_size);
+  BLI_assert(size <= GPU_max_storage_buffer_size());
 }
 
 GLStorageBuf::~GLStorageBuf()

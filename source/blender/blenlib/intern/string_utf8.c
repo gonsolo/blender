@@ -1,8 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2011 Blender Foundation.
- * Code from gutf8.c Copyright 1999 Tom Tromey
- *                   Copyright 2000 Red Hat, Inc.
- * All rights reserved. */
+/* SPDX-FileCopyrightText: 1999 Tom Tromey
+ * SPDX-FileCopyrightText: 2000 Red Hat, Inc. All rights reserved.
+ * SPDX-FileCopyrightText: 2011 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * Code from `gutf8.c` by Tom Tromey & Red Hat, Inc. */
 
 /** \file
  * \ingroup bli
@@ -17,6 +19,7 @@
 
 #include "BLI_utildefines.h"
 
+#include "BLI_string.h"      /* #BLI_string_debug_size. */
 #include "BLI_string_utf8.h" /* own include */
 #ifdef WIN32
 #  include "utfconv.h"
@@ -25,23 +28,123 @@
 #  pragma GCC diagnostic error "-Wsign-conversion"
 #endif
 
-// #define DEBUG_STRSIZE
+#include "BLI_strict_flags.h"
+
+/* -------------------------------------------------------------------- */
+/** \name UTF8 Character Decoding (Skip & Mask Lookup)
+ *
+ * Derived from GLIB `gutf8.c`.
+ *
+ * Ranges (zero based, inclusive):
+ *
+ * - 000..127: 1 byte.
+ * - 128..191: invalid.
+ * - 192..223: 2 bytes.
+ * - 224..239: 3 bytes.
+ * - 240..247: 4 bytes.
+ * - 248..251: 4 bytes.
+ * - 252..253: 4 bytes.
+ * - 254..255: invalid.
+ *
+ * Invalid values fall back to 1 byte or -1 (for an error value).
+ *
+ * \note From testing string copying via #BLI_strncpy_utf8 with large (multi-megabyte) strings,
+ * using a function instead of a lookup-table is between 2 & 3 times faster.
+ * \{ */
+
+BLI_INLINE int utf8_char_compute_skip(const char c)
+{
+  if (UNLIKELY(c >= 192)) {
+    if ((c & 0xe0) == 0xc0) {
+      return 2;
+    }
+    if ((c & 0xf0) == 0xe0) {
+      return 3;
+    }
+    if ((c & 0xf8) == 0xf0) {
+      return 4;
+    }
+    if ((c & 0xfc) == 0xf8) {
+      return 5;
+    }
+    if ((c & 0xfe) == 0xfc) {
+      return 6;
+    }
+  }
+  return 1;
+}
+
+BLI_INLINE int utf8_char_compute_skip_or_error(const char c)
+{
+  if (c < 128) {
+    return 1;
+  }
+  if ((c & 0xe0) == 0xc0) {
+    return 2;
+  }
+  if ((c & 0xf0) == 0xe0) {
+    return 3;
+  }
+  if ((c & 0xf8) == 0xf0) {
+    return 4;
+  }
+  if ((c & 0xfc) == 0xf8) {
+    return 5;
+  }
+  if ((c & 0xfe) == 0xfc) {
+    return 6;
+  }
+  return -1;
+}
+
+BLI_INLINE int utf8_char_compute_skip_or_error_with_mask(const char c, char *r_mask)
+{
+  /* Originally from GLIB `UTF8_COMPUTE` macro. */
+  if (c < 128) {
+    *r_mask = 0x7f;
+    return 1;
+  }
+  if ((c & 0xe0) == 0xc0) {
+    *r_mask = 0x1f;
+    return 2;
+  }
+  if ((c & 0xf0) == 0xe0) {
+    *r_mask = 0x0f;
+    return 3;
+  }
+  if ((c & 0xf8) == 0xf0) {
+    *r_mask = 0x07;
+    return 4;
+  }
+  if ((c & 0xfc) == 0xf8) {
+    *r_mask = 0x03;
+    return 5;
+  }
+  if ((c & 0xfe) == 0xfc) {
+    *r_mask = 0x01;
+    return 6;
+  }
+  return -1;
+}
 
 /**
- * Array copied from GLIB's `gutf8.c`.
- * \note last two values (0xfe and 0xff) are forbidden in UTF-8,
- * so they are considered 1 byte length too.
+ * Decode a UTF8 code-point, use in combination with #utf8_char_compute_skip_or_error_with_mask.
  */
-static const size_t utf8_skip_data[256] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1,
-};
+BLI_INLINE uint utf8_char_decode(const char *p, const char mask, const int len, const uint err)
+{
+  /* Originally from GLIB `UTF8_GET` macro, added an 'err' argument. */
+  uint result = p[0] & mask;
+  for (int count = 1; count < len; count++) {
+    if ((p[count] & 0xc0) != 0x80) {
+      return err;
+    }
+    result <<= 6;
+    result |= p[count] & 0x3f;
+  }
+  return result;
+}
+
+/** \} */
 
 ptrdiff_t BLI_str_utf8_invalid_byte(const char *str, size_t length)
 {
@@ -76,8 +179,8 @@ ptrdiff_t BLI_str_utf8_invalid_byte(const char *str, size_t length)
     /* Note that since we always increase p (and decrease length) by one byte in main loop,
      * we only add/subtract extra utf8 bytes in code below
      * (ab number, aka number of bytes remaining in the utf8 sequence after the initial one). */
-    ab = (int)utf8_skip_data[c] - 1;
-    if (length <= ab) {
+    ab = utf8_char_compute_skip(c) - 1;
+    if (length <= (size_t)ab) {
       goto utf8_error;
     }
 
@@ -203,84 +306,72 @@ int BLI_str_utf8_invalid_strip(char *str, size_t length)
   return tot;
 }
 
-/** Compatible with #BLI_strncpy, but ensure no partial UTF8 chars. */
-#define BLI_STR_UTF8_CPY(dst, src, maxncpy) \
-  { \
-    size_t utf8_size; \
-    while (*src != '\0' && (utf8_size = utf8_skip_data[*src]) < maxncpy) { \
-      maxncpy -= utf8_size; \
-      switch (utf8_size) { \
-        case 6: \
-          *dst++ = *src++; \
-          ATTR_FALLTHROUGH; \
-        case 5: \
-          *dst++ = *src++; \
-          ATTR_FALLTHROUGH; \
-        case 4: \
-          *dst++ = *src++; \
-          ATTR_FALLTHROUGH; \
-        case 3: \
-          *dst++ = *src++; \
-          ATTR_FALLTHROUGH; \
-        case 2: \
-          *dst++ = *src++; \
-          ATTR_FALLTHROUGH; \
-        case 1: \
-          *dst++ = *src++; \
-      } \
-    } \
-    *dst = '\0'; \
-  } \
-  (void)0
-
-char *BLI_strncpy_utf8(char *__restrict dst, const char *__restrict src, size_t maxncpy)
+/**
+ * Internal utility for implementing #BLI_strncpy_utf8 / #BLI_strncpy_utf8_rlen.
+ *
+ * Compatible with #BLI_strncpy, but ensure no partial UTF8 chars.
+ *
+ * \note currently we don't attempt to deal with invalid utf8 chars.
+ * See #BLI_str_utf8_invalid_strip for if that is needed.
+ */
+BLI_INLINE char *str_utf8_copy_max_bytes_impl(char *dst, const char *src, size_t dst_maxncpy)
 {
-  char *r_dst = dst;
-
-  BLI_assert(maxncpy != 0);
-
-#ifdef DEBUG_STRSIZE
-  memset(dst, 0xff, sizeof(*dst) * maxncpy);
-#endif
-
-  /* NOTE: currently we don't attempt to deal with invalid utf8 chars. */
-  BLI_STR_UTF8_CPY(dst, src, maxncpy);
-
-  return r_dst;
+  /* Cast to `uint8_t` is a no-op, quiets array subscript of type `char` warning.
+   * No need to check `src` points to a nil byte as this will return from the switch statement. */
+  size_t utf8_size;
+  while ((utf8_size = (size_t)utf8_char_compute_skip(*src)) < dst_maxncpy) {
+    dst_maxncpy -= utf8_size;
+    /* Prefer more compact block. */
+    /* NOLINTBEGIN: bugprone-assignment-in-if-condition */
+    /* clang-format off */
+    switch (utf8_size) {
+      case 6: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++; ATTR_FALLTHROUGH;
+      case 5: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++; ATTR_FALLTHROUGH;
+      case 4: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++; ATTR_FALLTHROUGH;
+      case 3: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++; ATTR_FALLTHROUGH;
+      case 2: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++; ATTR_FALLTHROUGH;
+      case 1: if (UNLIKELY(!(*dst = *src++))) { return dst; } dst++;
+    }
+    /* clang-format on */
+    /* NOLINTEND: bugprone-assignment-in-if-condition */
+  }
+  *dst = '\0';
+  return dst;
 }
 
-size_t BLI_strncpy_utf8_rlen(char *__restrict dst, const char *__restrict src, size_t maxncpy)
+char *BLI_strncpy_utf8(char *__restrict dst, const char *__restrict src, size_t dst_maxncpy)
 {
+  BLI_assert(dst_maxncpy != 0);
+  BLI_string_debug_size(dst, dst_maxncpy);
+
+  str_utf8_copy_max_bytes_impl(dst, src, dst_maxncpy);
+  return dst;
+}
+
+size_t BLI_strncpy_utf8_rlen(char *__restrict dst, const char *__restrict src, size_t dst_maxncpy)
+{
+  BLI_assert(dst_maxncpy != 0);
+  BLI_string_debug_size(dst, dst_maxncpy);
+
   char *r_dst = dst;
-
-  BLI_assert(maxncpy != 0);
-
-#ifdef DEBUG_STRSIZE
-  memset(dst, 0xff, sizeof(*dst) * maxncpy);
-#endif
-
-  /* NOTE: currently we don't attempt to deal with invalid utf8 chars. */
-  BLI_STR_UTF8_CPY(dst, src, maxncpy);
+  dst = str_utf8_copy_max_bytes_impl(dst, src, dst_maxncpy);
 
   return (size_t)(dst - r_dst);
 }
-
-#undef BLI_STR_UTF8_CPY
 
 /* -------------------------------------------------------------------- */
 /* wchar_t / utf8 functions */
 
 size_t BLI_strncpy_wchar_as_utf8(char *__restrict dst,
                                  const wchar_t *__restrict src,
-                                 const size_t maxncpy)
+                                 const size_t dst_maxncpy)
 {
-  BLI_assert(maxncpy != 0);
+  BLI_assert(dst_maxncpy != 0);
+  BLI_string_debug_size(dst, dst_maxncpy);
+
   size_t len = 0;
-#ifdef DEBUG_STRSIZE
-  memset(dst, 0xff, sizeof(*dst) * maxncpy);
-#endif
-  while (*src && len < maxncpy) {
-    len += BLI_str_utf8_from_unicode((uint)*src++, dst + len, maxncpy - len);
+  while (*src && len < dst_maxncpy) {
+    len += BLI_str_utf8_from_unicode((uint)*src++, dst + len, dst_maxncpy - len);
   }
   dst[len] = '\0';
   /* Return the correct length when part of the final byte did not fit into the string. */
@@ -320,11 +411,11 @@ size_t BLI_strlen_utf8(const char *strc)
   return BLI_strlen_utf8_ex(strc, &len_bytes);
 }
 
-size_t BLI_strnlen_utf8_ex(const char *strc, const size_t maxlen, size_t *r_len_bytes)
+size_t BLI_strnlen_utf8_ex(const char *strc, const size_t strc_maxlen, size_t *r_len_bytes)
 {
   size_t len = 0;
   const char *strc_orig = strc;
-  const char *strc_end = strc + maxlen;
+  const char *strc_end = strc + strc_maxlen;
 
   while (true) {
     size_t step = (size_t)BLI_str_utf8_size_safe(strc);
@@ -339,29 +430,30 @@ size_t BLI_strnlen_utf8_ex(const char *strc, const size_t maxlen, size_t *r_len_
   return len;
 }
 
-size_t BLI_strnlen_utf8(const char *strc, const size_t maxlen)
+size_t BLI_strnlen_utf8(const char *strc, const size_t strc_maxlen)
 {
   size_t len_bytes;
-  return BLI_strnlen_utf8_ex(strc, maxlen, &len_bytes);
+  return BLI_strnlen_utf8_ex(strc, strc_maxlen, &len_bytes);
 }
 
 size_t BLI_strncpy_wchar_from_utf8(wchar_t *__restrict dst_w,
                                    const char *__restrict src_c,
-                                   const size_t maxncpy)
+                                   const size_t dst_w_maxncpy)
 {
 #ifdef WIN32
-  conv_utf_8_to_16(src_c, dst_w, maxncpy);
+  BLI_string_debug_size(dst_w, dst_w_maxncpy);
+  conv_utf_8_to_16(src_c, dst_w, dst_w_maxncpy);
   /* NOTE: it would be more efficient to calculate the length as part of #conv_utf_8_to_16. */
   return wcslen(dst_w);
 #else
-  return BLI_str_utf8_as_utf32((char32_t *)dst_w, src_c, maxncpy);
+  return BLI_str_utf8_as_utf32((char32_t *)dst_w, src_c, dst_w_maxncpy);
 #endif
 }
 
 /* end wchar_t / utf8 functions */
 /* -------------------------------------------------------------------- */
 
-int BLI_wcwidth(char32_t ucs)
+int BLI_wcwidth_or_error(char32_t ucs)
 {
   /* Treat private use areas (icon fonts), symbols, and emoticons as double-width. */
   if (ucs >= 0xf0000 || (ucs >= 0xe000 && ucs < 0xf8ff) || (ucs >= 0x1f300 && ucs < 0x1fbff)) {
@@ -370,33 +462,38 @@ int BLI_wcwidth(char32_t ucs)
   return mk_wcwidth(ucs);
 }
 
-int BLI_wcswidth(const char32_t *pwcs, size_t n)
+int BLI_wcwidth_safe(char32_t ucs)
+{
+  const int columns = BLI_wcwidth_or_error(ucs);
+  if (columns >= 0) {
+    return columns;
+  }
+  return 1;
+}
+
+int BLI_wcswidth_or_error(const char32_t *pwcs, size_t n)
 {
   return mk_wcswidth(pwcs, n);
 }
 
-int BLI_str_utf8_char_width(const char *p)
+int BLI_str_utf8_char_width_or_error(const char *p)
 {
-  uint unicode = BLI_str_utf8_as_unicode(p);
+  uint unicode = BLI_str_utf8_as_unicode_or_error(p);
   if (unicode == BLI_UTF8_ERR) {
     return -1;
   }
 
-  return BLI_wcwidth((char32_t)unicode);
+  return BLI_wcwidth_or_error((char32_t)unicode);
 }
 
 int BLI_str_utf8_char_width_safe(const char *p)
 {
-  int columns;
-
-  uint unicode = BLI_str_utf8_as_unicode(p);
+  uint unicode = BLI_str_utf8_as_unicode_or_error(p);
   if (unicode == BLI_UTF8_ERR) {
     return 1;
   }
 
-  columns = BLI_wcwidth((char32_t)unicode);
-
-  return (columns < 0) ? 1 : columns;
+  return BLI_wcwidth_safe((char32_t)unicode);
 }
 
 /* -------------------------------------------------------------------- */
@@ -413,7 +510,10 @@ char32_t BLI_str_utf32_char_to_upper(const char32_t wc)
 {
   if (wc < U'\xFF') { /* Latin. */
     if ((wc <= U'z' && wc >= U'a') || (wc <= U'\xF6' && wc >= U'\xE0') ||
-        (wc <= U'\xFE' && wc >= U'\xF8')) {
+        /* Correct but the first case is know, only check the second */
+        // (wc <= U'\xFE' && wc >= U'\xF8')
+        (wc >= U'\xF8'))
+    {
       return wc - 32;
     }
     return wc;
@@ -436,7 +536,8 @@ char32_t BLI_str_utf32_char_to_upper(const char32_t wc)
 
   /* There are only three remaining ranges that contain capitalization. */
   if (!(wc <= U'\x0292' && wc >= U'\x00FF') && !(wc <= U'\x04F9' && wc >= U'\x03AC') &&
-      !(wc <= U'\x1FE1' && wc >= U'\x1E01')) {
+      !(wc <= U'\x1FE1' && wc >= U'\x1E01'))
+  {
     return wc;
   }
 
@@ -541,7 +642,8 @@ char32_t BLI_str_utf32_char_to_lower(const char32_t wc)
 
   /* There are only three remaining ranges that contain capitalization. */
   if (!(wc <= U'\x0216' && wc >= U'\x00D8') && !(wc <= U'\x04F8' && wc >= U'\x0386') &&
-      !(wc <= U'\x1FE9' && wc >= U'\x1E00')) {
+      !(wc <= U'\x1FE9' && wc >= U'\x1E00'))
+  {
     return wc;
   }
 
@@ -623,95 +725,36 @@ char32_t BLI_str_utf32_char_to_lower(const char32_t wc)
 
 /** \} */ /* -------------------------------------------------------------------- */
 
-/* copied from glib's gutf8.c, added 'Err' arg */
-
-/* NOTE(@ideasman42): glib uses uint for unicode, best we do the same,
- * though we don't typedef it. */
-
-#define UTF8_COMPUTE(Char, Mask, Len, Err) \
-  if (Char < 128) { \
-    Len = 1; \
-    Mask = 0x7f; \
-  } \
-  else if ((Char & 0xe0) == 0xc0) { \
-    Len = 2; \
-    Mask = 0x1f; \
-  } \
-  else if ((Char & 0xf0) == 0xe0) { \
-    Len = 3; \
-    Mask = 0x0f; \
-  } \
-  else if ((Char & 0xf8) == 0xf0) { \
-    Len = 4; \
-    Mask = 0x07; \
-  } \
-  else if ((Char & 0xfc) == 0xf8) { \
-    Len = 5; \
-    Mask = 0x03; \
-  } \
-  else if ((Char & 0xfe) == 0xfc) { \
-    Len = 6; \
-    Mask = 0x01; \
-  } \
-  else { \
-    Len = Err; /* -1 is the typical error value or 1 to skip */ \
-  } \
-  (void)0
-
-/* same as glib define but added an 'Err' arg */
-#define UTF8_GET(Result, Chars, Count, Mask, Len, Err) \
-  (Result) = (Chars)[0] & (Mask); \
-  for ((Count) = 1; (Count) < (Len); ++(Count)) { \
-    if (((Chars)[(Count)] & 0xc0) != 0x80) { \
-      (Result) = Err; \
-      break; \
-    } \
-    (Result) <<= 6; \
-    (Result) |= ((Chars)[(Count)] & 0x3f); \
-  } \
-  (void)0
-
-int BLI_str_utf8_size(const char *p)
+int BLI_str_utf8_size_or_error(const char *p)
 {
-  /* NOTE: uses glib functions but not from GLIB. */
-
-  int mask = 0, len;
-  const uchar c = (uchar)*p;
-
-  UTF8_COMPUTE(c, mask, len, -1);
-
-  (void)mask; /* quiet warning */
-
-  return len;
+  return utf8_char_compute_skip_or_error(*p);
 }
 
 int BLI_str_utf8_size_safe(const char *p)
 {
-  int mask = 0, len;
-  const uchar c = (uchar)*p;
-
-  UTF8_COMPUTE(c, mask, len, 1);
-
-  (void)mask; /* quiet warning */
-
-  return len;
+  return utf8_char_compute_skip(*p);
 }
 
-uint BLI_str_utf8_as_unicode(const char *p)
+uint BLI_str_utf8_as_unicode_or_error(const char *p)
 {
   /* Originally `g_utf8_get_char` in GLIB. */
 
-  int i, len;
-  uint mask = 0;
-  uint result;
   const uchar c = (uchar)*p;
 
-  UTF8_COMPUTE(c, mask, len, -1);
+  char mask = 0;
+  const int len = utf8_char_compute_skip_or_error_with_mask(c, &mask);
   if (UNLIKELY(len == -1)) {
     return BLI_UTF8_ERR;
   }
-  UTF8_GET(result, p, i, mask, len, BLI_UTF8_ERR);
+  return utf8_char_decode(p, mask, len, BLI_UTF8_ERR);
+}
 
+uint BLI_str_utf8_as_unicode_safe(const char *p)
+{
+  const uint result = BLI_str_utf8_as_unicode_or_error(p);
+  if (UNLIKELY(result == BLI_UTF8_ERR)) {
+    return *p;
+  }
   return result;
 }
 
@@ -719,19 +762,18 @@ uint BLI_str_utf8_as_unicode_step_or_error(const char *__restrict p,
                                            const size_t p_len,
                                            size_t *__restrict index)
 {
-  int i, len;
-  uint mask = 0;
-  uint result;
   const uchar c = (uchar) * (p += *index);
 
   BLI_assert(*index < p_len);
   BLI_assert(c != '\0');
 
-  UTF8_COMPUTE(c, mask, len, -1);
+  char mask = 0;
+  const int len = utf8_char_compute_skip_or_error_with_mask(c, &mask);
   if (UNLIKELY(len == -1) || (*index + (size_t)len > p_len)) {
     return BLI_UTF8_ERR;
   }
-  UTF8_GET(result, p, i, mask, len, BLI_UTF8_ERR);
+
+  const uint result = utf8_char_decode(p, mask, len, BLI_UTF8_ERR);
   if (UNLIKELY(result == BLI_UTF8_ERR)) {
     return BLI_UTF8_ERR;
   }
@@ -740,9 +782,9 @@ uint BLI_str_utf8_as_unicode_step_or_error(const char *__restrict p,
   return result;
 }
 
-uint BLI_str_utf8_as_unicode_step(const char *__restrict p,
-                                  const size_t p_len,
-                                  size_t *__restrict index)
+uint BLI_str_utf8_as_unicode_step_safe(const char *__restrict p,
+                                       const size_t p_len,
+                                       size_t *__restrict index)
 {
   uint result = BLI_str_utf8_as_unicode_step_or_error(p, p_len, index);
   if (UNLIKELY(result == BLI_UTF8_ERR)) {
@@ -794,42 +836,41 @@ size_t BLI_str_utf8_from_unicode_len(const uint c)
   return len;
 }
 
-size_t BLI_str_utf8_from_unicode(uint c, char *outbuf, const size_t outbuf_len)
+size_t BLI_str_utf8_from_unicode(uint c, char *dst, const size_t dst_maxncpy)
 
 {
+  BLI_string_debug_size(dst, dst_maxncpy);
+
   /* If this gets modified, also update the copy in g_string_insert_unichar() */
   uint len = 0;
   uint first;
 
   UTF8_VARS_FROM_CHAR32(c, first, len);
 
-  if (UNLIKELY(outbuf_len < len)) {
+  if (UNLIKELY(dst_maxncpy < len)) {
     /* NULL terminate instead of writing a partial byte. */
-    memset(outbuf, 0x0, outbuf_len);
-    return outbuf_len;
+    memset(dst, 0x0, dst_maxncpy);
+    return dst_maxncpy;
   }
 
   for (uint i = len - 1; i > 0; i--) {
-    outbuf[i] = (c & 0x3f) | 0x80;
+    dst[i] = (char)((c & 0x3f) | 0x80);
     c >>= 6;
   }
-  outbuf[0] = c | first;
+  dst[0] = (char)(c | first);
 
   return len;
 }
 
 size_t BLI_str_utf8_as_utf32(char32_t *__restrict dst_w,
                              const char *__restrict src_c,
-                             const size_t maxncpy)
+                             const size_t dst_w_maxncpy)
 {
-  const size_t maxlen = maxncpy - 1;
+  BLI_assert(dst_w_maxncpy != 0);
+  BLI_string_debug_size(dst_w, dst_w_maxncpy);
+
+  const size_t maxlen = dst_w_maxncpy - 1;
   size_t len = 0;
-
-  BLI_assert(maxncpy != 0);
-
-#ifdef DEBUG_STRSIZE
-  memset(dst_w, 0xff, sizeof(*dst_w) * maxncpy);
-#endif
 
   const size_t src_c_len = strlen(src_c);
   const char *src_c_end = src_c + src_c_len;
@@ -855,15 +896,14 @@ size_t BLI_str_utf8_as_utf32(char32_t *__restrict dst_w,
 
 size_t BLI_str_utf32_as_utf8(char *__restrict dst,
                              const char32_t *__restrict src,
-                             const size_t maxncpy)
+                             const size_t dst_maxncpy)
 {
-  BLI_assert(maxncpy != 0);
+  BLI_assert(dst_maxncpy != 0);
+  BLI_string_debug_size(dst, dst_maxncpy);
+
   size_t len = 0;
-#ifdef DEBUG_STRSIZE
-  memset(dst, 0xff, sizeof(*dst) * maxncpy);
-#endif
-  while (*src && len < maxncpy) {
-    len += BLI_str_utf8_from_unicode((uint)*src++, dst + len, maxncpy - len);
+  while (*src && len < dst_maxncpy) {
+    len += BLI_str_utf8_from_unicode((uint)*src++, dst + len, dst_maxncpy - len);
   }
   dst[len] = '\0';
   /* Return the correct length when part of the final byte did not fit into the string. */
@@ -953,14 +993,15 @@ size_t BLI_str_partition_ex_utf8(const char *str,
   }
 
   /* Note that here, we assume end points to a valid utf8 char! */
-  BLI_assert((end >= str) && (BLI_str_utf8_as_unicode(end) != BLI_UTF8_ERR));
+  BLI_assert((end >= str) && (BLI_str_utf8_as_unicode_or_error(end) != BLI_UTF8_ERR));
 
   char *suf = (char *)(str + str_len);
   size_t index = 0;
   for (char *sep = (char *)(from_right ? BLI_str_find_prev_char_utf8(end, str) : str);
        from_right ? (sep > str) : ((sep < end) && (*sep != '\0'));
        sep = (char *)(from_right ? (str != sep ? BLI_str_find_prev_char_utf8(sep, str) : NULL) :
-                                   str + index)) {
+                                   str + index))
+  {
     size_t index_ofs = 0;
     const uint c = BLI_str_utf8_as_unicode_step_or_error(sep, (size_t)(end - sep), &index_ofs);
     if (UNLIKELY(c == BLI_UTF8_ERR)) {
@@ -986,50 +1027,109 @@ size_t BLI_str_partition_ex_utf8(const char *str,
 
 /* -------------------------------------------------------------------- */
 /** \name Offset Conversion in Strings
+ *
+ * \note Regarding the assertion: `BLI_assert(offset <= offset_target)`
+ * The `offset_target` is likely in the middle of a UTF8 byte-sequence.
+ * Most likely the offset passed in is incorrect, although it may be impractical to
+ * avoid this happening in the case of invalid UTF8 byte sequences.
+ * If the assert is impractical to avoid, it could be demoted to a warning.
  * \{ */
 
-int BLI_str_utf8_offset_to_index(const char *str, int offset)
+int BLI_str_utf8_offset_to_index(const char *str, const size_t str_len, const int offset_target)
 {
-  int index = 0, pos = 0;
-  while (pos != offset) {
-    pos += BLI_str_utf8_size(str + pos);
+  BLI_assert(offset_target >= 0);
+  const size_t offset_target_as_size = (size_t)offset_target;
+  size_t offset = 0;
+  int index = 0;
+  /* Note that `offset != offset_target_as_size` works for valid utf8 strings. */
+  while ((offset < str_len) && (offset < offset_target_as_size)) {
+    /* Use instead of #BLI_str_utf8_size_safe to match behavior when limiting the string length. */
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset);
+    UNUSED_VARS(code);
     index++;
+    BLI_assert(offset <= offset_target_as_size); /* See DOXY section comment. */
   }
   return index;
 }
 
-int BLI_str_utf8_offset_from_index(const char *str, int index)
+int BLI_str_utf8_offset_from_index(const char *str, const size_t str_len, const int index_target)
 {
-  int offset = 0, pos = 0;
-  while (pos != index) {
-    offset += BLI_str_utf8_size(str + offset);
-    pos++;
+  BLI_assert(index_target >= 0);
+  size_t offset = 0;
+  int index = 0;
+  while ((offset < str_len) && (index < index_target)) {
+    /* Use instead of #BLI_str_utf8_size_safe to match behavior when limiting the string length. */
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset);
+    UNUSED_VARS(code);
+    index++;
   }
-  return offset;
+  return (int)offset;
 }
 
-int BLI_str_utf8_offset_to_column(const char *str, int offset)
+int BLI_str_utf8_offset_to_column(const char *str, const size_t str_len, const int offset_target)
 {
-  int column = 0, pos = 0;
-  while (pos < offset) {
-    column += BLI_str_utf8_char_width_safe(str + pos);
-    pos += BLI_str_utf8_size_safe(str + pos);
+  BLI_assert(offset_target >= 0);
+  const size_t offset_target_clamp = MIN2((size_t)offset_target, str_len);
+  size_t offset = 0;
+  int column = 0;
+  while (offset < offset_target_clamp) {
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset);
+    column += BLI_wcwidth_safe(code);
+    BLI_assert(offset <= (size_t)offset_target); /* See DOXY section comment. */
   }
   return column;
 }
 
-int BLI_str_utf8_offset_from_column(const char *str, int column)
+int BLI_str_utf8_offset_from_column(const char *str, const size_t str_len, const int column_target)
 {
-  int offset = 0, pos = 0;
-  while (*(str + offset) && pos < column) {
-    const int col = BLI_str_utf8_char_width_safe(str + offset);
-    if (pos + col > column) {
+  size_t offset = 0, offset_next = 0;
+  int column = 0;
+  while ((offset < str_len) && (column < column_target)) {
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset_next);
+    column += BLI_wcwidth_safe(code);
+    if (column > column_target) {
       break;
     }
-    offset += BLI_str_utf8_size_safe(str + offset);
-    pos += col;
+    offset = offset_next;
   }
-  return offset;
+  return (int)offset;
+}
+
+int BLI_str_utf8_offset_to_column_with_tabs(const char *str,
+                                            const size_t str_len,
+                                            const int offset_target,
+                                            const int tab_width)
+{
+  BLI_assert(offset_target >= 0);
+  const size_t offset_target_clamp = MIN2((size_t)offset_target, str_len);
+  size_t offset = 0;
+  int column = 0;
+  while (offset < offset_target_clamp) {
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset);
+    /* The following line is the only change compared with #BLI_str_utf8_offset_to_column. */
+    column += (code == '\t') ? (tab_width - (column % tab_width)) : BLI_wcwidth_safe(code);
+    BLI_assert(offset <= (size_t)offset_target); /* See DOXY section comment. */
+  }
+  return column;
+}
+
+int BLI_str_utf8_offset_from_column_with_tabs(const char *str,
+                                              const size_t str_len,
+                                              const int column_target,
+                                              const int tab_width)
+{
+  size_t offset = 0, offset_next = 0;
+  int column = 0;
+  while ((offset < str_len) && (column < column_target)) {
+    const uint code = BLI_str_utf8_as_unicode_step_safe(str, str_len, &offset_next);
+    /* The following line is the only change compared with #BLI_str_utf8_offset_from_column. */
+    column += (code == '\t') ? (tab_width - (column % tab_width)) : BLI_wcwidth_safe(code);
+    if (column > column_target) {
+      break;
+    }
+    offset = offset_next;
+  }
+  return (int)offset;
 }
 
 /** \} */

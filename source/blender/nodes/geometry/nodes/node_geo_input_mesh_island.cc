@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "DNA_mesh_types.h"
 #include "DNA_meshdata_types.h"
@@ -14,13 +16,14 @@ namespace blender::nodes::node_geo_input_mesh_island_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_output<decl::Int>(N_("Island Index"))
+  b.add_output<decl::Int>("Island Index")
       .field_source()
-      .description(N_("The index of the each vertex's island. Indices are based on the "
-                      "lowest vertex index contained in each island"));
-  b.add_output<decl::Int>(N_("Island Count"))
+      .description(
+          "The index of the each vertex's island. Indices are based on the "
+          "lowest vertex index contained in each island");
+  b.add_output<decl::Int>("Island Count")
       .field_source()
-      .description(N_("The total number of mesh islands"));
+      .description("The total number of mesh islands");
 }
 
 class IslandFieldInput final : public bke::MeshFieldInput {
@@ -32,7 +35,7 @@ class IslandFieldInput final : public bke::MeshFieldInput {
 
   GVArray get_varray_for_context(const Mesh &mesh,
                                  const eAttrDomain domain,
-                                 const IndexMask /*mask*/) const final
+                                 const IndexMask & /*mask*/) const final
   {
     const Span<int2> edges = mesh.edges();
 
@@ -76,7 +79,7 @@ class IslandCountFieldInput final : public bke::MeshFieldInput {
 
   GVArray get_varray_for_context(const Mesh &mesh,
                                  const eAttrDomain domain,
-                                 const IndexMask /*mask*/) const final
+                                 const IndexMask & /*mask*/) const final
   {
     const Span<int2> edges = mesh.edges();
 
@@ -120,15 +123,14 @@ static void node_geo_exec(GeoNodeExecParams params)
   }
 }
 
-}  // namespace blender::nodes::node_geo_input_mesh_island_cc
-
-void register_node_type_geo_input_mesh_island()
+static void node_register()
 {
-  namespace file_ns = blender::nodes::node_geo_input_mesh_island_cc;
-
   static bNodeType ntype;
   geo_node_type_base(&ntype, GEO_NODE_INPUT_MESH_ISLAND, "Mesh Island", NODE_CLASS_INPUT);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
   nodeRegisterType(&ntype);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_input_mesh_island_cc

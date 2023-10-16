@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -50,8 +52,8 @@ static char SmoothingShader___doc__[] =
     ".. method:: shade(stroke)\n"
     "\n"
     "   Smooths the stroke by moving the vertices to make the stroke\n"
-    "   smoother.  Uses curvature flow to converge towards a curve of\n"
-    "   constant curvature.  The diffusion method we use is anisotropic to\n"
+    "   smoother. Uses curvature flow to converge towards a curve of\n"
+    "   constant curvature. The diffusion method we use is anisotropic to\n"
     "   prevent the diffusion across corners.\n"
     "\n"
     "   :arg stroke: A Stroke object.\n"
@@ -74,7 +76,8 @@ static int SmoothingShader___init__(BPy_SmoothingShader *self, PyObject *args, P
   double d2 = 0.1, d3 = 0.0, d4 = 0.2, d5 = 0.0, d6 = 0.0, d7 = 0.0, d8 = 1.0;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "|iddddddd", (char **)kwlist, &i1, &d2, &d3, &d4, &d5, &d6, &d7, &d8)) {
+          args, kwds, "|iddddddd", (char **)kwlist, &i1, &d2, &d3, &d4, &d5, &d6, &d7, &d8))
+  {
     return -1;
   }
   self->py_ss.ss = new SmoothingShader(i1, d2, d3, d4, d5, d6, d7, d8);
@@ -84,7 +87,7 @@ static int SmoothingShader___init__(BPy_SmoothingShader *self, PyObject *args, P
 /*-----------------------BPy_SmoothingShader type definition ------------------------------*/
 
 PyTypeObject SmoothingShader_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "SmoothingShader",
     /*tp_basicsize*/ sizeof(BPy_SmoothingShader),
     /*tp_itemsize*/ 0,

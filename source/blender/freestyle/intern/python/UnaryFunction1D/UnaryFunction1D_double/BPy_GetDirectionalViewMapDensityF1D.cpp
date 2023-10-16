@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -50,8 +52,8 @@ static char GetDirectionalViewMapDensityF1D___doc__[] =
     ".. method:: __call__(inter)\n"
     "\n"
     "   Returns the density evaluated for an Interface1D in of the steerable\n"
-    "   viewmaps image.  The direction telling which Directional map to choose\n"
-    "   is explicitly specified by the user.  The density is evaluated for a\n"
+    "   viewmaps image. The direction telling which Directional map to choose\n"
+    "   is explicitly specified by the user. The density is evaluated for a\n"
     "   set of points along the Interface1D (using the\n"
     "   :class:`freestyle.functions.ReadSteerableViewMapPixelF0D` functor) and\n"
     "   then integrated into a single value using a user-defined integration\n"
@@ -73,7 +75,8 @@ static int GetDirectionalViewMapDensityF1D___init__(BPy_GetDirectionalViewMapDen
   float f = 2.0;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "II|O!f", (char **)kwlist, &u1, &u2, &IntegrationType_Type, &obj, &f)) {
+          args, kwds, "II|O!f", (char **)kwlist, &u1, &u2, &IntegrationType_Type, &obj, &f))
+  {
     return -1;
   }
   IntegrationType t = (obj) ? IntegrationType_from_BPy_IntegrationType(obj) : MEAN;
@@ -85,7 +88,7 @@ static int GetDirectionalViewMapDensityF1D___init__(BPy_GetDirectionalViewMapDen
 /*-----------------------BPy_GetDirectionalViewMapDensityF1D type definition --------------------*/
 
 PyTypeObject GetDirectionalViewMapDensityF1D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "GetDirectionalViewMapDensityF1D",
     /*tp_basicsize*/ sizeof(BPy_GetDirectionalViewMapDensityF1D),
     /*tp_itemsize*/ 0,

@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -63,7 +65,8 @@ static int ViewMapGradientNormBP1D___init__(BPy_ViewMapGradientNormBP1D *self,
   float f = 2.0;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "i|O!f", (char **)kwlist, &i, &IntegrationType_Type, &obj, &f)) {
+          args, kwds, "i|O!f", (char **)kwlist, &i, &IntegrationType_Type, &obj, &f))
+  {
     return -1;
   }
   IntegrationType t = (obj) ? IntegrationType_from_BPy_IntegrationType(obj) : MEAN;
@@ -74,7 +77,7 @@ static int ViewMapGradientNormBP1D___init__(BPy_ViewMapGradientNormBP1D *self,
 /*-----------------------BPy_ViewMapGradientNormBP1D type definition ----------------------------*/
 
 PyTypeObject ViewMapGradientNormBP1D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ViewMapGradientNormBP1D",
     /*tp_basicsize*/ sizeof(BPy_ViewMapGradientNormBP1D),
     /*tp_itemsize*/ 0,

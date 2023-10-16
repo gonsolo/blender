@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -25,7 +26,7 @@ namespace blender::gpu {
 Texture::Texture(const char *name)
 {
   if (name) {
-    BLI_strncpy(name_, name, sizeof(name_));
+    STRNCPY(name_, name);
   }
   else {
     name_[0] = '\0';
@@ -132,14 +133,15 @@ bool Texture::init_buffer(GPUVertBuf *vbo, eGPUTextureFormat format)
   return this->init_internal(vbo);
 }
 
-bool Texture::init_view(const GPUTexture *src_,
+bool Texture::init_view(GPUTexture *src_,
                         eGPUTextureFormat format,
                         eGPUTextureType type,
                         int mip_start,
                         int mip_len,
                         int layer_start,
                         int layer_len,
-                        bool cube_as_array)
+                        bool cube_as_array,
+                        bool use_stencil)
 {
   const Texture *src = unwrap(src_);
   w_ = src->w_;
@@ -172,7 +174,7 @@ bool Texture::init_view(const GPUTexture *src_,
     type_ = (type_ & ~GPU_TEXTURE_CUBE) | GPU_TEXTURE_2D_ARRAY;
   }
   sampler_state = src->sampler_state;
-  return this->init_internal(src_, mip_start, layer_start);
+  return this->init_internal(src_, mip_start, layer_start, use_stencil);
 }
 
 void Texture::usage_set(eGPUTextureUsage usage_flags)
@@ -188,6 +190,17 @@ void Texture::usage_set(eGPUTextureUsage usage_flags)
 
 void Texture::attach_to(FrameBuffer *fb, GPUAttachmentType type)
 {
+  for (int i = 0; i < ARRAY_SIZE(fb_); i++) {
+    if (fb_[i] == fb) {
+      /* Already stores a reference */
+      if (fb_attachment_[i] != type) {
+        /* Ensure it's not attached twice to the same FrameBuffer. */
+        fb_[i]->attachment_remove(fb_attachment_[i]);
+        fb_attachment_[i] = type;
+      }
+      return;
+    }
+  }
   for (int i = 0; i < ARRAY_SIZE(fb_); i++) {
     if (fb_[i] == nullptr) {
       fb_attachment_[i] = type;
@@ -253,6 +266,8 @@ static inline GPUTexture *gpu_texture_create(const char *name,
 {
   BLI_assert(mip_len > 0);
   Texture *tex = GPUBackend::get()->texture_alloc(name);
+  tex->usage_set(usage);
+
   bool success = false;
   switch (type) {
     case GPU_TEXTURE_1D:
@@ -273,9 +288,6 @@ static inline GPUTexture *gpu_texture_create(const char *name,
     default:
       break;
   }
-
-  /* Assign usage. */
-  tex->usage_set(usage);
 
   if (!success) {
     delete tex;
@@ -380,10 +392,8 @@ GPUTexture *GPU_texture_create_compressed_2d(const char *name,
                                              const void *data)
 {
   Texture *tex = GPUBackend::get()->texture_alloc(name);
-  bool success = tex->init_2D(w, h, 0, miplen, tex_format);
-
-  /* Assign usage. */
   tex->usage_set(usage);
+  bool success = tex->init_2D(w, h, 0, miplen, tex_format);
 
   if (!success) {
     delete tex;
@@ -448,16 +458,20 @@ GPUTexture *GPU_texture_create_error(int dimension, bool is_array)
 }
 
 GPUTexture *GPU_texture_create_view(const char *name,
-                                    const GPUTexture *src,
+                                    GPUTexture *src,
                                     eGPUTextureFormat format,
                                     int mip_start,
                                     int mip_len,
                                     int layer_start,
                                     int layer_len,
-                                    bool cube_as_array)
+                                    bool cube_as_array,
+                                    bool use_stencil)
 {
   BLI_assert(mip_len > 0);
   BLI_assert(layer_len > 0);
+  BLI_assert_msg(
+      GPU_texture_usage(src) & GPU_TEXTURE_USAGE_MIP_SWIZZLE_VIEW,
+      "Source texture of TextureView must have GPU_TEXTURE_USAGE_MIP_SWIZZLE_VIEW usage flag.");
   Texture *view = GPUBackend::get()->texture_alloc(name);
   view->init_view(src,
                   format,
@@ -466,7 +480,8 @@ GPUTexture *GPU_texture_create_view(const char *name,
                   mip_len,
                   layer_start,
                   layer_len,
-                  cube_as_array);
+                  cube_as_array,
+                  use_stencil);
   return wrap(view);
 }
 
@@ -660,12 +675,6 @@ void GPU_texture_extend_mode(GPUTexture *tex_, GPUSamplerExtendMode extend_mode)
 void GPU_texture_swizzle_set(GPUTexture *tex, const char swizzle[4])
 {
   reinterpret_cast<Texture *>(tex)->swizzle_set(swizzle);
-}
-
-void GPU_texture_stencil_texture_mode_set(GPUTexture *tex, bool use_stencil)
-{
-  BLI_assert(GPU_texture_has_stencil_format(tex) || !use_stencil);
-  reinterpret_cast<Texture *>(tex)->stencil_texture_mode_set(use_stencil);
 }
 
 void GPU_texture_free(GPUTexture *tex_)
@@ -953,7 +962,7 @@ void GPU_texture_get_mipmap_size(GPUTexture *tex, int lvl, int *r_size)
  * Pixel buffer utility functions.
  * \{ */
 
-GPUPixelBuffer *GPU_pixel_buffer_create(uint size)
+GPUPixelBuffer *GPU_pixel_buffer_create(size_t size)
 {
   /* Ensure buffer satisfies the alignment of 256 bytes for copying
    * data between buffers and textures. As specified in:
@@ -982,7 +991,7 @@ void GPU_pixel_buffer_unmap(GPUPixelBuffer *pix_buf)
   reinterpret_cast<PixelBuffer *>(pix_buf)->unmap();
 }
 
-uint GPU_pixel_buffer_size(GPUPixelBuffer *pix_buf)
+size_t GPU_pixel_buffer_size(GPUPixelBuffer *pix_buf)
 {
   return reinterpret_cast<PixelBuffer *>(pix_buf)->get_size();
 }

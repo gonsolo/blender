@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -131,7 +132,10 @@ static void sigbus_handler_remove(BLI_mmap_file *file)
 BLI_mmap_file *BLI_mmap_open(int fd)
 {
   void *memory, *handle = NULL;
-  size_t length = BLI_lseek(fd, 0, SEEK_END);
+  const size_t length = BLI_lseek(fd, 0, SEEK_END);
+  if (UNLIKELY(length == (size_t)-1)) {
+    return NULL;
+  }
 
 #ifndef WIN32
   /* Ensure that the SIGBUS handler is configured. */
@@ -189,11 +193,13 @@ bool BLI_mmap_read(BLI_mmap_file *file, void *dest, size_t offset, size_t length
   memcpy(dest, file->memory + offset, length);
 #else
   /* On Windows, we use exception handling to be notified of errors. */
-  __try {
+  __try
+  {
     memcpy(dest, file->memory + offset, length);
   }
   __except (GetExceptionCode() == EXCEPTION_IN_PAGE_ERROR ? EXCEPTION_EXECUTE_HANDLER :
-                                                            EXCEPTION_CONTINUE_SEARCH) {
+                                                            EXCEPTION_CONTINUE_SEARCH)
+  {
     file->io_error = true;
     return false;
   }
@@ -205,6 +211,11 @@ bool BLI_mmap_read(BLI_mmap_file *file, void *dest, size_t offset, size_t length
 void *BLI_mmap_get_pointer(BLI_mmap_file *file)
 {
   return file->memory;
+}
+
+size_t BLI_mmap_get_length(const BLI_mmap_file *file)
+{
+  return file->length;
 }
 
 void BLI_mmap_free(BLI_mmap_file *file)

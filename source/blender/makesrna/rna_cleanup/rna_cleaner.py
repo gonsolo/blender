@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2010-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 """
@@ -103,7 +105,7 @@ def check_if_changed(a, b):
 
 def get_props_from_txt(input_filename):
     """
-    If the file is *.txt, the script assumes it is formatted as outlined in this script docstring
+    If the file is *.txt, the script assumes it is formatted as outlined in this script doc-string.
     """
 
     file = open(input_filename, 'r')
@@ -324,6 +326,6 @@ def main():
 if __name__ == '__main__':
     import sys
     if sys.version_info.major < 3:
-        print("Incorrect python version, use Python 3 or newer!")
+        print("Incorrect Python version, use Python 3 or newer!")
     else:
         main()

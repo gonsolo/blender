@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/curves.h"
 #include "scene/hair.h"
@@ -28,7 +29,8 @@ static Geometry::Type determine_geom_type(BObjectInfo &b_ob_info, bool use_parti
 
   if (b_ob_info.object_data.is_a(&RNA_Volume) ||
       (b_ob_info.object_data == b_ob_info.real_object.data() &&
-       object_fluid_gas_domain_find(b_ob_info.real_object))) {
+       object_fluid_gas_domain_find(b_ob_info.real_object)))
+  {
     return Geometry::VOLUME;
   }
 
@@ -54,10 +56,12 @@ array<Node *> BlenderSync::find_used_shaders(BL::Object &b_ob)
   }
 
   if (used_shaders.size() == 0) {
-    if (material_override)
+    if (material_override) {
       find_shader(material_override, used_shaders, default_shader);
-    else
+    }
+    else {
       used_shaders.push_back_slow(default_shader);
+    }
   }
 
   return used_shaders;
@@ -147,8 +151,9 @@ Geometry *BlenderSync::sync_geometry(BL::Depsgraph &b_depsgraph,
   geom->set_used_shaders(used_shaders);
 
   auto sync_func = [=]() mutable {
-    if (progress.get_cancel())
+    if (progress.get_cancel()) {
       return;
+    }
 
     progress.set_sync_status("Synchronizing object", b_ob_info.real_object.name());
 
@@ -192,7 +197,8 @@ void BlenderSync::sync_geometry_motion(BL::Depsgraph &b_depsgraph,
   Geometry *geom = object->get_geometry();
 
   if (geometry_motion_synced.find(geom) != geometry_motion_synced.end() ||
-      geometry_motion_attribute_synced.find(geom) != geometry_motion_attribute_synced.end()) {
+      geometry_motion_attribute_synced.find(geom) != geometry_motion_attribute_synced.end())
+  {
     return;
   }
 
@@ -200,8 +206,9 @@ void BlenderSync::sync_geometry_motion(BL::Depsgraph &b_depsgraph,
 
   /* Ensure we only motion sync geometry that also had geometry synced, to avoid
    * unnecessary work and to ensure that its attributes were clear. */
-  if (geometry_synced.find(geom) == geometry_synced.end())
+  if (geometry_synced.find(geom) == geometry_synced.end()) {
     return;
+  }
 
   /* Find time matching motion step required by geometry. */
   int motion_step = geom->motion_step(motion_time);
@@ -210,15 +217,17 @@ void BlenderSync::sync_geometry_motion(BL::Depsgraph &b_depsgraph,
   }
 
   auto sync_func = [=]() mutable {
-    if (progress.get_cancel())
+    if (progress.get_cancel()) {
       return;
+    }
 
     if (b_ob_info.object_data.is_a(&RNA_Curves) || use_particle_hair) {
       Hair *hair = static_cast<Hair *>(geom);
       sync_hair_motion(b_depsgraph, b_ob_info, hair, motion_step);
     }
     else if (b_ob_info.object_data.is_a(&RNA_Volume) ||
-             object_fluid_gas_domain_find(b_ob_info.real_object)) {
+             object_fluid_gas_domain_find(b_ob_info.real_object))
+    {
       /* No volume motion blur support yet. */
     }
     else if (b_ob_info.object_data.is_a(&RNA_PointCloud)) {

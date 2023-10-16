@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "bvh/bvh.h"
 #include "bvh/bvh2.h"
@@ -75,8 +76,9 @@ Geometry::~Geometry()
 
 void Geometry::clear(bool preserve_shaders)
 {
-  if (!preserve_shaders)
+  if (!preserve_shaders) {
     used_shaders.clear();
+  }
 
   transform_applied = false;
   transform_negative_scaled = false;
@@ -114,7 +116,10 @@ bool Geometry::need_build_bvh(BVHLayout layout) const
 {
   return is_instanced() || layout == BVH_LAYOUT_OPTIX || layout == BVH_LAYOUT_MULTI_OPTIX ||
          layout == BVH_LAYOUT_METAL || layout == BVH_LAYOUT_MULTI_OPTIX_EMBREE ||
-         layout == BVH_LAYOUT_MULTI_METAL || layout == BVH_LAYOUT_MULTI_METAL_EMBREE;
+         layout == BVH_LAYOUT_MULTI_METAL || layout == BVH_LAYOUT_MULTI_METAL_EMBREE ||
+         layout == BVH_LAYOUT_HIPRT || layout == BVH_LAYOUT_MULTI_HIPRT ||
+         layout == BVH_LAYOUT_MULTI_HIPRT_EMBREE || layout == BVH_LAYOUT_EMBREEGPU ||
+         layout == BVH_LAYOUT_MULTI_EMBREEGPU || layout == BVH_LAYOUT_MULTI_EMBREEGPU_EMBREE;
 }
 
 bool Geometry::is_instanced() const
@@ -498,7 +503,8 @@ void GeometryManager::device_update_preprocess(Device *device, Scene *scene, Pro
   DeviceScene *dscene = &scene->dscene;
 
   if (device_update_flags & (DEVICE_MESH_DATA_NEEDS_REALLOC | DEVICE_CURVE_DATA_NEEDS_REALLOC |
-                             DEVICE_POINT_DATA_NEEDS_REALLOC)) {
+                             DEVICE_POINT_DATA_NEEDS_REALLOC))
+  {
     delete scene->bvh;
     scene->bvh = nullptr;
 
@@ -702,8 +708,9 @@ void GeometryManager::device_update(Device *device,
                                     Scene *scene,
                                     Progress &progress)
 {
-  if (!need_update())
+  if (!need_update()) {
     return;
+  }
 
   VLOG_INFO << "Total " << scene->geometry.size() << " meshes.";
 
@@ -782,11 +789,13 @@ void GeometryManager::device_update(Device *device,
       Mesh *mesh = static_cast<Mesh *>(geom);
       if (mesh->need_tesselation()) {
         string msg = "Tessellating ";
-        if (mesh->name == "")
+        if (mesh->name == "") {
           msg += string_printf("%u/%u", (uint)(i + 1), (uint)total_tess_needed);
-        else
+        }
+        else {
           msg += string_printf(
               "%s %u/%u", mesh->name.c_str(), (uint)(i + 1), (uint)total_tess_needed);
+        }
 
         progress.set_status("Updating Mesh", msg);
 

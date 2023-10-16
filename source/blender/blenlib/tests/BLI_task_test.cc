@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "testing/testing.h"
 #include <atomic>
@@ -219,7 +221,7 @@ TEST(task, MempoolIterTLS)
 
   /* Check that all elements are added into the list once. */
   int number_accum = 0;
-  for (LinkData *link = (LinkData *)tls_data.accumulate_items->first; link; link = link->next) {
+  LISTBASE_FOREACH (LinkData *, link, tls_data.accumulate_items) {
     int *data = (int *)link->data;
     number_accum += *data;
   }
@@ -271,7 +273,8 @@ TEST(task, ListBaseIter)
   EXPECT_EQ(items_num, 0);
   LinkData *item;
   for (i = 0, item = (LinkData *)list.first; i < ITEMS_NUM && item != nullptr;
-       i++, item = item->next) {
+       i++, item = item->next)
+  {
     EXPECT_EQ(POINTER_AS_INT(item->data), i);
   }
   EXPECT_EQ(ITEMS_NUM, i);

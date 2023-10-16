@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "gpu_shader_create_info.hh"
 
@@ -303,6 +305,14 @@ GPU_SHADER_CREATE_INFO(eevee_legacy_post_process)
     .sampler(4, ImageType::FLOAT_2D, "inputTransmittanceBuffer")
     .fragment_out(0, Type::VEC4, "fragColor")
     .auto_resource_location(true)
+    .do_static_compilation(true);
+
+/* EEVEE_shaders_renderpasses_accumulate_sh_get */
+GPU_SHADER_CREATE_INFO(eevee_legacy_renderpass_accumulate)
+    .additional_info("draw_fullscreen")
+    .fragment_source("renderpass_accumulate_frag.glsl")
+    .sampler(1, ImageType::FLOAT_2D, "inputBuffer")
+    .fragment_out(0, Type::VEC4, "fragColor")
     .do_static_compilation(true);
 
 /* EEVEE_shaders_effect_mist_sh_get */

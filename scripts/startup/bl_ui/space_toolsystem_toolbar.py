@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2017-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # For documentation on tool definitions: see "bl_ui.space_toolsystem_common.ToolDef"
@@ -500,23 +502,21 @@ class _defs_view3d_add:
     # Layout tweaks here would be good to avoid,
     # this shows limits in layout engine, as buttons are using a lot of space.
     @staticmethod
-    def draw_settings_interactive_add(layout, tool, extra):
+    def draw_settings_interactive_add(layout, tool_settings, tool, extra):
         show_extra = False
-        props = tool.operator_properties("view3d.interactive_add")
         if not extra:
             row = layout.row()
             row.label(text="Depth:")
             row = layout.row()
-            row.prop(props, "plane_depth", text="")
+            row.prop(tool_settings, "plane_depth", text="")
             row = layout.row()
             row.label(text="Orientation:")
             row = layout.row()
-            row.prop(props, "plane_orientation", text="")
+            row.prop(tool_settings, "plane_orientation", text="")
             row = layout.row()
-            row.prop(props, "snap_target")
+            row.prop(tool_settings, "snap_elements_tool")
 
             region_is_header = bpy.context.region.type == 'TOOL_HEADER'
-
             if region_is_header:
                 # Don't draw the "extra" popover here as we might have other settings & this should be last.
                 show_extra = True
@@ -524,9 +524,10 @@ class _defs_view3d_add:
                 extra = True
 
         if extra:
+            props = tool.operator_properties("view3d.interactive_add")
             layout.use_property_split = True
-            layout.row().prop(props, "plane_axis", expand=True)
-            layout.row().prop(props, "plane_axis_auto")
+            layout.row().prop(tool_settings, "plane_axis", expand=True)
+            layout.row().prop(tool_settings, "plane_axis_auto")
 
             layout.label(text="Base")
             layout.row().prop(props, "plane_origin_base", expand=True)
@@ -538,8 +539,8 @@ class _defs_view3d_add:
 
     @ToolDef.from_fn
     def cube_add():
-        def draw_settings(_context, layout, tool, *, extra=False):
-            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, tool, extra)
+        def draw_settings(context, layout, tool, *, extra=False):
+            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, context.tool_settings, tool, extra)
             if show_extra:
                 layout.popover("TOPBAR_PT_tool_settings_extra", text="...")
 
@@ -557,8 +558,8 @@ class _defs_view3d_add:
 
     @ToolDef.from_fn
     def cone_add():
-        def draw_settings(_context, layout, tool, *, extra=False):
-            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, tool, extra)
+        def draw_settings(context, layout, tool, *, extra=False):
+            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, context.tool_settings, tool, extra)
             if extra:
                 return
 
@@ -583,8 +584,8 @@ class _defs_view3d_add:
 
     @ToolDef.from_fn
     def cylinder_add():
-        def draw_settings(_context, layout, tool, *, extra=False):
-            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, tool, extra)
+        def draw_settings(context, layout, tool, *, extra=False):
+            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, context.tool_settings, tool, extra)
             if extra:
                 return
 
@@ -608,8 +609,8 @@ class _defs_view3d_add:
 
     @ToolDef.from_fn
     def uv_sphere_add():
-        def draw_settings(_context, layout, tool, *, extra=False):
-            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, tool, extra)
+        def draw_settings(context, layout, tool, *, extra=False):
+            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, context.tool_settings, tool, extra)
             if extra:
                 return
 
@@ -633,8 +634,8 @@ class _defs_view3d_add:
 
     @ToolDef.from_fn
     def ico_sphere_add():
-        def draw_settings(_context, layout, tool, *, extra=False):
-            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, tool, extra)
+        def draw_settings(context, layout, tool, *, extra=False):
+            show_extra = _defs_view3d_add.draw_settings_interactive_add(layout, context.tool_settings, tool, extra)
             if extra:
                 return
 
@@ -1284,6 +1285,20 @@ class _defs_edit_curve:
         )
 
 
+class _defs_edit_text:
+
+    @ToolDef.from_fn
+    def select_text():
+        return dict(
+            idname="builtin.select_text",
+            label="Select Text",
+            cursor='TEXT',
+            icon="ops.generic.select_box",
+            widget=None,
+            keymap=(),
+        )
+
+
 class _defs_pose:
 
     @ToolDef.from_fn
@@ -1713,6 +1728,27 @@ class _defs_weight_paint:
             widget=None,
             keymap=(),
             draw_settings=draw_settings,
+        )
+
+
+class _defs_paint_grease_pencil:
+
+    @ToolDef.from_fn
+    def draw():
+        return dict(
+            idname="builtin_brush.Draw",
+            label="Draw",
+            icon="brush.gpencil_draw.draw",
+            data_block='DRAW',
+        )
+
+    @ToolDef.from_fn
+    def erase():
+        return dict(
+            idname="builtin_brush.Erase",
+            label="Erase",
+            icon="brush.gpencil_draw.erase",
+            data_block='ERASE',
         )
 
 
@@ -2517,18 +2553,6 @@ class _defs_sequencer_generic:
         )
 
     @ToolDef.from_fn
-    def retime():
-        return dict(
-            idname="builtin.retime",
-            label="Retime",
-            icon="ops.sequencer.retime",
-            widget="SEQUENCER_GGT_gizmo_retime",
-            operator=None,
-            keymap=None,
-            options={'KEYMAP_FALLBACK'},
-        )
-
-    @ToolDef.from_fn
     def sample():
         return dict(
             idname="builtin.sample",
@@ -2980,10 +3004,14 @@ class VIEW3D_PT_tools_active(ToolSelectPanelHelper, Panel):
             _defs_transform.shear,
         ],
         'EDIT_TEXT': [
+            _defs_edit_text.select_text,
             _defs_view3d_generic.cursor,
             None,
             *_tools_annotate,
             _defs_view3d_generic.ruler,
+        ],
+        'EDIT_GREASE_PENCIL': [
+            *_tools_select,
         ],
         'PARTICLE': [
             *_tools_select,
@@ -3069,6 +3097,12 @@ class VIEW3D_PT_tools_active(ToolSelectPanelHelper, Panel):
                 else ()
             ),
             *_tools_annotate,
+        ],
+        'PAINT_GREASE_PENCIL': [
+            _defs_view3d_generic.cursor,
+            None,
+            _defs_paint_grease_pencil.draw,
+            _defs_paint_grease_pencil.erase,
         ],
         'PAINT_GPENCIL': [
             _defs_view3d_generic.cursor,
@@ -3208,7 +3242,6 @@ class SEQUENCER_PT_tools_active(ToolSelectPanelHelper, Panel):
         'SEQUENCER': [
             *_tools_select,
             _defs_sequencer_generic.blade,
-            _defs_sequencer_generic.retime,
         ],
         'SEQUENCER_PREVIEW': [
             *_tools_select,

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #ifdef WITH_CUDA
 
@@ -333,7 +334,8 @@ string CUDADevice::compile_kernel(const string &common_cflags,
     return string();
   }
   else if (!(nvcc_cuda_version == 101 || nvcc_cuda_version == 102 || nvcc_cuda_version == 111 ||
-             nvcc_cuda_version == 112 || nvcc_cuda_version == 113 || nvcc_cuda_version == 114)) {
+             nvcc_cuda_version == 112 || nvcc_cuda_version == 113 || nvcc_cuda_version == 114))
+  {
     printf(
         "CUDA version %d.%d detected, build may succeed but only "
         "CUDA 10.1 to 11.4 are officially supported.\n",
@@ -406,19 +408,22 @@ bool CUDADevice::load_kernels(const uint kernel_features)
   }
 
   /* check if cuda init succeeded */
-  if (cuContext == 0)
+  if (cuContext == 0) {
     return false;
+  }
 
   /* check if GPU is supported */
-  if (!support_device(kernel_features))
+  if (!support_device(kernel_features)) {
     return false;
+  }
 
   /* get kernel */
   const char *kernel_name = "kernel";
   string cflags = compile_kernel_get_common_cflags(kernel_features);
   string cubin = compile_kernel(cflags, kernel_name);
-  if (cubin.empty())
+  if (cubin.empty()) {
     return false;
+  }
 
   /* open module */
   CUDAContextScope scope(this);
@@ -426,14 +431,17 @@ bool CUDADevice::load_kernels(const uint kernel_features)
   string cubin_data;
   CUresult result;
 
-  if (path_read_text(cubin, cubin_data))
+  if (path_read_text(cubin, cubin_data)) {
     result = cuModuleLoadData(&cuModule, cubin_data.c_str());
-  else
+  }
+  else {
     result = CUDA_ERROR_FILE_NOT_FOUND;
+  }
 
-  if (result != CUDA_SUCCESS)
+  if (result != CUDA_SUCCESS) {
     set_error(string_printf(
         "Failed to load CUDA kernel from '%s' (%s)", cubin.c_str(), cuewErrorString(result)));
+  }
 
   if (result == CUDA_SUCCESS) {
     kernels.load(this);
@@ -847,7 +855,8 @@ void CUDADevice::tex_alloc(device_texture &mem)
   if (mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT &&
       mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT3 &&
       mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FPN &&
-      mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FP16) {
+      mem.info.data_type != IMAGE_DATA_TYPE_NANOVDB_FP16)
+  {
     CUDA_RESOURCE_DESC resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
 

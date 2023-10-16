@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -47,8 +49,8 @@ static char IncreasingColorShader___doc__[] =
     "\n"
     ".. method:: shade(stroke)\n"
     "\n"
-    "   Assigns a varying color to the stroke.  The user specifies two\n"
-    "   colors A and B.  The stroke color will change linearly from A to B\n"
+    "   Assigns a varying color to the stroke. The user specifies two\n"
+    "   colors A and B. The stroke color will change linearly from A to B\n"
     "   between the first and the last vertex.\n"
     "\n"
     "   :arg stroke: A Stroke object.\n"
@@ -72,7 +74,8 @@ static int IncreasingColorShader___init__(BPy_IncreasingColorShader *self,
   float f1, f2, f3, f4, f5, f6, f7, f8;
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kwds, "ffffffff", (char **)kwlist, &f1, &f2, &f3, &f4, &f5, &f6, &f7, &f8)) {
+          args, kwds, "ffffffff", (char **)kwlist, &f1, &f2, &f3, &f4, &f5, &f6, &f7, &f8))
+  {
     return -1;
   }
   self->py_ss.ss = new StrokeShaders::IncreasingColorShader(f1, f2, f3, f4, f5, f6, f7, f8);
@@ -82,7 +85,7 @@ static int IncreasingColorShader___init__(BPy_IncreasingColorShader *self,
 /*-----------------------BPy_IncreasingColorShader type definition ------------------------------*/
 
 PyTypeObject IncreasingColorShader_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "IncreasingColorShader",
     /*tp_basicsize*/ sizeof(BPy_IncreasingColorShader),
     /*tp_itemsize*/ 0,

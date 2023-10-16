@@ -1,9 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "FN_multi_function_procedure.hh"
 
 #include "BLI_dot_export.hh"
 #include "BLI_stack.hh"
+
+#include <sstream>
 
 namespace blender::fn::multi_function {
 
@@ -681,7 +685,8 @@ class ProcedureDotExport {
     }
     if (ELEM(instruction.prev()[0].type(),
              InstructionCursor::Type::Branch,
-             InstructionCursor::Type::Entry)) {
+             InstructionCursor::Type::Entry))
+    {
       return true;
     }
     return false;
@@ -739,7 +744,8 @@ class ProcedureDotExport {
     Vector<const Instruction *> instructions;
     const Instruction &begin = this->get_first_instruction_in_block(representative);
     for (const Instruction *current = &begin; current != nullptr;
-         current = this->get_next_instruction_in_block(*current, begin)) {
+         current = this->get_next_instruction_in_block(*current, begin))
+    {
       instructions.append(current);
     }
     return instructions;

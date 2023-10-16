@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "DNA_volume_types.h"
 
@@ -6,11 +8,13 @@
 #include "BKE_lib_id.h"
 #include "BKE_volume.h"
 
+namespace blender::bke {
+
 /* -------------------------------------------------------------------- */
 /** \name Geometry Component Implementation
  * \{ */
 
-VolumeComponent::VolumeComponent() : GeometryComponent(GEO_COMPONENT_TYPE_VOLUME) {}
+VolumeComponent::VolumeComponent() : GeometryComponent(GeometryComponent::Type::Volume) {}
 
 VolumeComponent::~VolumeComponent()
 {
@@ -29,7 +33,7 @@ GeometryComponent *VolumeComponent::copy() const
 
 void VolumeComponent::clear()
 {
-  BLI_assert(this->is_mutable());
+  BLI_assert(this->is_mutable() || this->is_expired());
   if (volume_ != nullptr) {
     if (ownership_ == GeometryOwnershipType::Owned) {
       BKE_id_free(nullptr, volume_);
@@ -59,7 +63,7 @@ Volume *VolumeComponent::release()
   return volume;
 }
 
-const Volume *VolumeComponent::get_for_read() const
+const Volume *VolumeComponent::get() const
 {
   return volume_;
 }
@@ -89,3 +93,5 @@ void VolumeComponent::ensure_owns_direct_data()
 }
 
 /** \} */
+
+}  // namespace blender::bke

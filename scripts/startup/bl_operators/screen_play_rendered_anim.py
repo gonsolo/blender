@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Originally written by Matt Ebb
@@ -8,7 +10,6 @@ from bpy.app.translations import pgettext_tip as tip_
 
 
 def guess_player_path(preset):
-    import os
     import sys
 
     if preset == 'INTERNAL':
@@ -17,9 +18,30 @@ def guess_player_path(preset):
     elif preset == 'DJV':
         player_path = "djv"
         if sys.platform == "darwin":
+            import os
             test_path = "/Applications/DJV2.app/Contents/Resources/bin/djv"
             if os.path.exists(test_path):
                 player_path = test_path
+        elif sys.platform == "win32":
+            import winreg
+
+            # NOTE: This can be removed if/when DJV adds their executable to the PATH.
+            # See issue 449 on their GITHUB project page.
+            reg_path = r"SOFTWARE\Classes\djv\shell\open\command"
+            reg_value = None
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path, 0, winreg.KEY_READ) as regkey:
+                    reg_value = winreg.QueryValue(regkey, None)
+            except OSError:
+                pass
+
+            if reg_value:
+                # Remove trailing command line arguments from the path. The
+                # registry value looks like: `<full path>\djv.exe "%1"`.
+                binary = "djv.exe"
+                index = reg_value.find(binary)
+                if index > 0:
+                    player_path = reg_value[:index + len(binary)]
 
     elif preset == 'FRAMECYCLER':
         player_path = "framecycler"
@@ -141,7 +163,15 @@ class PlayRenderedAnim(Operator):
             opts = [file, "%d-%d" % (scene.frame_start, scene.frame_end)]
             cmd.extend(opts)
         elif preset == 'RV':
-            opts = ["-fps", str(rd.fps), "-play", "[ %s ]" % file]
+            opts = ["-fps", str(rd.fps), "-play"]
+            if scene.use_preview_range:
+                opts += [
+                    "%s" % file.replace("#", "", file.count('#') - 1),
+                    "%d-%d" % (frame_start, frame_end),
+                ]
+            else:
+                opts.append(file)
+
             cmd.extend(opts)
         elif preset == 'MPLAYER':
             opts = []
@@ -164,8 +194,8 @@ class PlayRenderedAnim(Operator):
 
         try:
             subprocess.Popen(cmd)
-        except Exception as e:
-            err_msg = tip_("Couldn't run external animation player with command %r\n%s") % (cmd, e)
+        except BaseException as ex:
+            err_msg = tip_("Couldn't run external animation player with command %r\n%s") % (cmd, ex)
             self.report(
                 {'ERROR'},
                 err_msg,

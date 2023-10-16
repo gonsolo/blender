@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2011 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
@@ -7,6 +8,7 @@
 
 #include "BLI_index_range.hh"
 #include "BLI_math_vector_types.hh"
+#include "BLI_string.h"
 
 #include "DNA_defaults.h"
 #include "DNA_movieclip_types.h"
@@ -17,11 +19,11 @@
 #include "BKE_movieclip.h"
 #include "BKE_tracking.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 #include "RNA_prototypes.h"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "COM_node_operation.hh"
 
@@ -33,9 +35,9 @@ NODE_STORAGE_FUNCS(NodeTrackPosData)
 
 static void cmp_node_trackpos_declare(NodeDeclarationBuilder &b)
 {
-  b.add_output<decl::Float>(N_("X"));
-  b.add_output<decl::Float>(N_("Y"));
-  b.add_output<decl::Vector>(N_("Speed")).subtype(PROP_VELOCITY);
+  b.add_output<decl::Float>("X");
+  b.add_output<decl::Float>("Y");
+  b.add_output<decl::Vector>("Speed").subtype(PROP_VELOCITY);
 }
 
 static void init(const bContext *C, PointerRNA *ptr)
@@ -54,10 +56,10 @@ static void init(const bContext *C, PointerRNA *ptr)
     id_us_plus(&clip->id);
 
     const MovieTrackingObject *tracking_object = BKE_tracking_object_get_active(tracking);
-    BLI_strncpy(data->tracking_object, tracking_object->name, sizeof(data->tracking_object));
+    STRNCPY(data->tracking_object, tracking_object->name);
 
     if (tracking_object->active_track) {
-      BLI_strncpy(data->track_name, tracking_object->active_track->name, sizeof(data->track_name));
+      STRNCPY(data->track_name, tracking_object->active_track->name);
     }
   }
 }
@@ -82,19 +84,16 @@ static void node_composit_buts_trackpos(uiLayout *layout, bContext *C, PointerRN
     MovieTracking *tracking = &clip->tracking;
     MovieTrackingObject *tracking_object;
     uiLayout *col;
-    PointerRNA tracking_ptr;
     NodeTrackPosData *data = (NodeTrackPosData *)node->storage;
-
-    RNA_pointer_create(&clip->id, &RNA_MovieTracking, tracking, &tracking_ptr);
+    PointerRNA tracking_ptr = RNA_pointer_create(&clip->id, &RNA_MovieTracking, tracking);
 
     col = uiLayoutColumn(layout, false);
     uiItemPointerR(col, ptr, "tracking_object", &tracking_ptr, "objects", "", ICON_OBJECT_DATA);
 
     tracking_object = BKE_tracking_object_get_named(tracking, data->tracking_object);
     if (tracking_object) {
-      PointerRNA object_ptr;
-
-      RNA_pointer_create(&clip->id, &RNA_MovieTrackingObject, tracking_object, &object_ptr);
+      PointerRNA object_ptr = RNA_pointer_create(
+          &clip->id, &RNA_MovieTrackingObject, tracking_object);
 
       uiItemPointerR(col, ptr, "track_name", &object_ptr, "tracks", "", ICON_ANIM_DATA);
     }
@@ -106,7 +105,8 @@ static void node_composit_buts_trackpos(uiLayout *layout, bContext *C, PointerRN
 
     if (ELEM(node->custom1,
              CMP_NODE_TRACK_POSITION_RELATIVE_FRAME,
-             CMP_NODE_TRACK_POSITION_ABSOLUTE_FRAME)) {
+             CMP_NODE_TRACK_POSITION_ABSOLUTE_FRAME))
+    {
       uiItemR(layout, ptr, "frame_relative", UI_ITEM_R_SPLIT_EMPTY_NAME, nullptr, ICON_NONE);
     }
   }

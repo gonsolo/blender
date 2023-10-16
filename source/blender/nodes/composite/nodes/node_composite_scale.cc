@@ -1,20 +1,25 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
  */
 
 #include "BLI_assert.h"
+#include "BLI_math_angle_types.hh"
 #include "BLI_math_base.hh"
 #include "BLI_math_matrix.hh"
+#include "BLI_math_matrix_types.hh"
 #include "BLI_math_vector_types.hh"
+#include "BLI_string.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
+#include "COM_algorithm_transform.hh"
 #include "COM_node_operation.hh"
 
 #include "node_composite_util.hh"
@@ -25,31 +30,30 @@ namespace blender::nodes::node_composite_scale_cc {
 
 static void cmp_node_scale_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image"))
+  b.add_input<decl::Color>("Image")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_input<decl::Float>(N_("X"))
+  b.add_input<decl::Float>("X")
       .default_value(1.0f)
       .min(0.0001f)
       .max(CMP_SCALE_MAX)
       .compositor_expects_single_value();
-  b.add_input<decl::Float>(N_("Y"))
+  b.add_input<decl::Float>("Y")
       .default_value(1.0f)
       .min(0.0001f)
       .max(CMP_SCALE_MAX)
       .compositor_expects_single_value();
-  b.add_output<decl::Color>(N_("Image"));
+  b.add_output<decl::Color>("Image");
 }
 
 static void node_composite_update_scale(bNodeTree *ntree, bNode *node)
 {
-  bNodeSocket *sock;
   bool use_xy_scale = ELEM(node->custom1, CMP_NODE_SCALE_RELATIVE, CMP_NODE_SCALE_ABSOLUTE);
 
   /* Only show X/Y scale factor inputs for modes using them! */
-  for (sock = (bNodeSocket *)node->inputs.first; sock; sock = sock->next) {
+  LISTBASE_FOREACH (bNodeSocket *, sock, &node->inputs) {
     if (STR_ELEM(sock->name, "X", "Y")) {
-      nodeSetSocketAvailability(ntree, sock, use_xy_scale);
+      bke::nodeSetSocketAvailability(ntree, sock, use_xy_scale);
     }
   }
 }
@@ -81,13 +85,16 @@ class ScaleOperation : public NodeOperation {
   void execute() override
   {
     Result &input = get_input("Image");
-    Result &result = get_result("Image");
-    input.pass_through(result);
+    Result &output = get_result("Image");
 
+    const float2 scale = get_scale();
+    const math::AngleRadian rotation = 0.0f;
+    const float2 translation = get_translation();
     const float3x3 transformation = math::from_loc_rot_scale<float3x3>(
-        get_translation(), math::AngleRadian(0.0f), get_scale());
+        translation, rotation, scale);
 
-    result.transform(transformation);
+    const Interpolation interpolation = input.get_realization_options().interpolation;
+    transform(context(), input, output, transformation, interpolation);
   }
 
   float2 get_scale()
@@ -126,7 +133,7 @@ class ScaleOperation : public NodeOperation {
   /* Scale by the render resolution percentage. */
   float2 get_scale_render_percent()
   {
-    return float2(context().get_scene()->r.size / 100.0f);
+    return float2(context().get_render_percentage());
   }
 
   float2 get_scale_render_size()

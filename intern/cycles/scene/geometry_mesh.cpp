@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "bvh/bvh.h"
 #include "bvh/bvh2.h"
@@ -106,7 +107,8 @@ void GeometryManager::device_update_mesh(Device *,
         Mesh *mesh = static_cast<Mesh *>(geom);
 
         if (mesh->shader_is_modified() || mesh->smooth_is_modified() ||
-            mesh->triangles_is_modified() || copy_all_data) {
+            mesh->triangles_is_modified() || copy_all_data)
+        {
           mesh->pack_shaders(scene, &tri_shader[mesh->prim_offset]);
         }
 
@@ -115,15 +117,17 @@ void GeometryManager::device_update_mesh(Device *,
         }
 
         if (mesh->verts_is_modified() || mesh->triangles_is_modified() ||
-            mesh->vert_patch_uv_is_modified() || copy_all_data) {
+            mesh->vert_patch_uv_is_modified() || copy_all_data)
+        {
           mesh->pack_verts(&tri_verts[mesh->vert_offset],
                            &tri_vindex[mesh->prim_offset],
                            &tri_patch[mesh->prim_offset],
                            &tri_patch_uv[mesh->vert_offset]);
         }
 
-        if (progress.get_cancel())
+        if (progress.get_cancel()) {
           return;
+        }
       }
     }
 
@@ -166,8 +170,9 @@ void GeometryManager::device_update_mesh(Device *,
                           &curve_keys[hair->curve_key_offset],
                           &curves[hair->prim_offset],
                           &curve_segments[hair->curve_segment_offset]);
-        if (progress.get_cancel())
+        if (progress.get_cancel()) {
           return;
+        }
       }
     }
 
@@ -187,8 +192,9 @@ void GeometryManager::device_update_mesh(Device *,
         PointCloud *pointcloud = static_cast<PointCloud *>(geom);
         pointcloud->pack(
             scene, &points[pointcloud->prim_offset], &points_shader[pointcloud->prim_offset]);
-        if (progress.get_cancel())
+        if (progress.get_cancel()) {
           return;
+        }
       }
     }
 
@@ -211,8 +217,9 @@ void GeometryManager::device_update_mesh(Device *,
                                                     mesh->patch_table_offset);
         }
 
-        if (progress.get_cancel())
+        if (progress.get_cancel()) {
           return;
+        }
       }
     }
 

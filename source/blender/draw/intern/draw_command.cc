@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2022 Blender Foundation. */
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup draw
@@ -34,6 +35,26 @@ void ShaderBind::execute(RecordingState &state) const
 void FramebufferBind::execute() const
 {
   GPU_framebuffer_bind(*framebuffer);
+}
+
+void SubPassTransition::execute() const
+{
+  /* TODO(fclem): Require framebuffer bind to always be part of the pass so that we can track it
+   * inside RecordingState. */
+  GPUFrameBuffer *framebuffer = GPU_framebuffer_active_get();
+  /* Unpack to the real enum type. */
+  const GPUAttachmentState states[9] = {
+      GPUAttachmentState(depth_state),
+      GPUAttachmentState(color_states[0]),
+      GPUAttachmentState(color_states[1]),
+      GPUAttachmentState(color_states[2]),
+      GPUAttachmentState(color_states[3]),
+      GPUAttachmentState(color_states[4]),
+      GPUAttachmentState(color_states[5]),
+      GPUAttachmentState(color_states[6]),
+      GPUAttachmentState(color_states[7]),
+  };
+  GPU_framebuffer_subpass_transition_array(framebuffer, states, ARRAY_SIZE(states));
 }
 
 void ResourceBind::execute() const
@@ -255,6 +276,26 @@ std::string FramebufferBind::serialize() const
 {
   return std::string(".framebuffer_bind(") +
          (*framebuffer == nullptr ? "nullptr" : GPU_framebuffer_get_name(*framebuffer)) + ")";
+}
+
+std::string SubPassTransition::serialize() const
+{
+  auto to_str = [](GPUAttachmentState state) {
+    return (state != GPU_ATTACHEMENT_IGNORE) ?
+               ((state == GPU_ATTACHEMENT_WRITE) ? "write" : "read") :
+               "ignore";
+  };
+
+  return std::string(".subpass_transition(\n") +
+         "depth=" + to_str(GPUAttachmentState(depth_state)) + ",\n" +
+         "color0=" + to_str(GPUAttachmentState(color_states[0])) + ",\n" +
+         "color1=" + to_str(GPUAttachmentState(color_states[1])) + ",\n" +
+         "color2=" + to_str(GPUAttachmentState(color_states[2])) + ",\n" +
+         "color3=" + to_str(GPUAttachmentState(color_states[3])) + ",\n" +
+         "color4=" + to_str(GPUAttachmentState(color_states[4])) + ",\n" +
+         "color5=" + to_str(GPUAttachmentState(color_states[5])) + ",\n" +
+         "color6=" + to_str(GPUAttachmentState(color_states[6])) + ",\n" +
+         "color7=" + to_str(GPUAttachmentState(color_states[7])) + "\n)";
 }
 
 std::string ResourceBind::serialize() const
@@ -614,13 +655,14 @@ void DrawMultiBuf::bind(RecordingState &state,
     group.start = resource_id_count_;
     resource_id_count_ += group.len * view_len;
 
-    int batch_inst_len;
+    int batch_vert_len, batch_vert_first, batch_base_index, batch_inst_len;
     /* Now that GPUBatches are guaranteed to be finished, extract their parameters. */
-    GPU_batch_draw_parameter_get(group.gpu_batch,
-                                 &group.vertex_len,
-                                 &group.vertex_first,
-                                 &group.base_index,
-                                 &batch_inst_len);
+    GPU_batch_draw_parameter_get(
+        group.gpu_batch, &batch_vert_len, &batch_vert_first, &batch_base_index, &batch_inst_len);
+
+    group.vertex_len = group.vertex_len == -1 ? batch_vert_len : group.vertex_len;
+    group.vertex_first = group.vertex_first == -1 ? batch_vert_first : group.vertex_first;
+    group.base_index = batch_base_index;
 
     /* Instancing attributes are not supported using the new pipeline since we use the base
      * instance to set the correct resource_id. Workaround is a storage_buf + gl_InstanceID. */

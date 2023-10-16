@@ -1,5 +1,6 @@
+# SPDX-FileCopyrightText: 2006 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2006 Blender Foundation
 
 set(SRC_DNA_INC
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_ID.h
@@ -32,6 +33,7 @@ set(SRC_DNA_INC
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_gpencil_legacy_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_gpencil_modifier_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_gpu_types.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_grease_pencil_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_image_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_ipo_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_key_types.h
@@ -50,6 +52,7 @@ set(SRC_DNA_INC
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_modifier_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_movieclip_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_nla_types.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_node_tree_interface_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_node_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_object_enums.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_object_fluidsim_types.h
@@ -61,13 +64,13 @@ set(SRC_DNA_INC
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_pointcache_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_pointcloud_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_rigidbody_types.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_scene_enums.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_scene_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_screen_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_sdna_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_sequence_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_session_uuid_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_shader_fx_types.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_simulation_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_sound_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_space_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_speaker_types.h
@@ -116,10 +119,10 @@ set(SRC_DNA_DEFAULTS_INC
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_particle_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_pointcloud_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_scene_defaults.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_simulation_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_space_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_speaker_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_texture_defaults.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_userdef_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_vec_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_view3d_defaults.h
   ${CMAKE_CURRENT_SOURCE_DIR}/makesdna/DNA_volume_defaults.h
@@ -129,6 +132,7 @@ set(SRC_DNA_DEFAULTS_INC
 add_subdirectory(datatoc)
 add_subdirectory(editors)
 add_subdirectory(windowmanager)
+add_subdirectory(animrig)
 add_subdirectory(asset_system)
 add_subdirectory(blenkernel)
 add_subdirectory(blenlib)

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2009 Blender Foundation */
+/* SPDX-FileCopyrightText: 2009 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup blf
@@ -14,11 +15,11 @@
 extern "C" {
 #endif
 
-/* Name of subfolder inside BLENDER_DATAFILES that contains font files. */
+/* Name of sub-directory inside #BLENDER_DATAFILES that contains font files. */
 #define BLF_DATAFILES_FONTS_DIR "fonts"
 
 /* File name of the default variable-width font. */
-#define BLF_DEFAULT_PROPORTIONAL_FONT "DejaVuSans.woff2"
+#define BLF_DEFAULT_PROPORTIONAL_FONT "Inter.woff2"
 
 /* File name of the default fixed-pitch font. */
 #define BLF_DEFAULT_MONOSPACED_FONT "DejaVuSansMono.woff2"
@@ -33,6 +34,12 @@ struct rcti;
 int BLF_init(void);
 void BLF_exit(void);
 
+/**
+ * Close any user-loaded fonts that are not used by the Interface. Call when
+ * loading new blend files so that the old fonts are not still taking resources.
+ */
+void BLF_reset_fonts(void);
+
 void BLF_cache_clear(void);
 
 /**
@@ -43,28 +50,36 @@ void BLF_cache_flush_set_fn(void (*cache_flush_fn)(void));
 /**
  * Loads a font, or returns an already loaded font and increments its reference count.
  */
-int BLF_load(const char *name) ATTR_NONNULL();
-int BLF_load_mem(const char *name, const unsigned char *mem, int mem_size) ATTR_NONNULL();
-bool BLF_is_loaded(const char *name) ATTR_NONNULL();
+int BLF_load(const char *filepath) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLF_load_mem(const char *name, const unsigned char *mem, int mem_size) ATTR_WARN_UNUSED_RESULT
+    ATTR_NONNULL(1, 2);
 
-int BLF_load_unique(const char *name) ATTR_NONNULL();
-int BLF_load_mem_unique(const char *name, const unsigned char *mem, int mem_size) ATTR_NONNULL();
+bool BLF_is_loaded(const char *filepath) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+bool BLF_is_loaded_mem(const char *name) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 
-void BLF_unload(const char *name) ATTR_NONNULL();
+int BLF_load_unique(const char *filepath) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
+int BLF_load_mem_unique(const char *name, const unsigned char *mem, int mem_size)
+    ATTR_NONNULL(1, 2);
+
+void BLF_unload(const char *filepath) ATTR_NONNULL(1);
+#if 0 /* Not needed at the moment. */
+void BLF_unload_mem(const char *name) ATTR_NONNULL(1);
+#endif
+
 void BLF_unload_id(int fontid);
 void BLF_unload_all(void);
 
-char *BLF_display_name_from_file(const char *filepath);
+char *BLF_display_name_from_file(const char *filepath) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(1);
 
 /**
  * Check if font supports a particular glyph.
  */
-bool BLF_has_glyph(int fontid, unsigned int unicode);
+bool BLF_has_glyph(int fontid, unsigned int unicode) ATTR_WARN_UNUSED_RESULT;
 
 /**
  * Attach a file with metrics information from memory.
  */
-void BLF_metrics_attach(int fontid, unsigned char *mem, int mem_size);
+void BLF_metrics_attach(int fontid, unsigned char *mem, int mem_size) ATTR_NONNULL(2);
 
 void BLF_aspect(int fontid, float x, float y, float z);
 void BLF_position(int fontid, float x, float y, float z);
@@ -86,10 +101,10 @@ void BLF_color3fv_alpha(int fontid, const float rgb[3], float alpha);
 
 /**
  * Set a 4x4 matrix to be multiplied before draw the text.
- * Remember that you need call BLF_enable(BLF_MATRIX)
+ * Remember that you need call `BLF_enable(BLF_MATRIX)`
  * to enable this.
  *
- * The order of the matrix is like GL:
+ * The order of the matrix is column major (following the GPU module):
  * \code{.unparsed}
  *  | m[0]  m[4]  m[8]  m[12] |
  *  | m[1]  m[5]  m[9]  m[13] |
@@ -113,7 +128,8 @@ void BLF_batch_draw_end(void);
 void BLF_draw_ex(int fontid, const char *str, size_t str_len, struct ResultBLF *r_info)
     ATTR_NONNULL(2);
 void BLF_draw(int fontid, const char *str, size_t str_len) ATTR_NONNULL(2);
-int BLF_draw_mono(int fontid, const char *str, size_t str_len, int cwidth) ATTR_NONNULL(2);
+int BLF_draw_mono(int fontid, const char *str, size_t str_len, int cwidth, int tab_columns)
+    ATTR_NONNULL(2);
 
 typedef bool (*BLF_GlyphBoundsFn)(const char *str,
                                   size_t str_step_ofs,
@@ -140,7 +156,7 @@ void BLF_boundbox_foreach_glyph(int fontid,
 size_t BLF_str_offset_from_cursor_position(int fontid,
                                            const char *str,
                                            size_t str_len,
-                                           int location_x);
+                                           int location_x) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(2);
 
 /**
  * Return bounds of the glyph rect at the string offset.
@@ -148,18 +164,25 @@ size_t BLF_str_offset_from_cursor_position(int fontid,
 bool BLF_str_offset_to_glyph_bounds(int fontid,
                                     const char *str,
                                     size_t str_offset,
-                                    struct rcti *glyph_bounds);
+                                    struct rcti *glyph_bounds) ATTR_WARN_UNUSED_RESULT
+    ATTR_NONNULL(2, 4);
 
 /**
  * Get the string byte offset that fits within a given width.
  */
-size_t BLF_width_to_strlen(
-    int fontid, const char *str, size_t str_len, float width, float *r_width) ATTR_NONNULL(2);
+size_t BLF_width_to_strlen(int fontid,
+                           const char *str,
+                           size_t str_len,
+                           float width,
+                           float *r_width) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(2);
 /**
  * Same as BLF_width_to_strlen but search from the string end.
  */
-size_t BLF_width_to_rstrlen(
-    int fontid, const char *str, size_t str_len, float width, float *r_width) ATTR_NONNULL(2);
+size_t BLF_width_to_rstrlen(int fontid,
+                            const char *str,
+                            size_t str_len,
+                            float width,
+                            float *r_width) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL(2);
 
 /**
  * This function return the bounding box of the string
@@ -269,27 +292,7 @@ void BLF_draw_buffer_ex(int fontid, const char *str, size_t str_len, struct Resu
     ATTR_NONNULL(2);
 void BLF_draw_buffer(int fontid, const char *str, size_t str_len) ATTR_NONNULL(2);
 
-/**
- * Add a path to the font dir paths.
- */
-void BLF_dir_add(const char *path) ATTR_NONNULL();
-
-/**
- * Remove a path from the font dir paths.
- */
-void BLF_dir_rem(const char *path) ATTR_NONNULL();
-
-/**
- * Return an array with all the font dir (this can be used for file-selector).
- */
-char **BLF_dir_get(int *ndir) ATTR_WARN_UNUSED_RESULT ATTR_NONNULL();
-
-/**
- * Free the data return by #BLF_dir_get.
- */
-void BLF_dir_free(char **dirs, int count) ATTR_NONNULL();
-
-/* blf_thumbs.c */
+/* `blf_thumbs.cc` */
 
 /**
  * This function is used for generating thumbnail previews.
@@ -299,7 +302,7 @@ void BLF_dir_free(char **dirs, int count) ATTR_NONNULL();
 bool BLF_thumb_preview(const char *filename, unsigned char *buf, int w, int h, int channels)
     ATTR_NONNULL();
 
-/* blf_default.c */
+/* `blf_default.cc` */
 
 void BLF_default_size(float size);
 void BLF_default_set(int fontid);
@@ -316,7 +319,7 @@ void BLF_draw_default(float x, float y, float z, const char *str, size_t str_len
  */
 int BLF_set_default(void);
 
-/* blf_font_default.c */
+/* `blf_font_default.cc` */
 
 int BLF_load_default(bool unique);
 int BLF_load_mono_default(bool unique);
@@ -352,6 +355,8 @@ enum {
   BLF_BAD_FONT = 1 << 16,
   /** This font is managed by the FreeType cache subsystem. */
   BLF_CACHED = 1 << 17,
+  /** At small sizes glyphs are rendered at multiple sub-pixel positions. */
+  BLF_RENDER_SUBPIXELAA = 1 << 18,
 };
 
 #define BLF_DRAW_STR_DUMMY_MAX 1024

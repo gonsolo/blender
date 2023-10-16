@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2013 Blender Foundation */
+/* SPDX-FileCopyrightText: 2013 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup depsgraph
@@ -17,7 +18,7 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_key.h"
-#include "BKE_object.h"
+#include "BKE_object.hh"
 #include "BKE_scene.h"
 
 #include "DNA_key_types.h"
@@ -26,19 +27,19 @@
 
 #include "DRW_engine.h"
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
 #include "intern/debug/deg_debug.h"
-#include "intern/depsgraph.h"
-#include "intern/depsgraph_relation.h"
-#include "intern/depsgraph_type.h"
-#include "intern/depsgraph_update.h"
-#include "intern/node/deg_node.h"
-#include "intern/node/deg_node_component.h"
-#include "intern/node/deg_node_factory.h"
-#include "intern/node/deg_node_id.h"
-#include "intern/node/deg_node_operation.h"
-#include "intern/node/deg_node_time.h"
+#include "intern/depsgraph.hh"
+#include "intern/depsgraph_relation.hh"
+#include "intern/depsgraph_type.hh"
+#include "intern/depsgraph_update.hh"
+#include "intern/node/deg_node.hh"
+#include "intern/node/deg_node_component.hh"
+#include "intern/node/deg_node_factory.hh"
+#include "intern/node/deg_node_id.hh"
+#include "intern/node/deg_node_operation.hh"
+#include "intern/node/deg_node_time.hh"
 
 #include "intern/eval/deg_eval_copy_on_write.h"
 
@@ -178,7 +179,8 @@ inline OperationNode *flush_schedule_children(OperationNode *op_node, FlushQueue
     /* Relation only allows flushes on user changes, but the node was not
      * affected by user. */
     if ((rel->flag & RELATION_FLAG_FLUSH_USER_EDIT_ONLY) &&
-        (op_node->flag & DEPSOP_FLAG_USER_MODIFIED) == 0) {
+        (op_node->flag & DEPSOP_FLAG_USER_MODIFIED) == 0)
+    {
       continue;
     }
     OperationNode *to_node = (OperationNode *)rel->to;
@@ -251,12 +253,12 @@ void flush_editors_id_update(Depsgraph *graph, const DEGEditorUpdateContext *upd
          * changed. CoW IDs indirectly modified because of changes in other IDs should never
          * require a lib-override diffing. */
         if (ID_IS_OVERRIDE_LIBRARY_REAL(id_orig)) {
-          id_orig->tag |= LIB_TAG_OVERRIDE_LIBRARY_AUTOREFRESH;
+          id_orig->tag |= LIB_TAG_LIBOVERRIDE_AUTOREFRESH;
         }
         else if (ID_IS_OVERRIDE_LIBRARY_VIRTUAL(id_orig)) {
           switch (GS(id_orig->name)) {
             case ID_KE:
-              ((Key *)id_orig)->from->tag |= LIB_TAG_OVERRIDE_LIBRARY_AUTOREFRESH;
+              ((Key *)id_orig)->from->tag |= LIB_TAG_LIBOVERRIDE_AUTOREFRESH;
               break;
             case ID_GR:
               BLI_assert(id_orig->flag & LIB_EMBEDDED_DATA);

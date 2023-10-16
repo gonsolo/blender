@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
@@ -290,7 +292,7 @@ struct BArrayStore {
  */
 struct BArrayState {
   /** linked list in #BArrayStore.states. */
-  struct BArrayState *next, *prev;
+  BArrayState *next, *prev;
   /** Shared chunk list, this reference must hold a #BChunkList::users. */
   struct BChunkList *chunk_list;
 };
@@ -468,7 +470,7 @@ static void bchunk_list_ensure_min_size_last(const BArrayInfo *info,
 {
   BChunkRef *cref = chunk_list->chunk_refs.last;
   if (cref && cref->prev) {
-    /* Both are decref'd after use (end of this block) */
+    /* Both are decrefed after use (end of this block). */
     BChunk *chunk_curr = cref->link;
     BChunk *chunk_prev = cref->prev->link;
 
@@ -1166,7 +1168,8 @@ static BChunkList *bchunk_list_from_data_merge(const BArrayInfo *info,
   if (!BLI_listbase_is_empty(&chunk_list_reference->chunk_refs)) {
     const BChunkRef *cref = chunk_list_reference->chunk_refs.last;
     while ((cref->prev != NULL) && (cref != cref_match_first) &&
-           (cref->link->data_len <= data_len - i_prev)) {
+           (cref->link->data_len <= data_len - i_prev))
+    {
       BChunk *chunk_test = cref->link;
       size_t offset = data_len - chunk_test->data_len;
       if (bchunk_data_compare(chunk_test, data, data_len, offset)) {
@@ -1237,7 +1240,8 @@ static BChunkList *bchunk_list_from_data_merge(const BArrayInfo *info,
   }
   else if ((data_len - i_prev >= info->chunk_byte_size) &&
            (chunk_list_reference->chunk_refs_len >= chunk_list_reference_skip_len) &&
-           (chunk_list_reference->chunk_refs.first != NULL)) {
+           (chunk_list_reference->chunk_refs.first != NULL))
+  {
 
     /* --------------------------------------------------------------------
      * Non-Aligned Chunk De-Duplication. */
@@ -1304,7 +1308,8 @@ static BChunkList *bchunk_list_from_data_merge(const BArrayInfo *info,
 #endif
 
       while ((cref != chunk_list_reference_last) &&
-             (chunk_list_reference_bytes_remaining >= info->accum_read_ahead_bytes)) {
+             (chunk_list_reference_bytes_remaining >= info->accum_read_ahead_bytes))
+      {
         hash_key key = key_from_chunk_ref(info,
                                           cref
 
@@ -1778,7 +1783,7 @@ bool BLI_array_store_is_valid(BArrayStore *bs)
       GHASH_PTR_ADD_USER(chunk_list_map, state->chunk_list);
     }
     GHASH_ITER (gh_iter, chunk_list_map) {
-      const struct BChunkList *chunk_list = BLI_ghashIterator_getKey(&gh_iter);
+      const BChunkList *chunk_list = BLI_ghashIterator_getKey(&gh_iter);
       const int users = POINTER_AS_INT(BLI_ghashIterator_getValue(&gh_iter));
       if (!(chunk_list->users == users)) {
         ok = false;
@@ -1792,7 +1797,7 @@ bool BLI_array_store_is_valid(BArrayStore *bs)
 
     /* Count chunk's. */
     GHASH_ITER (gh_iter, chunk_list_map) {
-      const struct BChunkList *chunk_list = BLI_ghashIterator_getKey(&gh_iter);
+      const BChunkList *chunk_list = BLI_ghashIterator_getKey(&gh_iter);
       LISTBASE_FOREACH (const BChunkRef *, cref, &chunk_list->chunk_refs) {
         GHASH_PTR_ADD_USER(chunk_map, cref->link);
         totrefs += 1;
@@ -1808,7 +1813,7 @@ bool BLI_array_store_is_valid(BArrayStore *bs)
     }
 
     GHASH_ITER (gh_iter, chunk_map) {
-      const struct BChunk *chunk = BLI_ghashIterator_getKey(&gh_iter);
+      const BChunk *chunk = BLI_ghashIterator_getKey(&gh_iter);
       const int users = POINTER_AS_INT(BLI_ghashIterator_getValue(&gh_iter));
       if (!(chunk->users == users)) {
         ok = false;

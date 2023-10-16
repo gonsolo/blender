@@ -1,14 +1,20 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2001-2002 NaN Holding BV. All rights reserved. */
+/* SPDX-FileCopyrightText: 2001-2002 NaN Holding BV. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bli
  */
 
+#include "BLI_math_base.h"
+#include "BLI_math_geom.h"
+
 #include "MEM_guardedalloc.h"
 
-#include "BLI_math.h"
 #include "BLI_math_bits.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
+#include "BLI_math_vector.h"
 #include "BLI_utildefines.h"
 
 #include "BLI_strict_flags.h"
@@ -794,14 +800,15 @@ void dist_squared_to_projected_aabb_precalc(struct DistProjectedAABBPrecalc *pre
   float projmat_trans[4][4];
   transpose_m4_m4(projmat_trans, projmat);
   if (!isect_plane_plane_plane_v3(
-          projmat_trans[0], projmat_trans[1], projmat_trans[3], precalc->ray_origin)) {
+          projmat_trans[0], projmat_trans[1], projmat_trans[3], precalc->ray_origin))
+  {
     /* Orthographic projection. */
     isect_plane_plane_v3(px, py, precalc->ray_origin, precalc->ray_direction);
   }
   else {
     /* Perspective projection. */
     cross_v3_v3v3(precalc->ray_direction, py, px);
-    //normalize_v3(precalc->ray_direction);
+    // normalize_v3(precalc->ray_direction);
   }
 #else
   if (!isect_plane_plane_v3(px, py, precalc->ray_origin, precalc->ray_direction)) {
@@ -1469,7 +1476,8 @@ bool isect_point_poly_v2(const float pt[2],
     if (((verts[i][1] > pt[1]) != (verts[j][1] > pt[1])) &&
         (pt[0] <
          (verts[j][0] - verts[i][0]) * (pt[1] - verts[i][1]) / (verts[j][1] - verts[i][1]) +
-             verts[i][0])) {
+             verts[i][0]))
+    {
       isect = !isect;
     }
   }
@@ -1488,7 +1496,8 @@ bool isect_point_poly_v2_int(const int pt[2],
     if (((verts[i][1] > pt[1]) != (verts[j][1] > pt[1])) &&
         (pt[0] <
          (verts[j][0] - verts[i][0]) * (pt[1] - verts[i][1]) / (verts[j][1] - verts[i][1]) +
-             verts[i][0])) {
+             verts[i][0]))
+    {
       isect = !isect;
     }
   }
@@ -1867,9 +1876,10 @@ bool isect_ray_tri_watertight_v3(const float ray_origin[3],
    * otherwise we won't match any of the other intersect functions here...
    * which would be confusing. */
 #if 0
-        || (sign_T > *r_lambda * xor_signmask(det, sign_mask))
+      || (sign_T > *r_lambda * xor_signmask(det, sign_mask))
 #endif
-  ) {
+  )
+  {
     return false;
   }
 
@@ -2259,7 +2269,8 @@ bool isect_tri_tri_v3_ex(const float tri_a[3][3],
   }
 
   if ((side[1][0] && side[1][1] && side[1][2]) && (side[1][0] < 0.0f) == (side[1][1] < 0.0f) &&
-      (side[1][0] < 0.0f) == (side[1][2] < 0.0f)) {
+      (side[1][0] < 0.0f) == (side[1][2] < 0.0f))
+  {
     /* All vertices of the 2nd triangle are positioned on the same side to the
      * plane defined by the 1st triangle. */
     return false;
@@ -2274,7 +2285,8 @@ bool isect_tri_tri_v3_ex(const float tri_a[3][3],
   side[0][2] = (float)(dot_v3db_v3fl(plane_b, tri_a[2]) + plane_b[3]);
 
   if ((side[0][0] && side[0][1] && side[0][2]) && (side[0][0] < 0.0f) == (side[0][1] < 0.0f) &&
-      (side[0][0] < 0.0f) == (side[0][2] < 0.0f)) {
+      (side[0][0] < 0.0f) == (side[0][2] < 0.0f))
+  {
     /* All vertices of the 1st triangle are positioned on the same side to the
      * plane defined by the 2nd triangle. */
     return false;
@@ -3666,7 +3678,8 @@ int barycentric_inside_triangle_v2(const float w[3])
     return 1;
   }
   if (IN_RANGE_INCL(w[0], 0.0f, 1.0f) && IN_RANGE_INCL(w[1], 0.0f, 1.0f) &&
-      IN_RANGE_INCL(w[2], 0.0f, 1.0f)) {
+      IN_RANGE_INCL(w[2], 0.0f, 1.0f))
+  {
     return 2;
   }
 
@@ -5238,9 +5251,9 @@ void vcloud_estimate_transform_v3(const int list_size,
       /* build 'projection' matrix */
       for (a = 0; a < list_size; a++) {
         sub_v3_v3v3(va, rpos[a], accu_rcom);
-        /* mul_v3_fl(va, bp->mass);  mass needs re-normalization here ?? */
+        // mul_v3_fl(va, bp->mass); /* Mass needs re-normalization here? */
         sub_v3_v3v3(vb, pos[a], accu_com);
-        /* mul_v3_fl(va, rp->mass); */
+        // mul_v3_fl(va, rp->mass);
         m[0][0] += va[0] * vb[0];
         m[0][1] += va[0] * vb[1];
         m[0][2] += va[0] * vb[2];

@@ -1,5 +1,6 @@
+# SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+#
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2011-2022 Blender Foundation
 
 set(INC
   ..
@@ -66,6 +67,13 @@ set(SRC_HIP
   hip/util.h
 )
 
+set(SRC_HIPRT
+  hiprt/device_impl.cpp
+  hiprt/device_impl.h
+  hiprt/queue.cpp
+  hiprt/queue.h
+)
+
 set(SRC_ONEAPI
   oneapi/device_impl.cpp
   oneapi/device_impl.h
@@ -124,6 +132,7 @@ set(SRC
   ${SRC_CPU}
   ${SRC_CUDA}
   ${SRC_HIP}
+  ${SRC_HIPRT}
   ${SRC_DUMMY}
   ${SRC_MULTI}
   ${SRC_OPTIX}
@@ -209,6 +218,7 @@ source_group("cpu" FILES ${SRC_CPU})
 source_group("cuda" FILES ${SRC_CUDA})
 source_group("dummy" FILES ${SRC_DUMMY})
 source_group("hip" FILES ${SRC_HIP})
+source_group("hiprt" FILES ${SRC_HIPRT})
 source_group("multi" FILES ${SRC_MULTI})
 source_group("metal" FILES ${SRC_METAL})
 source_group("optix" FILES ${SRC_OPTIX})

@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2008-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -50,7 +52,8 @@ void ViewEdgeXBuilder::BuildViewEdges(WXShape *iWShape,
   // Reinit structures
   Init(oVShape);
 
-  /* ViewEdge *vedge; */ /* UNUSED */
+  // ViewEdge *vedge; /* UNUSED. */
+
   // Let us build the smooth stuff
   //----------------------------------------
   // We parse all faces to find the ones that contain smooth edges
@@ -66,7 +69,8 @@ void ViewEdgeXBuilder::BuildViewEdges(WXShape *iWShape,
     vector<WXFaceLayer *> &smoothLayers = wxf->getSmoothLayers();
     for (vector<WXFaceLayer *>::iterator sl = smoothLayers.begin(), slend = smoothLayers.end();
          sl != slend;
-         ++sl) {
+         ++sl)
+    {
       if (!(*sl)->hasSmoothEdge()) {
         continue;
       }
@@ -168,7 +172,8 @@ ViewEdge *ViewEdgeXBuilder::BuildSmoothViewEdge(const OWXFaceLayer &iFaceLayer)
   FEdge *fefirst = nullptr;
   FEdge *fe = nullptr;
   for (list<OWXFaceLayer>::iterator fl = facesChain.begin(), flend = facesChain.end(); fl != flend;
-       ++fl) {
+       ++fl)
+  {
     fe = BuildSmoothFEdge(feprevious, (*fl));
     if (feprevious && fe == feprevious) {
       continue;
@@ -218,7 +223,7 @@ ViewEdge *ViewEdgeXBuilder::BuildSharpViewEdge(const OWXEdge &iWEdge)
 
   // Find first edge:
   OWXEdge firstWEdge = iWEdge;
-  /* OWXEdge previousWEdge = firstWEdge; */ /* UNUSED */
+  // OWXEdge previousWEdge = firstWEdge; /* UNUSED */
   OWXEdge currentWEdge = firstWEdge;
   list<OWXEdge> edgesChain;
 #if 0 /* TK 02-Sep-2012 Experimental fix for incorrect view edge visibility. */
@@ -475,8 +480,9 @@ FEdge *ViewEdgeXBuilder::BuildSmoothFEdge(FEdge *feprevious, const OWXFaceLayer 
 
   Vec3r normal;
   // Make the 2 Svertices
-  if (feprevious ==
-      nullptr) {  // that means that we don't have any vertex already built for that face
+
+  /* That means that we don't have any vertex already built for that face. */
+  if (feprevious == nullptr) {
     Vec3r A1(woea->GetaVertex()->GetVertex());
     Vec3r A2(woea->GetbVertex()->GetVertex());
     Vec3r A(A1 + ta * (A2 - A1));
@@ -589,7 +595,7 @@ OWXEdge ViewEdgeXBuilder::FindNextWEdge(const OWXEdge &iEdge)
   }
 
   if (((WXVertex *)v)->isFeature()) {
-    return nullptr; /* XXX eeek? NULL? OWXEdge(NULL, true/false)? */
+    return nullptr; /* XXX eeek? nullptr? OWXEdge(nullptr, true/false)? */
   }
 
   int faceMarks = retrieveFaceMarks(iEdge.e);

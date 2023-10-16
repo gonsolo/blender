@@ -1,11 +1,12 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2004 Blender Foundation */
+/* SPDX-FileCopyrightText: 2004 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup edundo
  */
 
-#include <string.h>
+#include <cstring>
 
 #include "MEM_guardedalloc.h"
 
@@ -25,33 +26,33 @@
 #include "BKE_global.h"
 #include "BKE_layer.h"
 #include "BKE_main.h"
-#include "BKE_paint.h"
+#include "BKE_paint.hh"
 #include "BKE_report.h"
 #include "BKE_scene.h"
-#include "BKE_screen.h"
+#include "BKE_screen.hh"
 #include "BKE_undo_system.h"
 #include "BKE_workspace.h"
 
-#include "BLO_blend_validate.h"
+#include "BLO_blend_validate.hh"
 
-#include "ED_asset.h"
-#include "ED_gpencil_legacy.h"
-#include "ED_object.h"
-#include "ED_outliner.h"
-#include "ED_render.h"
-#include "ED_screen.h"
-#include "ED_undo.h"
+#include "ED_asset.hh"
+#include "ED_gpencil_legacy.hh"
+#include "ED_object.hh"
+#include "ED_outliner.hh"
+#include "ED_render.hh"
+#include "ED_screen.hh"
+#include "ED_undo.hh"
 
-#include "WM_api.h"
+#include "WM_api.hh"
 #include "WM_toolsystem.h"
-#include "WM_types.h"
+#include "WM_types.hh"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
-#include "RNA_enum_types.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
+#include "RNA_enum_types.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 /** We only need this locally. */
 static CLG_LogRef LOG = {"ed.undo"};
@@ -171,7 +172,8 @@ static void ed_undo_step_pre(bContext *C,
 
   if (G.debug & G_DEBUG_IO) {
     if (bmain->lock != nullptr) {
-      BKE_report(reports, RPT_INFO, "Checking sanity of current .blend file *BEFORE* undo step");
+      BKE_report(
+          reports, RPT_DEBUG, "Checking validity of current .blend file *BEFORE* undo step");
       BLO_main_validate_libraries(bmain, reports);
     }
   }
@@ -236,7 +238,7 @@ static void ed_undo_step_post(bContext *C,
 
   if (G.debug & G_DEBUG_IO) {
     if (bmain->lock != nullptr) {
-      BKE_report(reports, RPT_INFO, "Checking sanity of current .blend file *AFTER* undo step");
+      BKE_report(reports, RPT_INFO, "Checking validity of current .blend file *AFTER* undo step");
       BLO_main_validate_libraries(bmain, reports);
     }
   }
@@ -444,7 +446,7 @@ bool ED_undo_is_memfile_compatible(const bContext *C)
   return true;
 }
 
-bool ED_undo_is_legacy_compatible_for_property(struct bContext *C, ID *id)
+bool ED_undo_is_legacy_compatible_for_property(bContext *C, ID *id)
 {
   const Scene *scene = CTX_data_scene(C);
   ViewLayer *view_layer = CTX_data_view_layer(C);
@@ -471,7 +473,7 @@ bool ED_undo_is_legacy_compatible_for_property(struct bContext *C, ID *id)
   return true;
 }
 
-UndoStack *ED_undo_stack_get(void)
+UndoStack *ED_undo_stack_get()
 {
   wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   return wm->undo_stack;
@@ -667,14 +669,21 @@ int ED_undo_operator_repeat(bContext *C, wmOperator *op)
   if (op) {
     CLOG_INFO(&LOG, 1, "idname='%s'", op->type->idname);
     wmWindowManager *wm = CTX_wm_manager(C);
-    struct Scene *scene = CTX_data_scene(C);
+    const ScrArea *area = CTX_wm_area(C);
+    Scene *scene = CTX_data_scene(C);
 
     /* keep in sync with logic in view3d_panel_operator_redo() */
     ARegion *region_orig = CTX_wm_region(C);
-    ARegion *region_win = BKE_area_find_region_active_win(CTX_wm_area(C));
+    /* If the redo is called from a HUD, this knows about the region type the operator was
+     * initially called in, so attempt to restore that. */
+    ARegion *redo_region_from_hud = (region_orig->regiontype == RGN_TYPE_HUD) ?
+                                        ED_area_type_hud_redo_region_find(area, region_orig) :
+                                        nullptr;
+    ARegion *region_repeat = redo_region_from_hud ? redo_region_from_hud :
+                                                    BKE_area_find_region_active_win(area);
 
-    if (region_win) {
-      CTX_wm_region_set(C, region_win);
+    if (region_repeat) {
+      CTX_wm_region_set(C, region_repeat);
     }
 
     if (WM_operator_repeat_check(C, op) && WM_operator_poll(C, op->type) &&
@@ -683,7 +692,8 @@ int ED_undo_operator_repeat(bContext *C, wmOperator *op)
          * (which copy their data), won't stop redo, see #29579.
          *
          * NOTE: WM_operator_check_ui_enabled() jobs test _must_ stay in sync with this. */
-        (WM_jobs_test(wm, scene, WM_JOB_TYPE_ANY) == 0)) {
+        (WM_jobs_test(wm, scene, WM_JOB_TYPE_ANY) == 0))
+    {
       int retval;
 
       if (G.debug & G_DEBUG) {
@@ -816,7 +826,7 @@ void ED_undo_object_set_active_or_warn(
   }
 }
 
-void ED_undo_object_editmode_restore_helper(struct bContext *C,
+void ED_undo_object_editmode_restore_helper(bContext *C,
                                             Object **object_array,
                                             uint object_array_len,
                                             uint object_array_stride)
@@ -833,7 +843,8 @@ void ED_undo_object_editmode_restore_helper(struct bContext *C,
   }
   Object **ob_p = object_array;
   for (uint i = 0; i < object_array_len;
-       i++, ob_p = static_cast<Object **>(POINTER_OFFSET(ob_p, object_array_stride))) {
+       i++, ob_p = static_cast<Object **>(POINTER_OFFSET(ob_p, object_array_stride)))
+  {
     Object *obedit = *ob_p;
     ED_object_editmode_enter_ex(bmain, scene, obedit, EM_NO_CONTEXT);
     ((ID *)obedit->data)->tag &= ~LIB_TAG_DOIT;
@@ -910,7 +921,8 @@ Object **ED_undo_editmode_objects_from_view_layer(const Scene *scene,
   for (Base *base = baseact,
             *base_next = static_cast<Base *>(BKE_view_layer_object_bases_get(view_layer)->first);
        base;
-       base = base_next, base_next = base_next ? base_next->next : nullptr) {
+       base = base_next, base_next = base_next ? base_next->next : nullptr)
+  {
     Object *ob = base->object;
     if ((ob->type == object_type) && (ob->mode & OB_MODE_EDIT)) {
       ID *id = static_cast<ID *>(ob->data);
@@ -945,7 +957,8 @@ Base **ED_undo_editmode_bases_from_view_layer(const Scene *scene,
   for (Base *base = BKE_view_layer_active_base_get(view_layer),
             *base_next = static_cast<Base *>(BKE_view_layer_object_bases_get(view_layer)->first);
        base;
-       base = base_next, base_next = base_next ? base_next->next : nullptr) {
+       base = base_next, base_next = base_next ? base_next->next : nullptr)
+  {
     Object *ob = base->object;
     if ((ob->type == object_type) && (ob->mode & OB_MODE_EDIT)) {
       ID *id = static_cast<ID *>(ob->data);

@@ -1,16 +1,24 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "node_shader_util.hh"
+#include "node_util.hh"
 
+#include "BKE_image.h"
 #include "BKE_node_runtime.hh"
+#include "BKE_texture.h"
+
+#include "IMB_colormanagement.h"
+
+#include "DEG_depsgraph_query.hh"
 
 namespace blender::nodes::node_shader_tex_environment_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Vector>(N_("Vector")).hide_value();
-  b.add_output<decl::Color>(N_("Color")).no_muted_links();
+  b.add_input<decl::Vector>("Vector").hide_value();
+  b.add_output<decl::Color>("Color").no_muted_links();
 }
 
 static void node_shader_init_tex_environment(bNodeTree * /*ntree*/, bNode *node)
@@ -102,7 +110,8 @@ static int node_shader_gpu_tex_environment(GPUMaterial *mat,
 
   if (out[0].hasoutput && ima) {
     if (ELEM(ima->alpha_mode, IMA_ALPHA_IGNORE, IMA_ALPHA_CHANNEL_PACKED) ||
-        IMB_colormanagement_space_name_is_data(ima->colorspace_settings.name)) {
+        IMB_colormanagement_space_name_is_data(ima->colorspace_settings.name))
+    {
       /* Don't let alpha affect color output in these cases. */
       GPU_link(mat, "color_alpha_clear", out[0].link, &out[0].link);
     }
@@ -120,6 +129,57 @@ static int node_shader_gpu_tex_environment(GPUMaterial *mat,
   return true;
 }
 
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  NodeItem res = val(MaterialX::Color4(1.0f, 0.0f, 1.0f, 1.0f));
+
+  Image *image = (Image *)node_->id;
+  if (!image) {
+    return res;
+  }
+
+  NodeTexEnvironment *tex_env = static_cast<NodeTexEnvironment *>(node_->storage);
+
+  std::string image_path = image->id.name;
+  if (export_image_fn_) {
+    Scene *scene = DEG_get_input_scene(depsgraph_);
+    Main *bmain = DEG_get_bmain(depsgraph_);
+    image_path = export_image_fn_(bmain, scene, image, &tex_env->iuser);
+  }
+
+  NodeItem vector = get_input_link("Vector", NodeItem::Type::Vector2);
+  if (!vector) {
+    vector = texcoord_node();
+  }
+  /* TODO: texture-coordinates should be translated to spherical coordinates. */
+
+  std::string filtertype;
+  switch (tex_env->interpolation) {
+    case SHD_INTERP_LINEAR:
+      filtertype = "linear";
+      break;
+    case SHD_INTERP_CLOSEST:
+      filtertype = "closest";
+      break;
+    case SHD_INTERP_CUBIC:
+    case SHD_INTERP_SMART:
+      filtertype = "cubic";
+      break;
+    default:
+      BLI_assert_unreachable();
+  }
+
+  res = create_node("image", NodeItem::Type::Color4);
+  res.set_input("file", image_path, NodeItem::Type::Filename);
+  res.set_input("texcoord", vector);
+  res.set_input("filtertype", val(filtertype));
+
+  return res;
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
 }  // namespace blender::nodes::node_shader_tex_environment_cc
 
 /* node type definition */
@@ -136,7 +196,8 @@ void register_node_type_sh_tex_environment()
       &ntype, "NodeTexEnvironment", node_free_standard_storage, node_copy_standard_storage);
   ntype.gpu_fn = file_ns::node_shader_gpu_tex_environment;
   ntype.labelfunc = node_image_label;
-  node_type_size_preset(&ntype, NODE_SIZE_LARGE);
+  blender::bke::node_type_size_preset(&ntype, blender::bke::eNodeSizePreset::LARGE);
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

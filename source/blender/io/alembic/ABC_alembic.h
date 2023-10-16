@@ -1,11 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 #pragma once
 
 /** \file
  * \ingroup balembic
  */
 
-#include "DEG_depsgraph.h"
+#include "DEG_depsgraph.hh"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,8 +105,8 @@ bool ABC_import(struct bContext *C,
                 const struct AlembicImportParams *params,
                 bool as_background_job);
 
-struct CacheArchiveHandle *ABC_create_handle(struct Main *bmain,
-                                             const char *filename,
+struct CacheArchiveHandle *ABC_create_handle(const struct Main *bmain,
+                                             const char *filepath,
                                              const struct CacheFileLayer *layers,
                                              struct ListBase *object_paths);
 
@@ -141,7 +143,8 @@ void ABC_CacheReader_free(struct CacheReader *reader);
 struct CacheReader *CacheReader_open_alembic_object(struct CacheArchiveHandle *handle,
                                                     struct CacheReader *reader,
                                                     struct Object *object,
-                                                    const char *object_path);
+                                                    const char *object_path,
+                                                    bool is_sequence);
 
 #ifdef __cplusplus
 }

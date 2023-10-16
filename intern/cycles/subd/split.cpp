@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
- * Copyright 2011-2022 Blender Foundation */
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
 
 #include "scene/camera.h"
 #include "scene/mesh.h"
@@ -29,8 +30,9 @@ float3 DiagSplit::to_world(Patch *patch, float2 uv)
   float3 P;
 
   patch->eval(&P, NULL, NULL, NULL, uv.x, uv.y);
-  if (params.camera)
+  if (params.camera) {
     P = transform_point(&params.objecttoworld, P);
+  }
 
   return P;
 }
@@ -692,7 +694,8 @@ void DiagSplit::post_split()
 
         /* Add to map */
         if (params.mesh->vert_to_stitching_key_map.find(vert) ==
-            params.mesh->vert_to_stitching_key_map.end()) {
+            params.mesh->vert_to_stitching_key_map.end())
+        {
           params.mesh->vert_to_stitching_key_map[vert] = key;
           params.mesh->vert_stitching_map.insert({key, vert});
         }

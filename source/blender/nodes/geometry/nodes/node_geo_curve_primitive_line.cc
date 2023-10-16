@@ -1,9 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "BKE_curves.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "NOD_rna_define.hh"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "node_geometry_util.hh"
 
@@ -17,26 +21,26 @@ static void node_declare(NodeDeclarationBuilder &b)
     node_storage(node).mode = GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_DIRECTION;
   };
 
-  b.add_input<decl::Vector>(N_("Start"))
+  b.add_input<decl::Vector>("Start")
       .subtype(PROP_TRANSLATION)
-      .description(N_("Position of the first control point"));
-  b.add_input<decl::Vector>(N_("End"))
+      .description("Position of the first control point");
+  b.add_input<decl::Vector>("End")
       .default_value({0.0f, 0.0f, 1.0f})
       .subtype(PROP_TRANSLATION)
-      .description(N_("Position of the second control point"))
+      .description("Position of the second control point")
       .make_available([](bNode &node) {
         node_storage(node).mode = GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_POINTS;
       });
-  b.add_input<decl::Vector>(N_("Direction"))
+  b.add_input<decl::Vector>("Direction")
       .default_value({0.0f, 0.0f, 1.0f})
-      .description(N_("Direction the line is going in. The length of this vector does not matter"))
+      .description("Direction the line is going in. The length of this vector does not matter")
       .make_available(enable_direction);
-  b.add_input<decl::Float>(N_("Length"))
+  b.add_input<decl::Float>("Length")
       .default_value(1.0f)
       .subtype(PROP_DISTANCE)
-      .description(N_("Distance between the two points"))
+      .description("Distance between the two points")
       .make_available(enable_direction);
-  b.add_output<decl::Geometry>(N_("Curve"));
+  b.add_output<decl::Geometry>("Curve");
 }
 
 static void node_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
@@ -61,10 +65,11 @@ static void node_update(bNodeTree *ntree, bNode *node)
   bNodeSocket *direction_socket = p2_socket->next;
   bNodeSocket *length_socket = direction_socket->next;
 
-  nodeSetSocketAvailability(ntree, p2_socket, mode == GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_POINTS);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
+      ntree, p2_socket, mode == GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_POINTS);
+  bke::nodeSetSocketAvailability(
       ntree, direction_socket, mode == GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_DIRECTION);
-  nodeSetSocketAvailability(
+  bke::nodeSetSocketAvailability(
       ntree, length_socket, mode == GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_DIRECTION);
 }
 
@@ -108,25 +113,51 @@ static void node_geo_exec(GeoNodeExecParams params)
                                          params.extract_input<float>("Length"));
   }
 
-  params.set_output("Curve", GeometrySet::create_with_curves(curves));
+  params.set_output("Curve", GeometrySet::from_curves(curves));
 }
 
-}  // namespace blender::nodes::node_geo_curve_primitive_line_cc
-
-void register_node_type_geo_curve_primitive_line()
+static void node_rna(StructRNA *srna)
 {
-  namespace file_ns = blender::nodes::node_geo_curve_primitive_line_cc;
+  static const EnumPropertyItem mode_items[] = {
+      {GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_POINTS,
+       "POINTS",
+       ICON_NONE,
+       "Points",
+       "Define the start and end points of the line"},
+      {GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_DIRECTION,
+       "DIRECTION",
+       ICON_NONE,
+       "Direction",
+       "Define a line with a start point, direction and length"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
 
+  RNA_def_node_enum(srna,
+                    "mode",
+                    "Mode",
+                    "Method used to determine radius and placement",
+                    mode_items,
+                    NOD_storage_enum_accessors(mode),
+                    GEO_NODE_CURVE_PRIMITIVE_LINE_MODE_POINTS);
+}
+
+static void node_register()
+{
   static bNodeType ntype;
   geo_node_type_base(&ntype, GEO_NODE_CURVE_PRIMITIVE_LINE, "Curve Line", NODE_CLASS_GEOMETRY);
-  ntype.initfunc = file_ns::node_init;
-  ntype.updatefunc = file_ns::node_update;
+  ntype.initfunc = node_init;
+  ntype.updatefunc = node_update;
   node_type_storage(&ntype,
                     "NodeGeometryCurvePrimitiveLine",
                     node_free_standard_storage,
                     node_copy_standard_storage);
-  ntype.declare = file_ns::node_declare;
-  ntype.geometry_node_execute = file_ns::node_geo_exec;
-  ntype.draw_buttons = file_ns::node_layout;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
   nodeRegisterType(&ntype);
+
+  node_rna(ntype.rna_ext.srna);
 }
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_curve_primitive_line_cc

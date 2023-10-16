@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup gpu
@@ -45,8 +46,6 @@ void GLBackend::platform_init()
 
 #ifdef _WIN32
   os = GPU_OS_WIN;
-#elif defined(__APPLE__)
-  os = GPU_OS_MAC;
 #else
   os = GPU_OS_UNIX;
 #endif
@@ -66,14 +65,16 @@ void GLBackend::platform_init()
   }
   else if (strstr(vendor, "Intel") ||
            /* src/mesa/drivers/dri/intel/intel_context.c */
-           strstr(renderer, "Mesa DRI Intel") || strstr(renderer, "Mesa DRI Mobile Intel")) {
+           strstr(renderer, "Mesa DRI Intel") || strstr(renderer, "Mesa DRI Mobile Intel"))
+  {
     device = GPU_DEVICE_INTEL;
     driver = GPU_DRIVER_OFFICIAL;
 
     if (strstr(renderer, "UHD Graphics") ||
         /* Not UHD but affected by the same bugs. */
         strstr(renderer, "HD Graphics 530") || strstr(renderer, "Kaby Lake GT2") ||
-        strstr(renderer, "Whiskey Lake")) {
+        strstr(renderer, "Whiskey Lake"))
+    {
       device |= GPU_DEVICE_INTEL_UHD;
     }
   }
@@ -81,7 +82,8 @@ void GLBackend::platform_init()
            (strstr(renderer, "Radeon") && strstr(vendor, "X.Org")) ||
            (strstr(renderer, "AMD") && strstr(vendor, "X.Org")) ||
            (strstr(renderer, "Gallium ") && strstr(renderer, " on ATI ")) ||
-           (strstr(renderer, "Gallium ") && strstr(renderer, " on AMD "))) {
+           (strstr(renderer, "Gallium ") && strstr(renderer, " on AMD ")))
+  {
     device = GPU_DEVICE_ATI;
     driver = GPU_DRIVER_OPENSOURCE;
   }
@@ -118,7 +120,7 @@ void GLBackend::platform_init()
   }
 
   /* Detect support level */
-  if (!(epoxy_gl_version() >= 33)) {
+  if (!(epoxy_gl_version() >= 43)) {
     support_level = GPU_SUPPORT_LEVEL_UNSUPPORTED;
   }
   else {
@@ -130,7 +132,8 @@ void GLBackend::platform_init()
           strstr(version, "Build 8.15") || strstr(version, "Build 9.17") ||
           strstr(version, "Build 9.18") || strstr(version, "Build 10.18.10.3") ||
           strstr(version, "Build 10.18.10.4") || strstr(version, "Build 10.18.10.5") ||
-          strstr(version, "Build 10.18.14.4")) {
+          strstr(version, "Build 10.18.14.4"))
+      {
         support_level = GPU_SUPPORT_LEVEL_LIMITED;
       }
     }
@@ -141,9 +144,32 @@ void GLBackend::platform_init()
         support_level = GPU_SUPPORT_LEVEL_LIMITED;
       }
     }
+
+    /* Check SSBO bindings requirement. */
+    GLint max_ssbo_binds_vertex;
+    GLint max_ssbo_binds_fragment;
+    GLint max_ssbo_binds_compute;
+    glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &max_ssbo_binds_vertex);
+    glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &max_ssbo_binds_fragment);
+    glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &max_ssbo_binds_compute);
+    GLint max_ssbo_binds = min_iii(
+        max_ssbo_binds_vertex, max_ssbo_binds_fragment, max_ssbo_binds_compute);
+    if (max_ssbo_binds < 8) {
+      std::cout << "Warning: Unsupported platform as it supports max " << max_ssbo_binds
+                << " SSBO binding locations\n";
+      support_level = GPU_SUPPORT_LEVEL_UNSUPPORTED;
+    }
   }
 
-  GPG.init(device, os, driver, support_level, GPU_BACKEND_OPENGL, vendor, renderer, version);
+  GPG.init(device,
+           os,
+           driver,
+           support_level,
+           GPU_BACKEND_OPENGL,
+           vendor,
+           renderer,
+           version,
+           GPU_ARCHITECTURE_IMR);
 }
 
 void GLBackend::platform_exit()
@@ -225,27 +251,43 @@ static void detect_workarounds()
     GCaps.mip_render_workaround = true;
     GLContext::debug_layer_workaround = true;
     GLContext::unused_fb_slot_workaround = true;
-    /* Turn off extensions. */
-    GCaps.shader_image_load_store_support = false;
-    GCaps.shader_draw_parameters_support = false;
-    GCaps.shader_storage_buffer_objects_support = false;
-    GLContext::base_instance_support = false;
+    /* Turn off Blender features. */
+    GCaps.hdr_viewport_support = false;
+    /* Turn off OpenGL 4.4 features. */
     GLContext::clear_texture_support = false;
+    GLContext::multi_bind_support = false;
+    GLContext::multi_bind_image_support = false;
+    /* Turn off OpenGL 4.5 features. */
+    GLContext::direct_state_access_support = false;
+    /* Turn off OpenGL 4.6 features. */
+    GLContext::texture_filter_anisotropic_support = false;
+    GCaps.shader_draw_parameters_support = false;
+    GLContext::shader_draw_parameters_support = false;
+    /* Although an OpenGL 4.3 feature, our implementation requires shader_draw_parameters_support.
+     * NOTE: we should untangle this by checking both features for clarity. */
+    GLContext::multi_draw_indirect_support = false;
+    /* Turn off extensions. */
+    GLContext::layered_rendering_support = false;
+    /* Turn off vendor specific extensions. */
+    GLContext::native_barycentric_support = false;
+    GLContext::framebuffer_fetch_support = false;
+    GLContext::texture_barrier_support = false;
+
+    /* Do not alter OpenGL 4.3 features.
+     * These code paths should be removed. */
+    /*
+    GCaps.shader_image_load_store_support = false;
+    GLContext::base_instance_support = false;
     GLContext::copy_image_support = false;
     GLContext::debug_layer_support = false;
-    GLContext::direct_state_access_support = false;
     GLContext::fixed_restart_index_support = false;
     GLContext::geometry_shader_invocations = false;
-    GLContext::layered_rendering_support = false;
-    GLContext::native_barycentric_support = false;
-    GLContext::multi_bind_support = false;
-    GLContext::multi_draw_indirect_support = false;
-    GLContext::shader_draw_parameters_support = false;
     GLContext::texture_cube_map_array_support = false;
-    GLContext::texture_filter_anisotropic_support = false;
     GLContext::texture_gather_support = false;
     GLContext::texture_storage_support = false;
     GLContext::vertex_attrib_binding_support = false;
+    */
+
     return;
   }
 
@@ -267,7 +309,8 @@ static void detect_workarounds()
   }
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_WIN, GPU_DRIVER_OFFICIAL) &&
       (strstr(version, "4.5.13399") || strstr(version, "4.5.13417") ||
-       strstr(version, "4.5.13422") || strstr(version, "4.5.13467"))) {
+       strstr(version, "4.5.13422") || strstr(version, "4.5.13467")))
+  {
     /* The renderers include:
      *   Radeon HD 5000;
      *   Radeon HD 7500M;
@@ -283,13 +326,15 @@ static void detect_workarounds()
   }
   /* Compute shaders have some issues with those versions (see #94936). */
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_OFFICIAL) &&
-      (strstr(version, "4.5.14831") || strstr(version, "4.5.14760"))) {
+      (strstr(version, "4.5.14831") || strstr(version, "4.5.14760")))
+  {
     GCaps.compute_shader_support = false;
   }
   /* We have issues with this specific renderer. (see #74024) */
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OPENSOURCE) &&
       (strstr(renderer, "AMD VERDE") || strstr(renderer, "AMD KAVERI") ||
-       strstr(renderer, "AMD TAHITI"))) {
+       strstr(renderer, "AMD TAHITI")))
+  {
     GLContext::unused_fb_slot_workaround = true;
     GCaps.shader_image_load_store_support = false;
     GCaps.shader_draw_parameters_support = false;
@@ -297,7 +342,8 @@ static void detect_workarounds()
   }
   /* Fix slowdown on this particular driver. (see #77641) */
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OPENSOURCE) &&
-      strstr(version, "Mesa 19.3.4")) {
+      strstr(version, "Mesa 19.3.4"))
+  {
     GCaps.shader_image_load_store_support = false;
     GCaps.shader_draw_parameters_support = false;
     GCaps.broken_amd_driver = true;
@@ -315,33 +361,26 @@ static void detect_workarounds()
       GCaps.use_hq_normals_workaround = true;
     }
   }
-  /* There is an issue with the #glBlitFramebuffer on MacOS with radeon pro graphics.
-   * Blitting depth with#GL_DEPTH24_STENCIL8 is buggy so the workaround is to use
-   * #GPU_DEPTH32F_STENCIL8. Then Blitting depth will work but blitting stencil will
-   * still be broken. */
-  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_MAC, GPU_DRIVER_OFFICIAL)) {
-    if (strstr(renderer, "AMD Radeon Pro") || strstr(renderer, "AMD Radeon R9") ||
-        strstr(renderer, "AMD Radeon RX")) {
-      GCaps.depth_blitting_workaround = true;
-    }
-  }
   /* Limit this fix to older hardware with GL < 4.5. This means Broadwell GPUs are
    * covered since they only support GL 4.4 on windows.
    * This fixes some issues with workbench anti-aliasing on Win + Intel GPU. (see #76273) */
   if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_WIN, GPU_DRIVER_OFFICIAL) &&
-      !(epoxy_gl_version() >= 45)) {
+      !(epoxy_gl_version() >= 45))
+  {
     GLContext::copy_image_support = false;
   }
   /* Special fix for these specific GPUs.
    * Without this workaround, blender crashes on startup. (see #72098) */
   if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_WIN, GPU_DRIVER_OFFICIAL) &&
-      (strstr(renderer, "HD Graphics 620") || strstr(renderer, "HD Graphics 630"))) {
+      (strstr(renderer, "HD Graphics 620") || strstr(renderer, "HD Graphics 630")))
+  {
     GCaps.mip_render_workaround = true;
   }
   /* Intel Ivy Bridge GPU's seems to have buggy cube-map array support. (see #75943) */
   if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_WIN, GPU_DRIVER_OFFICIAL) &&
       (strstr(renderer, "HD Graphics 4000") || strstr(renderer, "HD Graphics 4400") ||
-       strstr(renderer, "HD Graphics 2500"))) {
+       strstr(renderer, "HD Graphics 2500")))
+  {
     GLContext::texture_cube_map_array_support = false;
   }
   /* Maybe not all of these drivers have problems with `GL_ARB_base_instance`.
@@ -351,20 +390,23 @@ static void detect_workarounds()
   if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_WIN, GPU_DRIVER_ANY) &&
       (strstr(version, "Build 10.18.10.3") || strstr(version, "Build 10.18.10.4") ||
        strstr(version, "Build 10.18.10.5") || strstr(version, "Build 10.18.14.4") ||
-       strstr(version, "Build 10.18.14.5"))) {
+       strstr(version, "Build 10.18.14.5")))
+  {
     GLContext::base_instance_support = false;
     GCaps.use_main_context_workaround = true;
   }
   /* Somehow fixes armature display issues (see #69743). */
   if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_WIN, GPU_DRIVER_ANY) &&
-      strstr(version, "Build 20.19.15.4285")) {
+      strstr(version, "Build 20.19.15.4285"))
+  {
     GCaps.use_main_context_workaround = true;
   }
   /* See #70187: merging vertices fail. This has been tested from `18.2.2` till `19.3.0~dev`
    * of the Mesa driver */
   if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_UNIX, GPU_DRIVER_OPENSOURCE) &&
       (strstr(version, "Mesa 18.") || strstr(version, "Mesa 19.0") ||
-       strstr(version, "Mesa 19.1") || strstr(version, "Mesa 19.2"))) {
+       strstr(version, "Mesa 19.1") || strstr(version, "Mesa 19.2")))
+  {
     GLContext::unused_fb_slot_workaround = true;
   }
   /* There is a bug on older Nvidia GPU where GL_ARB_texture_gather
@@ -375,8 +417,8 @@ static void detect_workarounds()
   }
 
   /* dFdx/dFdy calculation factors, those are dependent on driver. */
-  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_ANY) &&
-      strstr(version, "3.3.10750")) {
+  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_ANY) && strstr(version, "3.3.10750"))
+  {
     GLContext::derivative_signs[0] = 1.0;
     GLContext::derivative_signs[1] = -1.0;
   }
@@ -386,15 +428,11 @@ static void detect_workarounds()
         strstr(version, "4.0.0 - Build 9.18.10.3165") ||
         strstr(version, "3.1.0 - Build 9.17.10.3347") ||
         strstr(version, "3.1.0 - Build 9.17.10.4101") ||
-        strstr(version, "3.3.0 - Build 8.15.10.2618")) {
+        strstr(version, "3.3.0 - Build 8.15.10.2618"))
+    {
       GLContext::derivative_signs[0] = -1.0;
       GLContext::derivative_signs[1] = 1.0;
     }
-  }
-
-  /* Disable TF on macOS. */
-  if (GPU_type_matches(GPU_DEVICE_ANY, GPU_OS_MAC, GPU_DRIVER_ANY)) {
-    GCaps.transform_feedback_support = false;
   }
 
   /* Some Intel drivers have issues with using mips as frame-buffer targets if
@@ -413,37 +451,17 @@ static void detect_workarounds()
     GLContext::debug_layer_workaround = true;
   }
 
-  /* Broken glGenerateMipmap on macOS 10.15.7 security update. */
-  if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_MAC, GPU_DRIVER_ANY) &&
-      strstr(renderer, "HD Graphics 4000")) {
-    GLContext::generate_mipmap_workaround = true;
-  }
-
-  /* Buggy interface query functions cause crashes when handling SSBOs (#93680) */
-  if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_ANY, GPU_DRIVER_ANY) &&
-      (strstr(renderer, "HD Graphics 4400") || strstr(renderer, "HD Graphics 4600"))) {
-    GCaps.shader_storage_buffer_objects_support = false;
-  }
-
-  /* Certain Intel/AMD based platforms don't clear the viewport textures. Always clearing leads to
-   * noticeable performance regressions on other platforms as well. */
-  if (GPU_type_matches(GPU_DEVICE_ANY, GPU_OS_MAC, GPU_DRIVER_ANY) ||
-      GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_ANY, GPU_DRIVER_ANY)) {
-    GCaps.clear_viewport_workaround = true;
+  /* There is an issue in AMD official driver where we cannot use multi bind when using images. AMD
+   * is aware of the issue, but hasn't released a fix. */
+  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_OFFICIAL)) {
+    GLContext::multi_bind_image_support = false;
   }
 
   /* Metal-related Workarounds. */
 
   /* Minimum Per-Vertex stride is 1 byte for OpenGL. */
   GCaps.minimum_per_vertex_stride = 1;
-
-  /* Force disable per feature. */
-  if (G.debug & G_DEBUG_GPU_FORCE_DISABLE_SSBO) {
-    printf("\n");
-    printf("GL: Force disabling SSBO support from commandline arguments.\n");
-    GCaps.shader_storage_buffer_objects_support = false;
-  }
-}  // namespace blender::gpu
+}
 
 /** Internal capabilities. */
 
@@ -451,7 +469,6 @@ GLint GLContext::max_cubemap_size = 0;
 GLint GLContext::max_ubo_binds = 0;
 GLint GLContext::max_ubo_size = 0;
 GLint GLContext::max_ssbo_binds = 0;
-GLint GLContext::max_ssbo_size = 0;
 
 /** Extensions. */
 
@@ -461,14 +478,17 @@ bool GLContext::copy_image_support = false;
 bool GLContext::debug_layer_support = false;
 bool GLContext::direct_state_access_support = false;
 bool GLContext::explicit_location_support = false;
+bool GLContext::framebuffer_fetch_support = false;
 bool GLContext::geometry_shader_invocations = false;
 bool GLContext::fixed_restart_index_support = false;
 bool GLContext::layered_rendering_support = false;
 bool GLContext::native_barycentric_support = false;
 bool GLContext::multi_bind_support = false;
+bool GLContext::multi_bind_image_support = false;
 bool GLContext::multi_draw_indirect_support = false;
 bool GLContext::shader_draw_parameters_support = false;
 bool GLContext::stencil_texturing_support = false;
+bool GLContext::texture_barrier_support = false;
 bool GLContext::texture_cube_map_array_support = false;
 bool GLContext::texture_filter_anisotropic_support = false;
 bool GLContext::texture_gather_support = false;
@@ -497,14 +517,7 @@ void GLBackend::capabilities_init()
   glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &GCaps.max_batch_indices);
   glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &GCaps.max_batch_vertices);
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &GCaps.max_vertex_attribs);
-  if (GPU_type_matches(GPU_DEVICE_APPLE, GPU_OS_MAC, GPU_DRIVER_OFFICIAL)) {
-    /* Due to a bug, querying GL_MAX_VARYING_FLOATS is emitting GL_INVALID_ENUM.
-     * Force use minimum required value. */
-    GCaps.max_varying_floats = 32;
-  }
-  else {
-    glGetIntegerv(GL_MAX_VARYING_FLOATS, &GCaps.max_varying_floats);
-  }
+  glGetIntegerv(GL_MAX_VARYING_FLOATS, &GCaps.max_varying_floats);
 
   glGetIntegerv(GL_NUM_EXTENSIONS, &GCaps.extensions_len);
   GCaps.extension_get = gl_extension_get;
@@ -518,6 +531,7 @@ void GLBackend::capabilities_init()
                                  epoxy_gl_version() >= 43;
   GCaps.geometry_shader_support = true;
   GCaps.max_samplers = GCaps.max_textures;
+  GCaps.hdr_viewport_support = false;
 
   if (GCaps.compute_shader_support) {
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &GCaps.max_work_group_count[0]);
@@ -529,31 +543,27 @@ void GLBackend::capabilities_init()
     glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS,
                   &GCaps.max_shader_storage_buffer_bindings);
     glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &GCaps.max_compute_shader_storage_blocks);
+    int64_t max_ssbo_size;
+    glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &max_ssbo_size);
+    GCaps.max_storage_buffer_size = size_t(max_ssbo_size);
   }
-  GCaps.shader_storage_buffer_objects_support = epoxy_has_gl_extension(
-      "GL_ARB_shader_storage_buffer_object");
   GCaps.transform_feedback_support = true;
+  GCaps.texture_view_support = epoxy_gl_version() >= 43 ||
+                               epoxy_has_gl_extension("GL_ARB_texture_view");
 
   /* GL specific capabilities. */
   glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &GCaps.max_texture_3d_size);
   glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &GLContext::max_cubemap_size);
   glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &GLContext::max_ubo_binds);
   glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &GLContext::max_ubo_size);
-  if (GCaps.shader_storage_buffer_objects_support) {
-    GLint max_ssbo_binds;
-    GLContext::max_ssbo_binds = 999999;
-    glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
-    GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
-    glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
-    GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
-    glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
-    GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
-    if (GLContext::max_ssbo_binds < 8) {
-      /* Does not meet our minimum requirements. */
-      GCaps.shader_storage_buffer_objects_support = false;
-    }
-    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &GLContext::max_ssbo_size);
-  }
+  GLint max_ssbo_binds;
+  GLContext::max_ssbo_binds = 999999;
+  glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
+  GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
+  glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
+  GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
+  glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &max_ssbo_binds);
+  GLContext::max_ssbo_binds = min_ii(GLContext::max_ssbo_binds, max_ssbo_binds);
   GLContext::base_instance_support = epoxy_has_gl_extension("GL_ARB_base_instance");
   GLContext::clear_texture_support = epoxy_has_gl_extension("GL_ARB_clear_texture");
   GLContext::copy_image_support = epoxy_has_gl_extension("GL_ARB_copy_image");
@@ -564,10 +574,14 @@ void GLBackend::capabilities_init()
   GLContext::explicit_location_support = epoxy_gl_version() >= 43;
   GLContext::geometry_shader_invocations = epoxy_has_gl_extension("GL_ARB_gpu_shader5");
   GLContext::fixed_restart_index_support = epoxy_has_gl_extension("GL_ARB_ES3_compatibility");
-  GLContext::layered_rendering_support = epoxy_has_gl_extension("GL_AMD_vertex_shader_layer");
+  GLContext::framebuffer_fetch_support = epoxy_has_gl_extension("GL_EXT_shader_framebuffer_fetch");
+  GLContext::texture_barrier_support = epoxy_has_gl_extension("GL_ARB_texture_barrier");
+  GLContext::layered_rendering_support = epoxy_has_gl_extension(
+      "GL_ARB_shader_viewport_layer_array");
   GLContext::native_barycentric_support = epoxy_has_gl_extension(
       "GL_AMD_shader_explicit_vertex_parameter");
-  GLContext::multi_bind_support = epoxy_has_gl_extension("GL_ARB_multi_bind");
+  GLContext::multi_bind_support = GLContext::multi_bind_image_support = epoxy_has_gl_extension(
+      "GL_ARB_multi_bind");
   GLContext::multi_draw_indirect_support = epoxy_has_gl_extension("GL_ARB_multi_draw_indirect");
   GLContext::shader_draw_parameters_support = epoxy_has_gl_extension(
       "GL_ARB_shader_draw_parameters");
@@ -580,6 +594,9 @@ void GLBackend::capabilities_init()
   GLContext::texture_storage_support = epoxy_gl_version() >= 43;
   GLContext::vertex_attrib_binding_support = epoxy_has_gl_extension(
       "GL_ARB_vertex_attrib_binding");
+
+  /* Disabled until it is proven to work. */
+  GLContext::framebuffer_fetch_support = false;
 
   detect_workarounds();
 

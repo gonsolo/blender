@@ -1,16 +1,14 @@
+# SPDX-FileCopyrightText: 2006 Blender Authors
+#
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright 2006 Blender Foundation
 
 set(INC
-  .
+  PUBLIC .
   ../clog
-  ../../source/blender/blenlib
   ../../source/blender/imbuf
-  ../../source/blender/makesdna
 )
 
 set(INC_SYS
-  ${Epoxy_INCLUDE_DIRS}
 )
 
 set(SRC
@@ -73,10 +71,32 @@ set(SRC
 )
 
 set(LIB
-  ${Epoxy_LIBRARIES}
+  PRIVATE bf::blenlib
+  PRIVATE bf::dna
 )
 
+if(WITH_OPENGL_BACKEND)
+  list(APPEND INC_SYS
+    ${Epoxy_INCLUDE_DIRS}
+  )
+  list(APPEND LIB
+    ${Epoxy_LIBRARIES}
+  )
+  add_definitions(-DWITH_OPENGL_BACKEND)
+endif()
+
 if(WITH_VULKAN_BACKEND)
+
+  if(APPLE)
+    list(APPEND INC_SYS
+      PUBLIC ${MOLTENVK_INCLUDE_DIRS}
+    )
+
+    list(APPEND LIB
+      ${MOLTENVK_LIBRARIES}
+    )
+  endif()
+
   list(APPEND SRC
     intern/GHOST_ContextVK.cc
 
@@ -84,13 +104,11 @@ if(WITH_VULKAN_BACKEND)
   )
 
   list(APPEND INC_SYS
-    ${VULKAN_INCLUDE_DIRS}
-    ${MOLTENVK_INCLUDE_DIRS}
+    PUBLIC ${VULKAN_INCLUDE_DIRS}
   )
 
   list(APPEND LIB
     ${VULKAN_LIBRARIES}
-    ${MOLTENVK_LIBRARIES}
   )
 
   add_definitions(-DWITH_VULKAN_BACKEND)
@@ -211,11 +229,13 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
       intern/GHOST_WindowX11.hh
     )
 
-    list(APPEND SRC
-      intern/GHOST_ContextGLX.cc
+    if(WITH_OPENGL_BACKEND)
+      list(APPEND SRC
+        intern/GHOST_ContextGLX.cc
 
-      intern/GHOST_ContextGLX.hh
-    )
+        intern/GHOST_ContextGLX.hh
+      )
+    endif()
 
     if(WITH_GHOST_XDND)
       add_definitions(-DWITH_XDND)
@@ -245,7 +265,7 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
     if(WITH_X11_XF86VMODE)
       add_definitions(-DWITH_X11_XF86VMODE)
       list(APPEND INC_SYS
-        ${X11_Xxf86vmode_INCLUDE_PATH}
+        ${X11_Xxf86vm_INCLUDE_PATH}
       )
       list(APPEND LIB
         ${X11_Xxf86vmode_LIB}
@@ -302,15 +322,6 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
       )
     endif()
 
-    if(WITH_GHOST_WAYLAND_DBUS)
-      list(APPEND INC_SYS
-        ${dbus_INCLUDE_DIRS}
-      )
-      list(APPEND LIB
-        ${dbus_LINK_LIBRARIES}
-      )
-    endif()
-
     if(WITH_GHOST_WAYLAND_LIBDECOR)
       list(APPEND INC_SYS
         ${libdecor_INCLUDE_DIRS}
@@ -340,7 +351,6 @@ elseif(WITH_GHOST_X11 OR WITH_GHOST_WAYLAND)
       intern/GHOST_WindowWayland.cc
 
       intern/GHOST_SystemWayland.hh
-      intern/GHOST_WaylandCursorSettings.hh
       intern/GHOST_WaylandUtils.hh
       intern/GHOST_WindowWayland.hh
     )
@@ -507,11 +517,13 @@ elseif(WIN32)
 endif()
 
 if(UNIX AND NOT APPLE)
-  list(APPEND SRC
-    intern/GHOST_ContextEGL.cc
+  if(WITH_OPENGL_BACKEND)
+    list(APPEND SRC
+      intern/GHOST_ContextEGL.cc
 
-    intern/GHOST_ContextEGL.hh
-  )
+      intern/GHOST_ContextEGL.hh
+    )
+  endif()
 endif()
 
 if(APPLE)

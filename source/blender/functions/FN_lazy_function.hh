@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
@@ -53,7 +55,7 @@
 
 namespace blender::fn::lazy_function {
 
-enum class ValueUsage {
+enum class ValueUsage : uint8_t {
   /**
    * The value is definitely used and therefore has to be computed.
    */
@@ -73,6 +75,16 @@ enum class ValueUsage {
 class LazyFunction;
 
 /**
+ * Extension of #UserData that is thread-local. This avoids accessing e.g.
+ * `EnumerableThreadSpecific.local()` in every nested lazy-function because the thread local
+ * data is passed in by the caller.
+ */
+class LocalUserData {
+ public:
+  virtual ~LocalUserData() = default;
+};
+
+/**
  * This allows passing arbitrary data into a lazy-function during execution. For that, #UserData
  * has to be subclassed. This mainly exists because it's more type safe than passing a `void *`
  * with no type information attached.
@@ -82,6 +94,11 @@ class LazyFunction;
 class UserData {
  public:
   virtual ~UserData() = default;
+
+  /**
+   * Get thread local data for this user-data and the current thread.
+   */
+  virtual destruct_ptr<LocalUserData> get_local(LinearAllocator<> &allocator);
 };
 
 /**
@@ -98,6 +115,15 @@ struct Context {
    * Custom user data that can be used in the function.
    */
   UserData *user_data;
+  /**
+   * Custom user data that is local to the thread that executes the lazy-function.
+   */
+  LocalUserData *local_user_data;
+
+  Context(void *storage, UserData *user_data, LocalUserData *local_user_data)
+      : storage(storage), user_data(user_data), local_user_data(local_user_data)
+  {
+  }
 };
 
 /**
@@ -367,39 +393,46 @@ inline Params::Params(const LazyFunction &fn,
 
 inline void *Params::try_get_input_data_ptr(const int index) const
 {
+  BLI_assert(index >= 0 && index < fn_.inputs().size());
   return this->try_get_input_data_ptr_impl(index);
 }
 
 inline void *Params::try_get_input_data_ptr_or_request(const int index)
 {
+  BLI_assert(index >= 0 && index < fn_.inputs().size());
   this->assert_valid_thread();
   return this->try_get_input_data_ptr_or_request_impl(index);
 }
 
 inline void *Params::get_output_data_ptr(const int index)
 {
+  BLI_assert(index >= 0 && index < fn_.outputs().size());
   this->assert_valid_thread();
   return this->get_output_data_ptr_impl(index);
 }
 
 inline void Params::output_set(const int index)
 {
+  BLI_assert(index >= 0 && index < fn_.outputs().size());
   this->assert_valid_thread();
   this->output_set_impl(index);
 }
 
 inline bool Params::output_was_set(const int index) const
 {
+  BLI_assert(index >= 0 && index < fn_.outputs().size());
   return this->output_was_set_impl(index);
 }
 
 inline ValueUsage Params::get_output_usage(const int index) const
 {
+  BLI_assert(index >= 0 && index < fn_.outputs().size());
   return this->get_output_usage_impl(index);
 }
 
 inline void Params::set_input_unused(const int index)
 {
+  BLI_assert(index >= 0 && index < fn_.inputs().size());
   this->assert_valid_thread();
   this->set_input_unused_impl(index);
 }

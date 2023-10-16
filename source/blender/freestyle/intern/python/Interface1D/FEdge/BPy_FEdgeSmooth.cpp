@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup freestyle
@@ -24,8 +26,8 @@ using namespace Freestyle;
 PyDoc_STRVAR(FEdgeSmooth_doc,
              "Class hierarchy: :class:`Interface1D` > :class:`FEdge` > :class:`FEdgeSmooth`\n"
              "\n"
-             "Class defining a smooth edge.  This kind of edge typically runs across\n"
-             "a face of the input mesh.  It can be a silhouette, a ridge or valley,\n"
+             "Class defining a smooth edge. This kind of edge typically runs across\n"
+             "a face of the input mesh. It can be a silhouette, a ridge or valley,\n"
              "a suggestive contour.\n"
              "\n"
              ".. method:: __init__()\n"
@@ -48,8 +50,8 @@ static int FEdgeSmooth_init(BPy_FEdgeSmooth *self, PyObject *args, PyObject *kwd
   static const char *kwlist_2[] = {"first_vertex", "second_vertex", nullptr};
   PyObject *obj1 = nullptr, *obj2 = nullptr;
 
-  if (PyArg_ParseTupleAndKeywords(
-          args, kwds, "|O!", (char **)kwlist_1, &FEdgeSmooth_Type, &obj1)) {
+  if (PyArg_ParseTupleAndKeywords(args, kwds, "|O!", (char **)kwlist_1, &FEdgeSmooth_Type, &obj1))
+  {
     if (!obj1) {
       self->fes = new FEdgeSmooth();
     }
@@ -58,14 +60,9 @@ static int FEdgeSmooth_init(BPy_FEdgeSmooth *self, PyObject *args, PyObject *kwd
     }
   }
   else if ((void)PyErr_Clear(),
-           PyArg_ParseTupleAndKeywords(args,
-                                       kwds,
-                                       "O!O!",
-                                       (char **)kwlist_2,
-                                       &SVertex_Type,
-                                       &obj1,
-                                       &SVertex_Type,
-                                       &obj2)) {
+           PyArg_ParseTupleAndKeywords(
+               args, kwds, "O!O!", (char **)kwlist_2, &SVertex_Type, &obj1, &SVertex_Type, &obj2))
+  {
     self->fes = new FEdgeSmooth(((BPy_SVertex *)obj1)->sv, ((BPy_SVertex *)obj2)->sv);
   }
   else {
@@ -239,7 +236,7 @@ static PyGetSetDef BPy_FEdgeSmooth_getseters[] = {
 /*-----------------------BPy_FEdgeSmooth type definition ------------------------------*/
 
 PyTypeObject FEdgeSmooth_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "FEdgeSmooth",
     /*tp_basicsize*/ sizeof(BPy_FEdgeSmooth),
     /*tp_itemsize*/ 0,

@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup ply
@@ -9,6 +11,7 @@
 #include "ply_import_buffer.hh"
 
 #include "BLI_endian_switch.h"
+#include "BLI_string_ref.hh"
 
 #include "fast_float.h"
 
@@ -338,8 +341,9 @@ static uint32_t read_list_count(PlyReadBuffer &file,
   scratch.resize(8);
   file.read_bytes(scratch.data(), data_type_size[prop.count_type]);
   const uint8_t *ptr = scratch.data();
-  if (big_endian)
+  if (big_endian) {
     endian_switch((uint8_t *)ptr, data_type_size[prop.count_type]);
+  }
   uint32_t count = get_binary_value<uint32_t>(prop.count_type, ptr);
   return count;
 }
@@ -443,8 +447,9 @@ static const char *load_face_element(PlyReadBuffer &file,
       scratch.resize(count * data_type_size[prop.type]);
       file.read_bytes(scratch.data(), scratch.size());
       ptr = scratch.data();
-      if (header.type == PlyFormatType::BINARY_BE)
+      if (header.type == PlyFormatType::BINARY_BE) {
         endian_switch_array((uint8_t *)ptr, data_type_size[prop.type], count);
+      }
       for (int j = 0; j < count; ++j) {
         uint32_t index = get_binary_value<uint32_t>(prop.type, ptr);
         data->face_vertices.append(index);
@@ -505,8 +510,9 @@ static const char *load_tristrips_element(PlyReadBuffer &file,
     scratch.resize(count * data_type_size[prop.type]);
     file.read_bytes(scratch.data(), scratch.size());
     ptr = scratch.data();
-    if (header.type == PlyFormatType::BINARY_BE)
+    if (header.type == PlyFormatType::BINARY_BE) {
       endian_switch_array((uint8_t *)ptr, data_type_size[prop.type], count);
+    }
     for (int j = 0; j < count; ++j) {
       int index = get_binary_value<int>(prop.type, ptr);
       strip[j] = index;
@@ -576,27 +582,60 @@ static const char *load_edge_element(PlyReadBuffer &file,
   return nullptr;
 }
 
+static const char *skip_element(PlyReadBuffer &file,
+                                const PlyHeader &header,
+                                const PlyElement &element)
+{
+  if (header.type == PlyFormatType::ASCII) {
+    for (int i = 0; i < element.count; i++) {
+      Span<char> line = file.read_line();
+      (void)line;
+    }
+  }
+  else {
+    Vector<uint8_t> scratch(64);
+    for (int i = 0; i < element.count; i++) {
+      for (const PlyProperty &prop : element.properties) {
+        skip_property(file, prop, scratch, header.type == PlyFormatType::BINARY_BE);
+      }
+    }
+  }
+  return nullptr;
+}
+
 std::unique_ptr<PlyData> import_ply_data(PlyReadBuffer &file, PlyHeader &header)
 {
   std::unique_ptr<PlyData> data = std::make_unique<PlyData>();
 
+  bool got_vertex = false, got_face = false, got_tristrips = false, got_edge = false;
   for (const PlyElement &element : header.elements) {
     const char *error = nullptr;
     if (element.name == "vertex") {
       error = load_vertex_element(file, header, element, data.get());
+      got_vertex = true;
     }
     else if (element.name == "face") {
       error = load_face_element(file, header, element, data.get());
+      got_face = true;
     }
     else if (element.name == "tristrips") {
       error = load_tristrips_element(file, header, element, data.get());
+      got_tristrips = true;
     }
     else if (element.name == "edge") {
       error = load_edge_element(file, header, element, data.get());
+      got_edge = true;
+    }
+    else {
+      error = skip_element(file, header, element);
     }
     if (error != nullptr) {
       data->error = error;
       return data;
+    }
+    if (got_vertex && got_face && got_tristrips && got_edge) {
+      /* We have parsed all the elements we'd need, skip the rest. */
+      break;
     }
   }
 

@@ -1,10 +1,9 @@
-/* SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-FileCopyrightText: 2009-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.
+ * SPDX-FileCopyrightText: 2011-2022 Blender Foundation
  *
- * Adapted from Open Shading Language
- * Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
- * All Rights Reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
  *
- * Modifications Copyright 2011-2022 Blender Foundation. */
+ * Adapted code from Open Shading Language. */
 
 #include "kernel/tables.h"
 #include "kernel/util/differential.h"
@@ -739,22 +738,28 @@ ccl_device_extern bool osl_transform_triple(ccl_private ShaderGlobals *sg,
 
   if (res) {
     if (vectype == 2 /* TypeDesc::POINT */) {
-      if (p_in_derivs)
+      if (p_in_derivs) {
         osl_transform_dvmdv(p_out, m, p_in);
-      else
+      }
+      else {
         osl_transform_vmv(p_out, m, p_in);
+      }
     }
     else if (vectype == 3 /* TypeDesc::VECTOR */) {
-      if (p_in_derivs)
+      if (p_in_derivs) {
         osl_transformv_dvmdv(p_out, m, p_in);
-      else
+      }
+      else {
         osl_transformv_vmv(p_out, m, p_in);
+      }
     }
     else if (vectype == 4 /* TypeDesc::NORMAL */) {
-      if (p_in_derivs)
+      if (p_in_derivs) {
         osl_transformn_dvmdv(p_out, m, p_in);
-      else
+      }
+      else {
         osl_transformn_vmv(p_out, m, p_in);
+      }
     }
     else {
       res = false;
@@ -810,16 +815,16 @@ ccl_device_inline bool set_attribute_float(ccl_private float fval[3],
   const int type_arraylen = type >> 32;
 
   if (type_basetype == 11 /* TypeDesc::FLOAT */) {
-    if ((type_aggregate == 2 /* TypeDesc::VEC2 */) ||
-        (type_aggregate == 1 && type_arraylen == 2)) {
+    if ((type_aggregate == 2 /* TypeDesc::VEC2 */) || (type_aggregate == 1 && type_arraylen == 2))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 2 + 0] = fval[i];
         static_cast<ccl_private float *>(val)[i * 2 + 1] = fval[i];
       }
       return true;
     }
-    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) ||
-        (type_aggregate == 1 && type_arraylen == 3)) {
+    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) || (type_aggregate == 1 && type_arraylen == 3))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 3 + 0] = fval[i];
         static_cast<ccl_private float *>(val)[i * 3 + 1] = fval[i];
@@ -827,8 +832,8 @@ ccl_device_inline bool set_attribute_float(ccl_private float fval[3],
       }
       return true;
     }
-    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) ||
-        (type_aggregate == 1 && type_arraylen == 4)) {
+    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) || (type_aggregate == 1 && type_arraylen == 4))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 4 + 0] = fval[i];
         static_cast<ccl_private float *>(val)[i * 4 + 1] = fval[i];
@@ -870,16 +875,16 @@ ccl_device_inline bool set_attribute_float2(ccl_private float2 fval[3],
   const int type_arraylen = type >> 32;
 
   if (type_basetype == 11 /* TypeDesc::FLOAT */) {
-    if ((type_aggregate == 2 /* TypeDesc::VEC2 */) ||
-        (type_aggregate == 1 && type_arraylen == 2)) {
+    if ((type_aggregate == 2 /* TypeDesc::VEC2 */) || (type_aggregate == 1 && type_arraylen == 2))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 2 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 2 + 1] = fval[i].y;
       }
       return true;
     }
-    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) ||
-        (type_aggregate == 1 && type_arraylen == 3)) {
+    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) || (type_aggregate == 1 && type_arraylen == 3))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 3 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 3 + 1] = fval[i].y;
@@ -887,8 +892,8 @@ ccl_device_inline bool set_attribute_float2(ccl_private float2 fval[3],
       }
       return true;
     }
-    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) ||
-        (type_aggregate == 1 && type_arraylen == 4)) {
+    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) || (type_aggregate == 1 && type_arraylen == 4))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 4 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 4 + 1] = fval[i].y;
@@ -917,8 +922,8 @@ ccl_device_inline bool set_attribute_float3(ccl_private float3 fval[3],
   const int type_arraylen = type >> 32;
 
   if (type_basetype == 11 /* TypeDesc::FLOAT */) {
-    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) ||
-        (type_aggregate == 1 && type_arraylen == 3)) {
+    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) || (type_aggregate == 1 && type_arraylen == 3))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 3 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 3 + 1] = fval[i].y;
@@ -926,8 +931,8 @@ ccl_device_inline bool set_attribute_float3(ccl_private float3 fval[3],
       }
       return true;
     }
-    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) ||
-        (type_aggregate == 1 && type_arraylen == 4)) {
+    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) || (type_aggregate == 1 && type_arraylen == 4))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 4 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 4 + 1] = fval[i].y;
@@ -969,8 +974,8 @@ ccl_device_inline bool set_attribute_float4(ccl_private float4 fval[3],
   const int type_arraylen = type >> 32;
 
   if (type_basetype == 11 /* TypeDesc::FLOAT */) {
-    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) ||
-        (type_aggregate == 1 && type_arraylen == 3)) {
+    if ((type_aggregate == 3 /* TypeDesc::VEC3 */) || (type_aggregate == 1 && type_arraylen == 3))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 3 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 3 + 1] = fval[i].y;
@@ -978,8 +983,8 @@ ccl_device_inline bool set_attribute_float4(ccl_private float4 fval[3],
       }
       return true;
     }
-    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) ||
-        (type_aggregate == 1 && type_arraylen == 4)) {
+    if ((type_aggregate == 4 /* TypeDesc::VEC4 */) || (type_aggregate == 1 && type_arraylen == 4))
+    {
       for (int i = 0; i < (derivatives ? 3 : 1); ++i) {
         static_cast<ccl_private float *>(val)[i * 4 + 0] = fval[i].x;
         static_cast<ccl_private float *>(val)[i * 4 + 1] = fval[i].y;
@@ -1631,19 +1636,24 @@ ccl_device_extern bool osl_texture(ccl_private ShaderGlobals *sg,
   switch (type) {
     case OSL_TEXTURE_HANDLE_TYPE_SVM: {
       const float4 rgba = kernel_tex_image_interp(nullptr, slot, s, 1.0f - t);
-      if (nchannels > 0)
+      if (nchannels > 0) {
         result[0] = rgba.x;
-      if (nchannels > 1)
+      }
+      if (nchannels > 1) {
         result[1] = rgba.y;
-      if (nchannels > 2)
+      }
+      if (nchannels > 2) {
         result[2] = rgba.z;
-      if (alpha)
+      }
+      if (alpha) {
         *alpha = rgba.w;
+      }
       return true;
     }
     case OSL_TEXTURE_HANDLE_TYPE_IES: {
-      if (nchannels > 0)
+      if (nchannels > 0) {
         result[0] = kernel_ies_interp(nullptr, slot, s, t);
+      }
       return true;
     }
     default: {
@@ -1675,14 +1685,18 @@ ccl_device_extern bool osl_texture3d(ccl_private ShaderGlobals *sg,
   switch (type) {
     case OSL_TEXTURE_HANDLE_TYPE_SVM: {
       const float4 rgba = kernel_tex_image_interp_3d(nullptr, slot, *P, INTERPOLATION_NONE);
-      if (nchannels > 0)
+      if (nchannels > 0) {
         result[0] = rgba.x;
-      if (nchannels > 1)
+      }
+      if (nchannels > 1) {
         result[1] = rgba.y;
-      if (nchannels > 2)
+      }
+      if (nchannels > 2) {
         result[2] = rgba.z;
-      if (alpha)
+      }
+      if (alpha) {
         *alpha = rgba.w;
+      }
       return true;
     }
     default: {
@@ -1707,14 +1721,18 @@ ccl_device_extern bool osl_environment(ccl_private ShaderGlobals *sg,
                                        ccl_private float *dalphay,
                                        ccl_private void *errormessage)
 {
-  if (nchannels > 0)
+  if (nchannels > 0) {
     result[0] = 1.0f;
-  if (nchannels > 1)
+  }
+  if (nchannels > 1) {
     result[1] = 0.0f;
-  if (nchannels > 2)
+  }
+  if (nchannels > 2) {
     result[2] = 1.0f;
-  if (alpha)
+  }
+  if (alpha) {
     *alpha = 1.0f;
+  }
 
   return false;
 }
@@ -2096,22 +2114,25 @@ ccl_device_extern void osl_sincos_dfdff(ccl_private const float *a,
                                         ccl_private float *b,
                                         ccl_private float *c)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i) {
     sincos(a[i], b + i, c);
+  }
 }
 ccl_device_extern void osl_sincos_dffdf(ccl_private const float *a,
                                         ccl_private float *b,
                                         ccl_private float *c)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i) {
     sincos(a[i], b, c + i);
+  }
 }
 ccl_device_extern void osl_sincos_dfdfdf(ccl_private const float *a,
                                          ccl_private float *b,
                                          ccl_private float *c)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i) {
     sincos(a[i], b + i, c + i);
+  }
 }
 ccl_device_extern void osl_sincos_vvv(ccl_private const float3 *a,
                                       ccl_private float3 *b,
@@ -2233,10 +2254,12 @@ ccl_device_extern void osl_calculatenormal(ccl_private float3 *res,
                                            ccl_private ShaderGlobals *sg,
                                            ccl_private const float3 *p)
 {
-  if (sg->flipHandedness)
+  if (sg->flipHandedness) {
     *res = cross(p[2], p[1]);
-  else
+  }
+  else {
     *res = cross(p[1], p[2]);
+  }
 }
 
 ccl_device_extern float osl_area(ccl_private const float3 *p)
@@ -2251,8 +2274,9 @@ ccl_device_extern float osl_filterwidth_fdf(ccl_private const float *x)
 
 ccl_device_extern void osl_filterwidth_vdv(ccl_private float *res, ccl_private const float *x)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < 3; ++i) {
     res[i] = osl_filterwidth_fdf(x + i);
+  }
 }
 
 ccl_device_extern bool osl_raytype_bit(ccl_private ShaderGlobals *sg, int bit)

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2005 Blender Foundation */
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup shdnodes
@@ -11,9 +12,9 @@ namespace blender::nodes::node_shader_camera_cc {
 
 static void node_declare(NodeDeclarationBuilder &b)
 {
-  b.add_output<decl::Vector>(N_("View Vector"));
-  b.add_output<decl::Float>(N_("View Z Depth"));
-  b.add_output<decl::Float>(N_("View Distance"));
+  b.add_output<decl::Vector>("View Vector");
+  b.add_output<decl::Float>("View Z Depth");
+  b.add_output<decl::Float>("View Distance");
 }
 
 static int gpu_shader_camera(GPUMaterial *mat,
@@ -24,6 +25,15 @@ static int gpu_shader_camera(GPUMaterial *mat,
 {
   return GPU_stack_link(mat, node, "camera", in, out);
 }
+
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  /* NOTE: This node doesn't have an implementation in MaterialX.*/
+  return get_output_default(socket_out_->name, NodeItem::Type::Any);
+}
+#endif
+NODE_SHADER_MATERIALX_END
 
 }  // namespace blender::nodes::node_shader_camera_cc
 
@@ -36,6 +46,7 @@ void register_node_type_sh_camera()
   sh_node_type_base(&ntype, SH_NODE_CAMERA, "Camera Data", NODE_CLASS_INPUT);
   ntype.declare = file_ns::node_declare;
   ntype.gpu_fn = file_ns::gpu_shader_camera;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
 
   nodeRegisterType(&ntype);
 }

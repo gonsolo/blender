@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2013 Blender Foundation */
+/* SPDX-FileCopyrightText: 2013 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup depsgraph
@@ -28,22 +29,23 @@
 #include "BKE_action.h"
 #include "BKE_armature.h"
 #include "BKE_constraint.h"
+#include "BKE_lib_query.h"
 
 #include "RNA_prototypes.h"
 
-#include "DEG_depsgraph.h"
-#include "DEG_depsgraph_build.h"
+#include "DEG_depsgraph.hh"
+#include "DEG_depsgraph_build.hh"
 
 #include "intern/builder/deg_builder.h"
 #include "intern/builder/deg_builder_cache.h"
 #include "intern/builder/deg_builder_pchanmap.h"
 #include "intern/debug/deg_debug.h"
-#include "intern/node/deg_node.h"
-#include "intern/node/deg_node_component.h"
-#include "intern/node/deg_node_operation.h"
+#include "intern/node/deg_node.hh"
+#include "intern/node/deg_node_component.hh"
+#include "intern/node/deg_node_operation.hh"
 
-#include "intern/depsgraph_relation.h"
-#include "intern/depsgraph_type.h"
+#include "intern/depsgraph_relation.hh"
+#include "intern/depsgraph_type.hh"
 
 namespace blender::deg {
 
@@ -75,8 +77,7 @@ void DepsgraphRelationBuilder::build_ik_pose(Object *object,
    * one Init IK node per armature, this link has quite high risk of spurious dependency cycles.
    */
   const bool is_itasc = (object->pose->iksolver == IKSOLVER_ITASC);
-  PointerRNA con_ptr;
-  RNA_pointer_create(&object->id, &RNA_Constraint, con, &con_ptr);
+  PointerRNA con_ptr = RNA_pointer_create(&object->id, &RNA_Constraint, con);
   if (is_itasc || cache_->isAnyPropertyAnimated(&con_ptr)) {
     add_relation(pchan_local_key, init_ik_key, "IK Constraint -> Init IK Tree");
   }
@@ -239,7 +240,8 @@ void DepsgraphRelationBuilder::build_splineik_pose(Object *object,
   /* Walk to the chain's root/ */
   int segcount = 1;
   for (bPoseChannel *parchan = pchan->parent; parchan != nullptr && segcount < data->chainlen;
-       parchan = parchan->parent, segcount++) {
+       parchan = parchan->parent, segcount++)
+  {
     /* Make Spline IK solver dependent on this bone's result, since it can
      * only run after the standard results of the bone are know. Validate
      * links step on the bone will ensure that users of this bone only grab
@@ -288,7 +290,7 @@ void DepsgraphRelationBuilder::build_rig(Object *object)
 {
   /* Armature-Data */
   bArmature *armature = (bArmature *)object->data;
-  // TODO: selection status?
+  /* TODO: selection status? */
   /* Attach links between pose operations. */
   ComponentKey local_transform(&object->id, NodeType::TRANSFORM);
   OperationKey pose_init_key(&object->id, NodeType::EVAL_POSE, OperationCode::POSE_INIT);
@@ -395,7 +397,7 @@ void DepsgraphRelationBuilder::build_rig(Object *object)
       /* Build relations for indirectly linked objects. */
       BuilderWalkUserData data;
       data.builder = this;
-      BKE_constraints_id_loop(&pchan->constraints, constraint_walk, &data);
+      BKE_constraints_id_loop(&pchan->constraints, constraint_walk, IDWALK_NOP, &data);
       /* Constraints stack and constraint dependencies. */
       build_constraints(&object->id, NodeType::BONE, pchan->name, &pchan->constraints, &root_map);
       /* Pose -> constraints. */
@@ -430,7 +432,8 @@ void DepsgraphRelationBuilder::build_rig(Object *object)
         OperationCode opcode = OperationCode::BONE_DONE;
         /* Inheriting parent roll requires access to prev handle's B-Bone properties. */
         if ((pchan->bone->bbone_flag & BBONE_ADD_PARENT_END_ROLL) != 0 &&
-            check_pchan_has_bbone_segments(object, prev)) {
+            check_pchan_has_bbone_segments(object, prev))
+        {
           opcode = OperationCode::BONE_SEGMENTS;
         }
         OperationKey prev_key(&object->id, NodeType::BONE, prev->name, opcode);

@@ -1,5 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2020 Blender Foundation */
+/* SPDX-FileCopyrightText: 2020 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup bke
@@ -99,7 +100,7 @@ struct CryptomatteLayer {
 #endif
 
   static std::unique_ptr<CryptomatteLayer> read_from_manifest(blender::StringRefNull manifest);
-  uint32_t add_ID(const struct ID &id);
+  uint32_t add_ID(const ID &id);
   void add_hash(blender::StringRef name, CryptomatteHash cryptomatte_hash);
   std::string manifest() const;
 
@@ -107,7 +108,7 @@ struct CryptomatteLayer {
 };
 
 struct CryptomatteStampDataCallbackData {
-  struct CryptomatteSession *session;
+  CryptomatteSession *session;
   blender::Map<std::string, std::string> hash_to_layer_name;
 
   /**
@@ -118,9 +119,15 @@ struct CryptomatteStampDataCallbackData {
   static blender::StringRef extract_layer_hash(blender::StringRefNull key);
 
   /* C type callback function (StampCallback). */
-  static void extract_layer_names(void *_data, const char *propname, char *propvalue, int len);
+  static void extract_layer_names(void *_data,
+                                  const char *propname,
+                                  char *propvalue,
+                                  int propvalue_maxncpy);
   /* C type callback function (StampCallback). */
-  static void extract_layer_manifest(void *_data, const char *propname, char *propvalue, int len);
+  static void extract_layer_manifest(void *_data,
+                                     const char *propname,
+                                     char *propvalue,
+                                     int propvalue_maxncpy);
 };
 
 const blender::Vector<std::string> &BKE_cryptomatte_layer_names_get(

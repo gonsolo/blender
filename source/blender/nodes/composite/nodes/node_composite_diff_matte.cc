@@ -1,12 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Copyright 2006 Blender Foundation */
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /** \file
  * \ingroup cmpnodes
  */
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "GPU_material.h"
 
@@ -22,14 +23,14 @@ NODE_STORAGE_FUNCS(NodeChroma)
 
 static void cmp_node_diff_matte_declare(NodeDeclarationBuilder &b)
 {
-  b.add_input<decl::Color>(N_("Image 1"))
+  b.add_input<decl::Color>("Image 1")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(0);
-  b.add_input<decl::Color>(N_("Image 2"))
+  b.add_input<decl::Color>("Image 2")
       .default_value({1.0f, 1.0f, 1.0f, 1.0f})
       .compositor_domain_priority(1);
-  b.add_output<decl::Color>(N_("Image"));
-  b.add_output<decl::Float>(N_("Matte"));
+  b.add_output<decl::Color>("Image");
+  b.add_output<decl::Float>("Matte");
 }
 
 static void node_composit_init_diff_matte(bNodeTree * /*ntree*/, bNode *node)
