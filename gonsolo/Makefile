@@ -1,3 +1,4 @@
+#OPTIONS = --gpu-backend vulkan
 BLENDER = ../../build_linux/bin/blender
 SCENE = ~/Dokumente/blender/junkshop/junkshop.blend
 THREADS = #-t 1
@@ -17,7 +18,7 @@ clean:
 	cd ..; make clean; cd -
 r: run
 run:
-	$(BLENDER) -W $(SCENE)
+	$(BLENDER) $(OPTIONS) -W $(SCENE)
 b: background
 background:
 	$(BLENDER) --background $(SCENE) --render-output ./bla. --render-format OPEN_EXR --render-frame 1 -- --cycles-device OPTIX
