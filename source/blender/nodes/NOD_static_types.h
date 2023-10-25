@@ -353,6 +353,7 @@ DefNode(GeometryNode, GEO_NODE_INPUT_MESH_FACE_NEIGHBORS, 0, "MESH_FACE_NEIGHBOR
 DefNode(GeometryNode, GEO_NODE_INPUT_MESH_ISLAND, 0, "MESH_ISLAND", InputMeshIsland, "Mesh Island", "Retrieve information about separate connected regions in a mesh")
 DefNode(GeometryNode, GEO_NODE_INPUT_MESH_VERTEX_NEIGHBORS, 0, "MESH_VERTEX_NEIGHBORS", InputMeshVertexNeighbors, "Vertex Neighbors", "Retrieve topology information relating to each vertex of a mesh")
 DefNode(GeometryNode, GEO_NODE_INPUT_NAMED_ATTRIBUTE, 0, "INPUT_ATTRIBUTE", InputNamedAttribute, "Named Attribute", "Retrieve the data of a specified attribute")
+DefNode(GeometryNode, GEO_NODE_INPUT_NAMED_LAYER_SELECTION, 0, "INPUT_NAMED_LAYER_SELECTION", InputNamedLayerSelection, "Named Layer Selection", "Output a selection of a grease pencil layer");
 DefNode(GeometryNode, GEO_NODE_INPUT_NORMAL, 0, "INPUT_NORMAL", InputNormal, "Normal", "Retrieve a unit length vector indicating the direction pointing away from the geometry at each element")
 DefNode(GeometryNode, GEO_NODE_INPUT_POSITION, 0, "POSITION", InputPosition, "Position", "Retrieve a vector indicating the location of each element")
 DefNode(GeometryNode, GEO_NODE_INPUT_RADIUS, 0, "INPUT_RADIUS", InputRadius, "Radius", "Retrieve the radius at each point on curve or point cloud geometry")
@@ -441,6 +442,7 @@ DefNode(GeometryNode, GEO_NODE_SET_SPLINE_CYCLIC, 0, "SET_SPLINE_CYCLIC", SetSpl
 DefNode(GeometryNode, GEO_NODE_SET_SPLINE_RESOLUTION, 0, "SET_SPLINE_RESOLUTION", SetSplineResolution, "Set Spline Resolution", "Control how many evaluated points should be generated on every curve segment")
 DefNode(GeometryNode, GEO_NODE_SIMULATION_INPUT, def_geo_simulation_input, "SIMULATION_INPUT", SimulationInput, "Simulation Input", "Input data for the simulation zone")
 DefNode(GeometryNode, GEO_NODE_SIMULATION_OUTPUT, def_geo_simulation_output, "SIMULATION_OUTPUT", SimulationOutput, "Simulation Output", " Output data from the simulation zone")
+DefNode(GeometryNode, GEO_NODE_SPLIT_TO_INSTANCES, 0, "Split to Instances", SplitToInstances, "Split to Instances", "Create separate geometries containing the elements from the same group")
 DefNode(GeometryNode, GEO_NODE_SPLIT_EDGES, 0, "SPLIT_EDGES", SplitEdges, "Split Edges", "Duplicate mesh edges and break connections with the surrounding faces")
 DefNode(GeometryNode, GEO_NODE_STORE_NAMED_ATTRIBUTE, 0, "STORE_NAMED_ATTRIBUTE", StoreNamedAttribute, "Store Named Attribute", "Store the result of a field on a geometry as an attribute with the specified name")
 DefNode(GeometryNode, GEO_NODE_STRING_JOIN, 0, "STRING_JOIN", StringJoin, "Join Strings", "Combine any number of input strings")

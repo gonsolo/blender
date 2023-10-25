@@ -248,6 +248,11 @@ class StorageCommon : public DataBuffer<T, len, false>, NonMovable, NonCopyable 
     GPU_storagebuf_clear_to_zero(ssbo_);
   }
 
+  void async_flush_to_host()
+  {
+    GPU_storagebuf_sync_to_host(ssbo_);
+  }
+
   void read()
   {
     GPU_storagebuf_read(ssbo_, this->data_);
@@ -861,8 +866,8 @@ class Texture : NonCopyable {
   }
 
   /**
-   * Clear the texture to NaN for floats, or a to debug value for ints.
-   * (For debugging unitialized data issues)
+   * Clear the texture to NaN for floats, or a to debug value for integers.
+   * (For debugging uninitialized data issues)
    */
   void debug_clear()
   {
