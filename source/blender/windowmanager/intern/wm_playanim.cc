@@ -665,6 +665,8 @@ static void playanim_toscreen_ex(GHOST_WindowHandle ghost_window,
                                  const float frame_indicator_factor)
 {
   GHOST_ActivateWindowDrawingContext(ghost_window);
+  GPU_render_begin();
+  GPU_render_step();
 
   GPU_clear_color(0.1f, 0.1f, 0.1f, 0.0f);
 
@@ -768,6 +770,7 @@ static void playanim_toscreen_ex(GHOST_WindowHandle ghost_window,
   }
 
   GHOST_SwapWindowBuffers(ghost_window);
+  GPU_render_end();
 }
 
 static void playanim_toscreen_on_load(GHOST_WindowHandle ghost_window,
@@ -1813,6 +1816,10 @@ static bool wm_main_playanim_intern(int argc, const char **argv, PlayArgs *args_
     exit(EXIT_FAILURE);
   }
 
+  /* Select GPU backend. */
+  GPU_backend_type_selection_detect();
+
+  /* Init GHOST and open window. */
   GHOST_EventConsumerHandle ghost_event_consumer = nullptr;
   {
     ghost_event_consumer = GHOST_CreateEventConsumer(ghost_event_proc, &ps);
@@ -1840,7 +1847,7 @@ static bool wm_main_playanim_intern(int argc, const char **argv, PlayArgs *args_
 
   // GHOST_ActivateWindowDrawingContext(ps.ghost_data.window);
 
-  /* Initialize GPU immediate mode. */
+  /* Init Blender GPU context. */
   ps.ghost_data.gpu_context = GPU_context_create(ps.ghost_data.window, nullptr);
   GPU_init();
 
@@ -1857,6 +1864,8 @@ static bool wm_main_playanim_intern(int argc, const char **argv, PlayArgs *args_
   ps.display_ctx.size[0] = ps.ibuf_size[0];
   ps.display_ctx.size[1] = ps.ibuf_size[1];
 
+  GPU_render_begin();
+  GPU_render_step();
   GPU_clear_color(0.1f, 0.1f, 0.1f, 0.0f);
 
   {
@@ -1868,6 +1877,7 @@ static bool wm_main_playanim_intern(int argc, const char **argv, PlayArgs *args_
   }
 
   GHOST_SwapWindowBuffers(ps.ghost_data.window);
+  GPU_render_end();
 
   /* One of the frames was invalid or not passed in. */
   if (frame_start == -1 || frame_end == -1) {
