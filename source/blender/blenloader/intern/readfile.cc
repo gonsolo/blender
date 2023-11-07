@@ -99,11 +99,11 @@
 #include "BLO_readfile.h"
 #include "BLO_undofile.hh"
 
-#include "SEQ_clipboard.h"
-#include "SEQ_iterator.h"
-#include "SEQ_modifier.h"
-#include "SEQ_sequencer.h"
-#include "SEQ_utils.h"
+#include "SEQ_clipboard.hh"
+#include "SEQ_iterator.hh"
+#include "SEQ_modifier.hh"
+#include "SEQ_sequencer.hh"
+#include "SEQ_utils.hh"
 
 #include "readfile.hh"
 
@@ -702,7 +702,7 @@ static BHeadN *get_bhead(FileData *fd)
           else {
             /* MIN2 is only to quiet '-Warray-bounds' compiler warning. */
             BLI_assert(sizeof(bhead) == sizeof(bhead4));
-            memcpy(&bhead, &bhead4, MIN2(sizeof(bhead), sizeof(bhead4)));
+            memcpy(&bhead, &bhead4, std::min(sizeof(bhead), sizeof(bhead4)));
           }
         }
         else {
@@ -725,7 +725,7 @@ static BHeadN *get_bhead(FileData *fd)
           else {
             /* MIN2 is only to quiet `-Warray-bounds` compiler warning. */
             BLI_assert(sizeof(bhead) == sizeof(bhead8));
-            memcpy(&bhead, &bhead8, MIN2(sizeof(bhead), sizeof(bhead8)));
+            memcpy(&bhead, &bhead8, std::min(sizeof(bhead), sizeof(bhead8)));
           }
         }
         else {

@@ -8,6 +8,7 @@
 
 #include <cstdio>
 
+#include "ANIM_action.hh"
 #include "ANIM_keyframing.hh"
 
 #include "MEM_guardedalloc.h"
@@ -5094,7 +5095,7 @@ static void achannel_setting_slider_shapekey_cb(bContext *C, void *key_poin, voi
     /* find or create new F-Curve */
     /* XXX is the group name for this ok? */
     bAction *act = ED_id_action_ensure(bmain, (ID *)key);
-    FCurve *fcu = ED_action_fcurve_ensure(bmain, act, nullptr, &ptr, rna_path, 0);
+    FCurve *fcu = blender::animrig::action_fcurve_ensure(bmain, act, nullptr, &ptr, rna_path, 0);
 
     /* set the special 'replace' flag if on a keyframe */
     if (fcurve_frame_has_keyframe(fcu, remapped_frame)) {
@@ -5592,7 +5593,7 @@ void ANIM_channel_draw_widgets(const bContext *C,
                       "",
                       offset + margin_x,
                       rect->ymin,
-                      MAX2(width, RENAME_TEXT_MIN_WIDTH),
+                      std::max(width, RENAME_TEXT_MIN_WIDTH),
                       channel_height,
                       &ptr,
                       RNA_property_identifier(prop),

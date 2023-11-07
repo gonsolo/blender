@@ -54,7 +54,9 @@ void VKTexture::generate_mipmap()
 
   layout_ensure(context,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 VK_ACCESS_MEMORY_WRITE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_ACCESS_TRANSFER_READ_BIT);
 
   for (int src_mipmap : IndexRange(mipmaps_ - 1)) {
@@ -81,7 +83,9 @@ void VKTexture::generate_mipmap()
                   IndexRange(src_mipmap, 1),
                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                  VK_PIPELINE_STAGE_TRANSFER_BIT,
                   VK_ACCESS_TRANSFER_WRITE_BIT,
+                  VK_PIPELINE_STAGE_TRANSFER_BIT,
                   VK_ACCESS_TRANSFER_READ_BIT);
 
     VkImageBlit image_blit = {};
@@ -111,12 +115,14 @@ void VKTexture::generate_mipmap()
                 IndexRange(mipmaps_ - 1, 1),
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 VK_ACCESS_MEMORY_READ_BIT);
   current_layout_set(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 }
 
-void VKTexture::copy_to(VKTexture &dst_texture, VkImageAspectFlagBits vk_image_aspect)
+void VKTexture::copy_to(VKTexture &dst_texture, VkImageAspectFlags vk_image_aspect)
 {
   VKContext &context = *VKContext::get();
   layout_ensure(context, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -207,32 +213,33 @@ void VKTexture::mip_range_set(int min, int max)
   flags_ |= IMAGE_VIEW_DIRTY;
 }
 
-void VKTexture::read_sub(int mip, eGPUDataFormat format, const int area[4], void *r_data)
+void VKTexture::read_sub(
+    int mip, eGPUDataFormat format, const int region[4], const IndexRange layers, void *r_data)
 {
-  BLI_assert(!is_texture_view());
   VKContext &context = *VKContext::get();
   layout_ensure(context, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
   /* Vulkan images cannot be directly mapped to host memory and requires a staging buffer. */
   VKBuffer staging_buffer;
 
-  size_t sample_len = area[2] * area[3] * vk_layer_count(1);
+  size_t sample_len = (region[2] - region[0]) * (region[3] - region[1]) * layers.size();
   size_t device_memory_size = sample_len * to_bytesize(format_);
 
   staging_buffer.create(device_memory_size, GPU_USAGE_DYNAMIC, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-  VkBufferImageCopy region = {};
-  region.imageOffset.x = area[0];
-  region.imageOffset.y = area[1];
-  region.imageExtent.width = area[2];
-  region.imageExtent.height = area[3];
-  region.imageExtent.depth = 1;
-  region.imageSubresource.aspectMask = to_vk_image_aspect_flag_bits(format_);
-  region.imageSubresource.mipLevel = mip;
-  region.imageSubresource.layerCount = vk_layer_count(1);
+  VkBufferImageCopy buffer_image_copy = {};
+  buffer_image_copy.imageOffset.x = region[0];
+  buffer_image_copy.imageOffset.y = region[1];
+  buffer_image_copy.imageExtent.width = region[2];
+  buffer_image_copy.imageExtent.height = region[3];
+  buffer_image_copy.imageExtent.depth = 1;
+  buffer_image_copy.imageSubresource.aspectMask = to_vk_image_aspect_flag_bits(format_);
+  buffer_image_copy.imageSubresource.mipLevel = mip;
+  buffer_image_copy.imageSubresource.baseArrayLayer = layers.start();
+  buffer_image_copy.imageSubresource.layerCount = layers.size();
 
   VKCommandBuffers &command_buffers = context.command_buffers_get();
-  command_buffers.copy(staging_buffer, *this, Span<VkBufferImageCopy>(&region, 1));
+  command_buffers.copy(staging_buffer, *this, Span<VkBufferImageCopy>(&buffer_image_copy, 1));
   context.flush();
 
   convert_device_to_host(r_data, staging_buffer.mapped_memory_get(), sample_len, format, format_);
@@ -240,15 +247,15 @@ void VKTexture::read_sub(int mip, eGPUDataFormat format, const int area[4], void
 
 void *VKTexture::read(int mip, eGPUDataFormat format)
 {
-  BLI_assert(!is_texture_view());
   int mip_size[3] = {1, 1, 1};
   mip_size_get(mip, mip_size);
-  size_t sample_len = mip_size[0] * mip_size[1] * vk_layer_count(1);
+  IndexRange layers = IndexRange(layer_offset_, vk_layer_count(1));
+  size_t sample_len = mip_size[0] * mip_size[1] * layers.size();
   size_t host_memory_size = sample_len * to_bytesize(format_, format);
 
   void *data = MEM_mallocN(host_memory_size, __func__);
-  int area[4] = {0, 0, mip_size[0], mip_size[1]};
-  read_sub(mip, format, area, data);
+  int region[4] = {0, 0, mip_size[0], mip_size[1]};
+  read_sub(mip, format, region, layers, data);
   return data;
 }
 
@@ -373,17 +380,16 @@ bool VKTexture::is_texture_view() const
   return source_texture_ != nullptr;
 }
 
-static VkImageUsageFlagBits to_vk_image_usage(const eGPUTextureUsage usage,
-                                              const eGPUTextureFormatFlag format_flag)
+static VkImageUsageFlags to_vk_image_usage(const eGPUTextureUsage usage,
+                                           const eGPUTextureFormatFlag format_flag)
 {
-  VkImageUsageFlagBits result = static_cast<VkImageUsageFlagBits>(VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                                                  VK_IMAGE_USAGE_SAMPLED_BIT);
+  VkImageUsageFlags result = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                             VK_IMAGE_USAGE_SAMPLED_BIT;
   if (usage & GPU_TEXTURE_USAGE_SHADER_READ) {
-    result = static_cast<VkImageUsageFlagBits>(result | VK_IMAGE_USAGE_STORAGE_BIT);
+    result |= VK_IMAGE_USAGE_STORAGE_BIT;
   }
   if (usage & GPU_TEXTURE_USAGE_SHADER_WRITE) {
-    result = static_cast<VkImageUsageFlagBits>(result | VK_IMAGE_USAGE_STORAGE_BIT);
+    result |= VK_IMAGE_USAGE_STORAGE_BIT;
   }
   if (usage & GPU_TEXTURE_USAGE_ATTACHMENT) {
     if (format_flag & GPU_FORMAT_COMPRESSED) {
@@ -392,44 +398,43 @@ static VkImageUsageFlagBits to_vk_image_usage(const eGPUTextureUsage usage,
     }
     else {
       if (format_flag & (GPU_FORMAT_DEPTH | GPU_FORMAT_STENCIL)) {
-        result = static_cast<VkImageUsageFlagBits>(result |
-                                                   VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
       }
       else {
-        result = static_cast<VkImageUsageFlagBits>(result | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
       }
     }
   }
   if (usage & GPU_TEXTURE_USAGE_HOST_READ) {
-    result = static_cast<VkImageUsageFlagBits>(result | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    result |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   }
 
   /* Disable some usages based on the given format flag to support more devices. */
   if (format_flag & GPU_FORMAT_SRGB) {
     /* NVIDIA devices don't create SRGB textures when it storage bit is set. */
-    result = static_cast<VkImageUsageFlagBits>(result & ~VK_IMAGE_USAGE_STORAGE_BIT);
+    result &= ~VK_IMAGE_USAGE_STORAGE_BIT;
   }
   if (format_flag & (GPU_FORMAT_DEPTH | GPU_FORMAT_STENCIL)) {
     /* NVIDIA devices don't create depth textures when it storage bit is set. */
-    result = static_cast<VkImageUsageFlagBits>(result & ~VK_IMAGE_USAGE_STORAGE_BIT);
+    result &= ~VK_IMAGE_USAGE_STORAGE_BIT;
   }
 
   return result;
 }
 
-static VkImageCreateFlagBits to_vk_image_create(const eGPUTextureType texture_type,
-                                                const eGPUTextureFormatFlag format_flag,
-                                                const eGPUTextureUsage usage)
+static VkImageCreateFlags to_vk_image_create(const eGPUTextureType texture_type,
+                                             const eGPUTextureFormatFlag format_flag,
+                                             const eGPUTextureUsage usage)
 {
-  VkImageCreateFlagBits result = static_cast<VkImageCreateFlagBits>(0);
+  VkImageCreateFlags result = 0;
 
   if (ELEM(texture_type, GPU_TEXTURE_CUBE, GPU_TEXTURE_CUBE_ARRAY)) {
-    result = static_cast<VkImageCreateFlagBits>(result | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+    result |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
   }
 
   /* sRGB textures needs to be mutable as they can be used as non-sRGB frame-buffer attachments. */
   if (usage & GPU_TEXTURE_USAGE_ATTACHMENT && format_flag & GPU_FORMAT_SRGB) {
-    result = static_cast<VkImageCreateFlagBits>(result | VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT);
+    result |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
   }
 
   return result;
@@ -535,8 +540,10 @@ void VKTexture::current_layout_set(const VkImageLayout new_layout)
 
 void VKTexture::layout_ensure(VKContext &context,
                               const VkImageLayout requested_layout,
-                              const VkAccessFlagBits src_access,
-                              const VkAccessFlagBits dst_access)
+                              const VkPipelineStageFlags src_stage,
+                              const VkAccessFlags src_access,
+                              const VkPipelineStageFlags dst_stage,
+                              const VkAccessFlags dst_access)
 {
   if (is_texture_view()) {
     source_texture_->layout_ensure(context, requested_layout);
@@ -550,7 +557,9 @@ void VKTexture::layout_ensure(VKContext &context,
                 IndexRange(0, VK_REMAINING_MIP_LEVELS),
                 current_layout,
                 requested_layout,
+                src_stage,
                 src_access,
+                dst_stage,
                 dst_access);
   current_layout_set(requested_layout);
 }
@@ -559,8 +568,10 @@ void VKTexture::layout_ensure(VKContext &context,
                               const IndexRange mipmap_range,
                               const VkImageLayout current_layout,
                               const VkImageLayout requested_layout,
-                              const VkAccessFlagBits src_access,
-                              const VkAccessFlagBits dst_access)
+                              const VkPipelineStageFlags src_stages,
+                              const VkAccessFlags src_access,
+                              const VkPipelineStageFlags dst_stages,
+                              const VkAccessFlags dst_access)
 {
   BLI_assert(vk_image_ != VK_NULL_HANDLE);
   VkImageMemoryBarrier barrier{};
@@ -575,7 +586,8 @@ void VKTexture::layout_ensure(VKContext &context,
   barrier.subresourceRange.levelCount = uint32_t(mipmap_range.size());
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-  context.command_buffers_get().pipeline_barrier(Span<VkImageMemoryBarrier>(&barrier, 1));
+  context.command_buffers_get().pipeline_barrier(
+      src_stages, dst_stages, Span<VkImageMemoryBarrier>(&barrier, 1));
 }
 
 /** \} */
@@ -621,6 +633,9 @@ IndexRange VKTexture::layer_range() const
 
 int VKTexture::vk_layer_count(int non_layered_value) const
 {
+  if (is_texture_view()) {
+    return 1;
+  }
   return type_ == GPU_TEXTURE_CUBE   ? d_ :
          (type_ & GPU_TEXTURE_ARRAY) ? layer_count() :
                                        non_layered_value;
