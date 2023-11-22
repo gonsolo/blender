@@ -19,8 +19,8 @@
 #include "BLI_math_vector.h"
 #include "BLI_rect.h"
 
-#include "BKE_context.h"
-#include "BKE_editmesh.h"
+#include "BKE_context.hh"
+#include "BKE_editmesh.hh"
 #include "BKE_layer.h"
 #include "BKE_mask.h"
 #include "BKE_scene.h"
@@ -705,6 +705,10 @@ static bool transform_modal_item_poll(const wmOperator *op, int value)
               t->mode, TFM_TRANSLATION, TFM_ROTATION, TFM_RESIZE, TFM_EDGE_SLIDE, TFM_VERT_SLIDE))
       {
         /* More modes can be added over time if this feature proves useful for them. */
+        return false;
+      }
+      if (t->options & CTX_CAMERA) {
+        /* Not supported. */
         return false;
       }
       break;

@@ -166,11 +166,15 @@ struct GeoNodesModifierData {
 };
 
 struct GeoNodesOperatorData {
+  eObjectMode mode;
   /** The object currently effected by the operator. */
   const Object *self_object = nullptr;
   /** Current evaluated depsgraph. */
   Depsgraph *depsgraph = nullptr;
   Scene *scene = nullptr;
+
+  /** Optional logger. */
+  geo_eval_log::GeoModifierLog *eval_log = nullptr;
 };
 
 /**

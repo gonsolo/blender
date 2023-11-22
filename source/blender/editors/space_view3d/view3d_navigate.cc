@@ -19,11 +19,12 @@
 
 #include "BLT_translation.h"
 
-#include "BKE_armature.h"
-#include "BKE_context.h"
+#include "BKE_armature.hh"
+#include "BKE_context.hh"
 #include "BKE_gpencil_geom_legacy.h"
 #include "BKE_layer.h"
 #include "BKE_object.hh"
+#include "BKE_object_types.hh"
 #include "BKE_paint.hh"
 #include "BKE_scene.h"
 #include "BKE_screen.hh"
@@ -279,8 +280,9 @@ void ViewOpsData::init_navigation(bContext *C,
     negate_v3_v3(this->dyn_ofs, pivot_new);
     this->use_dyn_ofs = true;
 
-    if (!(nav_type->flag & VIEWOPS_FLAG_ORBIT_SELECT)) {
-      /* Calculate new #RegionView3D::ofs and #RegionView3D::dist. */
+    {
+      /* The pivot has changed so the offset needs to be updated as well.
+       * Calculate new #RegionView3D::ofs and #RegionView3D::dist. */
 
       if (rv3d->is_persp) {
         float my_origin[3]; /* Original #RegionView3D.ofs. */
@@ -832,10 +834,10 @@ bool view3d_orbit_calc_center(bContext *C, float r_dyn_ofs[3])
         /* use the boundbox if we can */
         Object *ob_eval = base_eval->object;
 
-        if (ob_eval->runtime.bb && !(ob_eval->runtime.bb->flag & BOUNDBOX_DIRTY)) {
+        if (ob_eval->runtime->bb && !(ob_eval->runtime->bb->flag & BOUNDBOX_DIRTY)) {
           float cent[3];
 
-          BKE_boundbox_calc_center_aabb(ob_eval->runtime.bb, cent);
+          BKE_boundbox_calc_center_aabb(ob_eval->runtime->bb, cent);
 
           mul_m4_v3(ob_eval->object_to_world, cent);
           add_v3_v3(select_center, cent);

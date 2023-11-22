@@ -28,9 +28,9 @@
 #include "BKE_attribute.h"
 #include "BKE_attribute.hh"
 #include "BKE_attribute_math.hh"
-#include "BKE_bvhutils.h"
-#include "BKE_customdata.h"
-#include "BKE_editmesh.h"
+#include "BKE_bvhutils.hh"
+#include "BKE_customdata.hh"
+#include "BKE_editmesh.hh"
 #include "BKE_lib_id.h"
 #include "BKE_mesh.hh"
 #include "BKE_mesh_mapping.hh"
@@ -282,19 +282,20 @@ void BKE_mesh_remesh_reproject_paint_mask(Mesh *target, const Mesh *source)
   BVHTreeFromMesh bvhtree = {nullptr};
   BKE_bvhtree_from_mesh_get(&bvhtree, source, BVHTREE_FROM_VERTS, 2);
   const Span<float3> target_positions = target->vert_positions();
-  const float *source_mask = (const float *)CustomData_get_layer(&source->vert_data,
-                                                                 CD_PAINT_MASK);
+  const float *source_mask = (const float *)CustomData_get_layer_named(
+      &source->vert_data, CD_PROP_FLOAT, ".sculpt_mask");
   if (source_mask == nullptr) {
     return;
   }
 
   float *target_mask;
-  if (CustomData_has_layer(&target->vert_data, CD_PAINT_MASK)) {
-    target_mask = (float *)CustomData_get_layer(&target->vert_data, CD_PAINT_MASK);
+  if (CustomData_has_layer_named(&target->vert_data, CD_PROP_FLOAT, ".sculpt_mask")) {
+    target_mask = (float *)CustomData_get_layer_named(
+        &target->vert_data, CD_PROP_FLOAT, ".sculpt_mask");
   }
   else {
-    target_mask = (float *)CustomData_add_layer(
-        &target->vert_data, CD_PAINT_MASK, CD_CONSTRUCT, target->totvert);
+    target_mask = (float *)CustomData_add_layer_named(
+        &target->vert_data, CD_PROP_FLOAT, CD_CONSTRUCT, target->totvert, ".sculpt_mask");
   }
 
   blender::threading::parallel_for(IndexRange(target->totvert), 4096, [&](const IndexRange range) {
@@ -319,7 +320,7 @@ void BKE_remesh_reproject_sculpt_face_sets(Mesh *target, const Mesh *source)
   const AttributeAccessor src_attributes = source->attributes();
   MutableAttributeAccessor dst_attributes = target->attributes_for_write();
   const Span<float3> target_positions = target->vert_positions();
-  const OffsetIndices target_polys = target->faces();
+  const OffsetIndices target_faces = target->faces();
   const Span<int> target_corner_verts = target->corner_verts();
 
   const VArray src_face_sets = *src_attributes.lookup<int>(".sculpt_face_set", ATTR_DOMAIN_FACE);
@@ -346,7 +347,7 @@ void BKE_remesh_reproject_sculpt_face_sets(Mesh *target, const Mesh *source)
           nearest.index = -1;
           nearest.dist_sq = FLT_MAX;
           const float3 from_co = mesh::face_center_calc(
-              target_positions, target_corner_verts.slice(target_polys[i]));
+              target_positions, target_corner_verts.slice(target_faces[i]));
           BLI_bvhtree_find_nearest(
               bvhtree.tree, from_co, &nearest, bvhtree.nearest_callback, &bvhtree);
           if (nearest.index != -1) {
