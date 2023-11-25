@@ -132,7 +132,7 @@ bool is_autokey_on(const Scene *scene);
 bool is_autokey_mode(const Scene *scene, eAutokey_Mode mode);
 
 /** Check if a flag is set for auto-key-framing (per scene takes precedence). */
-bool is_autokey_flag(const Scene *scene, eAutokey_Flag flag);
+bool is_autokey_flag(const Scene *scene, eKeyInsert_Flag flag);
 
 /**
  * Auto-keyframing feature - checks for whether anything should be done for the current frame.
@@ -193,5 +193,17 @@ int insert_key_action(Main *bmain,
                       const Span<float> values,
                       eInsertKeyFlags insert_key_flag,
                       eBezTriple_KeyframeType key_type);
+
+/** Insert keys to the ID of the given PointerRNA for the given RNA paths. Tries to create an
+ * action if none exists yet.
+ * \param scene_frame is expected to be not NLA mapped as that happens within the function.
+ */
+void insert_key_rna(PointerRNA *rna_pointer,
+                    const blender::Span<std::string> rna_paths,
+                    float scene_frame,
+                    eInsertKeyFlags insert_key_flags,
+                    eBezTriple_KeyframeType key_type,
+                    Main *bmain,
+                    ReportList *reports);
 
 }  // namespace blender::animrig
