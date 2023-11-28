@@ -10,13 +10,10 @@ set(INC
   ../blenloader
   ../blentranslation
   ../bmesh
-  ../depsgraph
   ../editors/include
   ../editors/space_view3d
-  ../functions
   ../gpu
   ../gpu/intern
-  ../imbuf
   ../makesrna
   ../nodes
   ../render
@@ -351,7 +348,10 @@ set(LIB
   PRIVATE bf::blenfont
   bf_blenkernel
   PRIVATE bf::blenlib
+  PRIVATE bf::depsgraph
   PRIVATE bf::dna
+  PRIVATE bf::functions
+  PRIVATE bf::imbuf
   PRIVATE bf::intern::clog
   PRIVATE bf::intern::guardedalloc
   bf_realtime_compositor

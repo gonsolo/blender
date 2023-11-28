@@ -8,12 +8,9 @@ set(INC
   ../../blenkernel
   ../../blentranslation
   ../../bmesh
-  ../../depsgraph
   ../../draw
-  ../../functions
   ../../geometry
   ../../gpu
-  ../../imbuf
   ../../makesrna
   ../../nodes
   ../../render
@@ -98,7 +95,10 @@ set(LIB
   bf_blenkernel
   PRIVATE bf::animrig
   PRIVATE bf::blenlib
+  PRIVATE bf::depsgraph
   PRIVATE bf::dna
+  PRIVATE bf::functions
+  PRIVATE bf::imbuf
   PRIVATE bf::intern::atomic
   PRIVATE bf::intern::clog
   PRIVATE bf::intern::guardedalloc
