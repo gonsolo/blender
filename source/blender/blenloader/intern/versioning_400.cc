@@ -53,7 +53,7 @@
 #include "BKE_effect.h"
 #include "BKE_grease_pencil.hh"
 #include "BKE_idprop.hh"
-#include "BKE_main.h"
+#include "BKE_main.hh"
 #include "BKE_material.h"
 #include "BKE_mesh_legacy_convert.hh"
 #include "BKE_node.hh"
@@ -65,7 +65,7 @@
 #include "SEQ_sequencer.hh"
 
 #include "ANIM_armature_iter.hh"
-#include "ANIM_bone_collections.h"
+#include "ANIM_bone_collections.hh"
 
 #include "ED_armature.hh"
 
@@ -323,6 +323,35 @@ static void versioning_eevee_shadow_settings(Object *object)
 
   /* Enable the hide_shadow flag only if there's not any shadow casting material. */
   SET_FLAG_FROM_TEST(object->visibility_flag, hide_shadows, OB_HIDE_SHADOW);
+}
+
+static void versioning_replace_splitviewer(bNodeTree *ntree)
+{
+  /* Split viewer was replaced with a regular split node, so add a viewer node,
+   * and link it to the new split node to achive the same behavior of the split viewer node. */
+
+  LISTBASE_FOREACH_MUTABLE (bNode *, node, &ntree->nodes) {
+    if (node->type != CMP_NODE_SPLITVIEWER__DEPRECATED) {
+      continue;
+    }
+
+    STRNCPY(node->idname, "CompositorNodeSplit");
+    node->type = CMP_NODE_SPLIT;
+    MEM_freeN(node->storage);
+    node->storage = nullptr;
+
+    bNode *viewer_node = nodeAddStaticNode(nullptr, ntree, CMP_NODE_VIEWER);
+    /* Nodes are created stacked on top of each other, so separate them a bit. */
+    viewer_node->locx = node->locx + node->width + viewer_node->width / 4.0f;
+    viewer_node->locy = node->locy;
+    viewer_node->flag &= ~NODE_PREVIEW;
+
+    bNodeSocket *split_out_socket = nodeAddStaticSocket(
+        ntree, node, SOCK_OUT, SOCK_IMAGE, PROP_NONE, "Image", "Image");
+    bNodeSocket *viewer_in_socket = nodeFindSocket(viewer_node, SOCK_IN, "Image");
+
+    nodeAddLink(ntree, node, split_out_socket, viewer_node, viewer_in_socket);
+  }
 }
 
 void do_versions_after_linking_400(FileData *fd, Main *bmain)
@@ -2421,6 +2450,13 @@ void blo_do_versions_400(FileData *fd, Library * /*lib*/, Main *bmain)
         SET_FLAG_FROM_TEST(material->blend_flag, transparent_shadow, MA_BL_TRANSPARENT_SHADOW);
       }
     }
+
+    FOREACH_NODETREE_BEGIN (bmain, ntree, id) {
+      if (ntree->type == NTREE_COMPOSIT) {
+        versioning_replace_splitviewer(ntree);
+      }
+    }
+    FOREACH_NODETREE_END;
   }
 
   /* 401 6 did not require any do_version here. */
@@ -2485,26 +2521,12 @@ void blo_do_versions_400(FileData *fd, Library * /*lib*/, Main *bmain)
       versioning_nodes_dynamic_sockets(*ntree);
     }
   }
-  /**
-   * Versioning code until next subversion bump goes here.
-   *
-   * \note Be sure to check when bumping the version:
-   * - #do_versions_after_linking_400 in this file.
-   * - `versioning_userdef.cc`, #blo_do_versions_userdef
-   * - `versioning_userdef.cc`, #do_versions_theme
-   *
-   * \note Keep this message at the bottom of the function.
-   */
-  {
-    /* Keep this block, even when empty. */
+
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 401, 9)) {
     LISTBASE_FOREACH (bNodeTree *, ntree, &bmain->nodetrees) {
       if (ntree->type == NTREE_GEOMETRY) {
         version_geometry_nodes_use_rotation_socket(*ntree);
       }
-    }
-
-    LISTBASE_FOREACH (Mesh *, mesh, &bmain->meshes) {
-      blender::bke::mesh_sculpt_mask_to_generic(*mesh);
     }
 
     if (!DNA_struct_member_exists(
@@ -2528,5 +2550,53 @@ void blo_do_versions_400(FileData *fd, Library * /*lib*/, Main *bmain)
         material->displacement_method = displacement_method;
       }
     }
+
+    /* Prevent custom bone colors from having alpha zero.
+     * Part of the fix for issue #115434. */
+    LISTBASE_FOREACH (bArmature *, arm, &bmain->armatures) {
+      blender::animrig::ANIM_armature_foreach_bone(&arm->bonebase, [](Bone *bone) {
+        bone->color.custom.solid[3] = 255;
+        bone->color.custom.select[3] = 255;
+        bone->color.custom.active[3] = 255;
+      });
+      if (arm->edbo) {
+        LISTBASE_FOREACH (EditBone *, ebone, arm->edbo) {
+          ebone->color.custom.solid[3] = 255;
+          ebone->color.custom.select[3] = 255;
+          ebone->color.custom.active[3] = 255;
+        }
+      }
+    }
+    LISTBASE_FOREACH (Object *, obj, &bmain->objects) {
+      if (obj->pose == nullptr) {
+        continue;
+      }
+      LISTBASE_FOREACH (bPoseChannel *, pchan, &obj->pose->chanbase) {
+        pchan->color.custom.solid[3] = 255;
+        pchan->color.custom.select[3] = 255;
+        pchan->color.custom.active[3] = 255;
+      }
+    }
+  }
+
+  /**
+   * Versioning code until next subversion bump goes here.
+   *
+   * \note Be sure to check when bumping the version:
+   * - #do_versions_after_linking_400 in this file.
+   * - `versioning_userdef.cc`, #blo_do_versions_userdef
+   * - `versioning_userdef.cc`, #do_versions_theme
+   *
+   * \note Keep this message at the bottom of the function.
+   */
+  {
+    /* Keep this block, even when empty. */
+  }
+
+  /* Always run this versioning; meshes are written with the legacy format which always needs to
+   * be converted to the new format on file load. Can be moved to a subversion check in a larger
+   * breaking release. */
+  LISTBASE_FOREACH (Mesh *, mesh, &bmain->meshes) {
+    blender::bke::mesh_sculpt_mask_to_generic(*mesh);
   }
 }

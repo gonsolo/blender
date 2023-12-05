@@ -276,7 +276,6 @@ set(SRC
   intern/subdiv.cc
   intern/subdiv_ccg.cc
   intern/subdiv_ccg_mask.cc
-  intern/subdiv_ccg_material.cc
   intern/subdiv_converter.cc
   intern/subdiv_converter_mesh.cc
   intern/subdiv_deform.cc
@@ -416,13 +415,13 @@ set(SRC
   BKE_lib_id.h
   BKE_lib_override.hh
   BKE_lib_query.h
-  BKE_lib_remap.h
-  BKE_library.h
+  BKE_lib_remap.hh
+  BKE_library.hh
   BKE_light.h
   BKE_light_linking.h
   BKE_lightprobe.h
   BKE_linestyle.h
-  BKE_main.h
+  BKE_main.hh
   BKE_main_idmap.hh
   BKE_main_namemap.hh
   BKE_mask.h
@@ -481,7 +480,7 @@ set(SRC
   BKE_screen.hh
   BKE_sequencer_offscreen.h
   BKE_shader_fx.h
-  BKE_shrinkwrap.h
+  BKE_shrinkwrap.hh
   BKE_softbody.h
   BKE_sound.h
   BKE_speaker.h
@@ -501,9 +500,9 @@ set(SRC
   BKE_tracking.h
   BKE_type_conversions.hh
   BKE_undo_system.h
-  BKE_unit.h
-  BKE_vfont.h
-  BKE_vfontdata.h
+  BKE_unit.hh
+  BKE_vfont.hh
+  BKE_vfontdata.hh
   BKE_viewer_path.hh
   BKE_volume.hh
   BKE_volume_openvdb.hh
@@ -522,7 +521,7 @@ set(SRC
   intern/CCGSubSurf_intern.h
   intern/attribute_access_intern.hh
   intern/data_transfer_intern.h
-  intern/lib_intern.h
+  intern/lib_intern.hh
   intern/multires_inline.hh
   intern/multires_reshape.hh
   intern/multires_unsubdivide.hh
@@ -638,8 +637,8 @@ endif()
 
 if(WITH_CODEC_FFMPEG)
   list(APPEND SRC
-    intern/writeffmpeg.c
-    BKE_writeffmpeg.h
+    intern/writeffmpeg.cc
+    BKE_writeffmpeg.hh
   )
   list(APPEND INC
     ../../../intern/ffmpeg
@@ -847,6 +846,7 @@ if(WITH_GTESTS)
     intern/lib_id_remapper_test.cc
     intern/lib_id_test.cc
     intern/lib_remap_test.cc
+    intern/main_test.cc
     intern/nla_test.cc
     intern/tracking_test.cc
   )

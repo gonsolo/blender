@@ -1882,13 +1882,6 @@ typedef struct NodeGeometryDistributePointsInVolume {
   uint8_t mode;
 } NodeGeometryDistributePointsInVolume;
 
-typedef struct NodeGeometrySampleVolume {
-  /** #eCustomDataType. */
-  int8_t grid_type;
-  /** #GeometryNodeSampleVolumeInterpolationMode */
-  int8_t interpolation_mode;
-} NodeGeometrySampleVolume;
-
 typedef struct NodeFunctionCompare {
   /** #NodeCompareOperation */
   int8_t operation;
@@ -2372,11 +2365,11 @@ enum {
   CMP_NODE_OUTPUT_IGNORE_ALPHA = 1,
 };
 
-/** Split Viewer Node. Stored in `custom2`. */
-typedef enum CMPNodeSplitViewerAxis {
-  CMP_NODE_SPLIT_VIEWER_HORIZONTAL = 0,
-  CMP_NODE_SPLIT_VIEWER_VERTICAL = 1,
-} CMPNodeSplitViewerAxis;
+/** Split Node. Stored in `custom2`. */
+typedef enum CMPNodeSplitAxis {
+  CMP_NODE_SPLIT_HORIZONTAL = 0,
+  CMP_NODE_SPLIT_VERTICAL = 1,
+} CMPNodeSplitAxis;
 
 /** Color Balance Node. Stored in `custom1`. */
 typedef enum CMPNodeColorBalanceMethod {
@@ -2780,12 +2773,6 @@ typedef enum GeometryNodeScaleElementsMode {
   GEO_NODE_SCALE_ELEMENTS_UNIFORM = 0,
   GEO_NODE_SCALE_ELEMENTS_SINGLE_AXIS = 1,
 } GeometryNodeScaleElementsMode;
-
-typedef enum GeometryNodeSampleVolumeInterpolationMode {
-  GEO_NODE_SAMPLE_VOLUME_INTERPOLATION_MODE_NEAREST = 0,
-  GEO_NODE_SAMPLE_VOLUME_INTERPOLATION_MODE_TRILINEAR = 1,
-  GEO_NODE_SAMPLE_VOLUME_INTERPOLATION_MODE_TRIQUADRATIC = 2,
-} GeometryNodeSampleVolumeInterpolationMode;
 
 typedef enum NodeCombSepColorMode {
   NODE_COMBSEP_COLOR_RGB = 0,

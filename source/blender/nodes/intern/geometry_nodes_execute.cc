@@ -680,12 +680,11 @@ static void store_output_attributes(bke::GeometrySet &geometry,
   store_computed_output_attributes(geometry, attributes_to_store);
 }
 
-bke::GeometrySet execute_geometry_nodes_on_geometry(
-    const bNodeTree &btree,
-    const IDProperty *properties,
-    const ComputeContext &base_compute_context,
-    bke::GeometrySet input_geometry,
-    const FunctionRef<void(nodes::GeoNodesLFUserData &)> fill_user_data)
+bke::GeometrySet execute_geometry_nodes_on_geometry(const bNodeTree &btree,
+                                                    const IDProperty *properties,
+                                                    const ComputeContext &base_compute_context,
+                                                    GeoNodesCallData &call_data,
+                                                    bke::GeometrySet input_geometry)
 {
   const nodes::GeometryNodesLazyFunctionGraphInfo &lf_graph_info =
       *nodes::ensure_geometry_nodes_lazy_function_graph(btree);
@@ -707,8 +706,9 @@ bke::GeometrySet execute_geometry_nodes_on_geometry(
       .fill(lf::ValueUsage::Unused);
 
   nodes::GeoNodesLFUserData user_data;
-  fill_user_data(user_data);
-  user_data.root_ntree = &btree;
+  user_data.call_data = &call_data;
+  call_data.root_ntree = &btree;
+
   user_data.compute_context = &base_compute_context;
 
   LinearAllocator<> allocator;
@@ -888,7 +888,7 @@ void update_output_properties_from_node_tree(const bNodeTree &tree,
     }
 
     const std::string idprop_name = socket_identifier + input_attribute_name_suffix();
-    IDProperty *new_prop = IDP_NewStringMaxSize("", idprop_name.c_str(), MAX_NAME);
+    IDProperty *new_prop = IDP_NewStringMaxSize("", MAX_NAME, idprop_name.c_str());
     if (socket.description && socket.description[0] != '\0') {
       IDPropertyUIData *ui_data = IDP_ui_data_ensure(new_prop);
       ui_data->description = BLI_strdup(socket.description);

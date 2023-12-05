@@ -22,7 +22,7 @@
 #include "BKE_paint.hh"
 #include "BKE_report.h"
 #include "BKE_screen.hh"
-#include "BKE_shrinkwrap.h"
+#include "BKE_shrinkwrap.hh"
 
 #include "BLI_math_vector.h"
 
@@ -218,7 +218,7 @@ static int geometry_extract_apply(bContext *C,
   BKE_mesh_copy_parameters_for_eval(new_ob_mesh, mesh);
 
   if (params->apply_shrinkwrap) {
-    BKE_shrinkwrap_mesh_nearest_surface_deform(C, new_ob, ob);
+    BKE_shrinkwrap_mesh_nearest_surface_deform(CTX_data_depsgraph_pointer(C), scene, new_ob, ob);
   }
 
   if (params->add_solidify) {
