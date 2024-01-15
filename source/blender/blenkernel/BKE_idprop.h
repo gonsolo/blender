@@ -21,6 +21,7 @@ struct BlendWriter;
 struct ID;
 struct IDProperty;
 struct IDPropertyUIData;
+struct IDPropertyUIDataEnumItem;
 struct Library;
 
 typedef union IDPropertyTemplate {
@@ -93,6 +94,14 @@ void IDP_AssignStringMaxSize(struct IDProperty *prop, const char *st, size_t st_
     ATTR_NONNULL();
 void IDP_AssignString(struct IDProperty *prop, const char *st) ATTR_NONNULL();
 void IDP_FreeString(struct IDProperty *prop) ATTR_NONNULL();
+
+/*-------- Enum Type -------*/
+
+const struct IDPropertyUIDataEnumItem *IDP_EnumItemFind(const struct IDProperty *prop);
+
+bool IDP_EnumItemsValidate(const struct IDPropertyUIDataEnumItem *items,
+                           int items_num,
+                           void (*error_fn)(const char *));
 
 /*-------- ID Type -------*/
 
@@ -256,15 +265,25 @@ void IDP_Reset(struct IDProperty *prop, const struct IDProperty *reference);
 /* C11 const correctness for casts */
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  define IDP_Float(prop) \
-    _Generic((prop), struct IDProperty * : (*(float *)&(prop)->data.val), const struct IDProperty * : (*(const float *)&(prop)->data.val))
+    _Generic((prop), \
+        struct IDProperty *: (*(float *)&(prop)->data.val), \
+        const struct IDProperty *: (*(const float *)&(prop)->data.val))
 #  define IDP_Double(prop) \
-    _Generic((prop), struct IDProperty * : (*(double *)&(prop)->data.val), const struct IDProperty * : (*(const double *)&(prop)->data.val))
+    _Generic((prop), \
+        struct IDProperty *: (*(double *)&(prop)->data.val), \
+        const struct IDProperty *: (*(const double *)&(prop)->data.val))
 #  define IDP_String(prop) \
-    _Generic((prop), struct IDProperty * : ((char *)(prop)->data.pointer), const struct IDProperty * : ((const char *)(prop)->data.pointer))
+    _Generic((prop), \
+        struct IDProperty *: ((char *)(prop)->data.pointer), \
+        const struct IDProperty *: ((const char *)(prop)->data.pointer))
 #  define IDP_IDPArray(prop) \
-    _Generic((prop), struct IDProperty * : ((struct IDProperty *)(prop)->data.pointer), const struct IDProperty * : ((const struct IDProperty *)(prop)->data.pointer))
+    _Generic((prop), \
+        struct IDProperty *: ((struct IDProperty *)(prop)->data.pointer), \
+        const struct IDProperty *: ((const struct IDProperty *)(prop)->data.pointer))
 #  define IDP_Id(prop) \
-    _Generic((prop), struct IDProperty * : ((ID *)(prop)->data.pointer), const struct IDProperty * : ((const ID *)(prop)->data.pointer))
+    _Generic((prop), \
+        struct IDProperty *: ((ID *)(prop)->data.pointer), \
+        const struct IDProperty *: ((const ID *)(prop)->data.pointer))
 #else
 #  define IDP_Float(prop) (*(float *)&(prop)->data.val)
 #  define IDP_Double(prop) (*(double *)&(prop)->data.val)

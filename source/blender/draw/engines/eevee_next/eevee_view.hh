@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "DRW_render.h"
+#include "DRW_render.hh"
 
 #include "eevee_camera.hh"
 #include "eevee_pipeline.hh"
@@ -161,6 +161,25 @@ class CaptureView {
   CaptureView(Instance &inst) : inst_(inst) {}
   void render_world();
   void render_probes();
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Lookdev View
+ *
+ * View for rendering the lookdev HDRI spheres.
+ * \{ */
+
+class LookdevView {
+ private:
+  Instance &inst_;
+
+  View view_ = {"Lookdev.View"};
+
+ public:
+  LookdevView(Instance &inst) : inst_(inst) {}
+  void render();
 };
 
 /** \} */

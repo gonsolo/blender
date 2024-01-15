@@ -186,7 +186,7 @@ struct KnifeUndoFrame {
 
 struct KnifeBVH {
   BVHTree *tree;          /* Knife Custom BVH Tree. */
-  BMLoop *(*looptris)[3]; /* Used by #knife_bvh_raycast_cb to store the intersecting looptri. */
+  BMLoop *(*looptris)[3]; /* Used by #knife_bvh_raycast_cb to store the intersecting triangles. */
   float uv[2];            /* Used by #knife_bvh_raycast_cb to store the intersecting uv. */
   uint ob_index;
 
@@ -1113,7 +1113,7 @@ static void knife_update_header(bContext *C, wmOperator *op, KnifeTool_OpData *k
 
   SNPRINTF(
       header,
-      TIP_("%s: confirm, %s: cancel, %s: undo, "
+      RPT_("%s: confirm, %s: cancel, %s: undo, "
            "%s: start/define cut, %s: close cut, %s: new cut, "
            "%s: midpoint snap (%s), %s: ignore snap (%s), "
            "%s: angle constraint %.2f(%.2f) (%s%s%s%s), %s: cut through (%s), "
@@ -1271,12 +1271,11 @@ static void knife_bvh_init(KnifeTool_OpData *kcd)
   f_test_prev = nullptr;
   test_fn_ret = false;
 
-  /* Add tri's for each object.
+  /* Add triangles for each object.
    * TODO:
    * test_fn can leave large gaps between bvh tree indices.
    * Compacting bvh tree indices may be possible.
-   * Don't forget to update #knife_bvh_intersect_plane!
-   */
+   * Don't forget to update #knife_bvh_intersect_plane! */
   tottri = 0;
   for (uint ob_index = 0; ob_index < kcd->objects_len; ob_index++) {
     ob = kcd->objects[ob_index];
@@ -2059,7 +2058,8 @@ static bool knife_add_single_cut__is_linehit_outside_face(BMFace *f,
   if (lh->v && lh->v->v) {
     BMLoop *l; /* side-of-loop */
     if ((l = BM_face_vert_share_loop(f, lh->v->v)) &&
-        (BM_loop_point_side_of_loop_test(l, co) < 0.0f)) {
+        (BM_loop_point_side_of_loop_test(l, co) < 0.0f))
+    {
       return true;
     }
   }
@@ -3493,7 +3493,8 @@ static KnifeVert *knife_find_closest_vert_of_edge(KnifeTool_OpData *kcd,
      * or we ignore. */
     if ((kcd->is_angle_snapping || kcd->axis_constrained) && (kcd->mode == MODE_DRAGGING)) {
       if (dist_squared_to_line_segment_v2(kfv_sco, kcd->prev.mval, kcd->curr.mval) >
-          KNIFE_FLT_EPSBIG) {
+          KNIFE_FLT_EPSBIG)
+      {
         continue;
       }
     }
@@ -4297,7 +4298,7 @@ static void knifetool_finish_single_post(KnifeTool_OpData * /*kcd*/, Object *ob)
   BMEditMesh *em = BKE_editmesh_from_object(ob);
   EDBM_selectmode_flush(em);
   EDBMUpdate_Params params{};
-  params.calc_looptri = true;
+  params.calc_looptris = true;
   params.calc_normals = true;
   params.is_destructive = true;
   EDBM_update(static_cast<Mesh *>(ob->data), &params);

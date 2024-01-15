@@ -254,7 +254,7 @@ blender::Array<uint> ExecutionGroup::get_execution_order() const
       uint by = my + 2 * ty;
       float addition = chunks_len_ / COM_RULE_OF_THIRDS_DIVIDER;
 
-      ChunkOrderHotspot hotspots[9]{
+      ChunkOrderHotspot hotspots[9] = {
           ChunkOrderHotspot(mx, my, addition * 0),
           ChunkOrderHotspot(tx, my, addition * 1),
           ChunkOrderHotspot(bx, my, addition * 2),
@@ -421,7 +421,7 @@ void ExecutionGroup::finalize_chunk_execution(int chunk_number, MemoryBuffer **m
     bTree_->runtime->progress(bTree_->runtime->prh, progress);
 
     char buf[128];
-    SNPRINTF(buf, TIP_("Compositing | Tile %u-%u"), chunks_finished_, chunks_len_);
+    SNPRINTF(buf, RPT_("Compositing | Tile %u-%u"), chunks_finished_, chunks_len_);
     bTree_->runtime->stats_draw(bTree_->runtime->sdh, buf);
   }
 }

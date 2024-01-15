@@ -24,7 +24,7 @@
 #include "BKE_report.h"
 
 #include "WM_api.hh"
-#include "WM_toolsystem.h"
+#include "WM_toolsystem.hh"
 #include "WM_types.hh"
 
 #include "RNA_define.hh"
@@ -276,13 +276,15 @@ Sequence *find_neighboring_sequence(Scene *scene, Sequence *test, int lr, int se
       switch (lr) {
         case SEQ_SIDE_LEFT:
           if (SEQ_time_left_handle_frame_get(scene, test) ==
-              SEQ_time_right_handle_frame_get(scene, seq)) {
+              SEQ_time_right_handle_frame_get(scene, seq))
+          {
             return seq;
           }
           break;
         case SEQ_SIDE_RIGHT:
           if (SEQ_time_right_handle_frame_get(scene, test) ==
-              SEQ_time_left_handle_frame_get(scene, seq)) {
+              SEQ_time_left_handle_frame_get(scene, seq))
+          {
             return seq;
           }
           break;
@@ -885,6 +887,12 @@ static void sequencer_select_strip_impl(const Editing *ed,
   }
 }
 
+static bool use_retiming_mode(const bContext *C, const Sequence *seq_key_test)
+{
+  return seq_key_test && SEQ_retiming_data_is_editable(seq_key_test) &&
+         !sequencer_retiming_mode_is_active(C) && retiming_keys_are_visible(C);
+}
+
 int sequencer_select_exec(bContext *C, wmOperator *op)
 {
   View2D *v2d = UI_view2d_fromcontext(C);
@@ -929,17 +937,25 @@ int sequencer_select_exec(bContext *C, wmOperator *op)
     seq = find_nearest_seq(scene, v2d, mval, &handle_clicked);
   }
 
+  Sequence *seq_key_test = nullptr;
+  SeqRetimingKey *key = retiming_mousover_key_get(C, mval, &seq_key_test);
+
   /* NOTE: `side_of_frame` and `linked_time` functionality is designed to be shared on one keymap,
    * therefore both properties can be true at the same time. */
   if (seq && RNA_boolean_get(op->ptr, "linked_time")) {
-    if (!extend && !toggle) {
-      ED_sequencer_deselect_all(scene);
+    if (use_retiming_mode(C, seq_key_test)) {
+      return sequencer_retiming_select_linked_time(C, op);
     }
-    sequencer_select_strip_impl(ed, seq, handle_clicked, extend, deselect, toggle);
-    select_linked_time(scene, ed->seqbasep, seq);
-    sequencer_select_do_updates(C, scene);
-    sequencer_select_set_active(scene, seq);
-    return OPERATOR_FINISHED;
+    else {
+      if (!extend && !toggle) {
+        ED_sequencer_deselect_all(scene);
+      }
+      sequencer_select_strip_impl(ed, seq, handle_clicked, extend, deselect, toggle);
+      select_linked_time(scene, ed->seqbasep, seq);
+      sequencer_select_do_updates(C, scene);
+      sequencer_select_set_active(scene, seq);
+      return OPERATOR_FINISHED;
+    }
   }
 
   /* Select left, right or overlapping the current frame. */
@@ -971,12 +987,7 @@ int sequencer_select_exec(bContext *C, wmOperator *op)
     return OPERATOR_RUNNING_MODAL;
   }
 
-  Sequence *seq_key_test = nullptr;
-  SeqRetimingKey *key = retiming_mousover_key_get(C, mval, &seq_key_test);
-
-  if (seq_key_test && SEQ_retiming_data_is_editable(seq_key_test) &&
-      !sequencer_retiming_mode_is_active(C) && retiming_keys_are_visible(C))
-  {
+  if (use_retiming_mode(C, seq_key_test)) {
 
     /* Realize "fake" key, if it is clicked on. */
     if (key == nullptr && seq_key_test != nullptr) {

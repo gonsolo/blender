@@ -749,10 +749,10 @@ struct LightData {
 #define _clipmap_origin_y object_mat[3][3]
   /** Aliases for axes. */
 #ifndef USE_GPU_SHADER_CREATE_INFO
-#  define _right object_mat[0].xyz()
-#  define _up object_mat[1].xyz()
-#  define _back object_mat[2].xyz()
-#  define _position object_mat[3].xyz()
+#  define _right object_mat[0]
+#  define _up object_mat[1]
+#  define _back object_mat[2]
+#  define _position object_mat[3]
 #else
 #  define _right object_mat[0].xyz
 #  define _up object_mat[1].xyz
@@ -1014,6 +1014,83 @@ BLI_STATIC_ASSERT_ALIGN(ShadowSceneData, 16)
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Light-probe Sphere
+ * \{ */
+
+struct ReflectionProbeLowFreqLight {
+  packed_float3 direction;
+  float ambient;
+};
+BLI_STATIC_ASSERT_ALIGN(ReflectionProbeLowFreqLight, 16)
+
+enum LightProbeShape : uint32_t {
+  SHAPE_ELIPSOID = 0u,
+  SHAPE_CUBOID = 1u,
+};
+
+struct ReflectionProbeCoordinate {
+  /* Offset in UV space to the start of the sampling space of the octahedron map. */
+  float2 offset;
+  /* Scaling of the squared UV space of the octahedron map. */
+  float scale;
+  /* Layer of the atlas where the octahedron map is stored. */
+  float layer;
+};
+BLI_STATIC_ASSERT_ALIGN(ReflectionProbeCoordinate, 16)
+
+struct ReflectionProbeWriteCoordinate {
+  /* Offset in pixel space to the start of the writing space of the octahedron map.
+   * Note that the writing space is not the same as the sampling space as we have borders. */
+  int2 offset;
+  /* Size of the area in pixel that is covered by this probe mip-map. */
+  int extent;
+  /* Layer of the atlas where the octahedron map is stored. */
+  int layer;
+};
+BLI_STATIC_ASSERT_ALIGN(ReflectionProbeWriteCoordinate, 16)
+
+/** Mapping data to locate a reflection probe in texture. */
+struct ReflectionProbeData {
+  /** Transform to probe local position with non-uniform scaling. */
+  float3x4 world_to_probe_transposed;
+
+  packed_float3 location;
+  float _pad2;
+
+  /** Shape of the parallax projection. */
+  LightProbeShape parallax_shape;
+  LightProbeShape influence_shape;
+  float parallax_distance;
+  /** Influence factor based on the distance to the parallax shape. */
+  float influence_scale;
+  float influence_bias;
+  /** LOD factor for mipmap selection. */
+  float lod_factor;
+  float _pad0;
+  float _pad1;
+
+  ReflectionProbeCoordinate atlas_coord;
+
+  /**
+   * Irradiance at the probe location encoded as spherical harmonics.
+   * Only contain the average luminance. Used for cube-map normalization.
+   */
+  ReflectionProbeLowFreqLight low_freq_light;
+};
+BLI_STATIC_ASSERT_ALIGN(ReflectionProbeData, 16)
+
+/** Viewport Display Pass. */
+struct ReflectionProbeDisplayData {
+  int probe_index;
+  float display_size;
+  float _pad0;
+  float _pad1;
+};
+BLI_STATIC_ASSERT_ALIGN(ReflectionProbeDisplayData, 16)
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Irradiance Cache
  * \{ */
 
@@ -1105,8 +1182,7 @@ struct CaptureInfoData {
   bool1 capture_emission;
   int _pad0;
   /* World light probe atlas coordinate. */
-  /* TODO(fclem): Remove this silly aliasing. */
-  int4 world_atlas_coord;
+  ReflectionProbeCoordinate world_atlas_coord;
 };
 BLI_STATIC_ASSERT_ALIGN(CaptureInfoData, 16)
 
@@ -1182,27 +1258,32 @@ enum eClosureBits : uint32_t {
   CLOSURE_SSS = (1u << 1u),
   CLOSURE_REFLECTION = (1u << 2u),
   CLOSURE_REFRACTION = (1u << 3u),
+  CLOSURE_TRANSLUCENT = (1u << 4u),
   CLOSURE_TRANSPARENCY = (1u << 8u),
   CLOSURE_EMISSION = (1u << 9u),
   CLOSURE_HOLDOUT = (1u << 10u),
   CLOSURE_VOLUME = (1u << 11u),
   CLOSURE_AMBIENT_OCCLUSION = (1u << 12u),
+  CLOSURE_SHADER_TO_RGBA = (1u << 13u),
 };
 
 enum GBufferMode : uint32_t {
   /** None mode for pixels not rendered. */
   GBUF_NONE = 0u,
 
-  GBUF_REFLECTION = 1u,
-  GBUF_REFRACTION = 2u,
-  GBUF_DIFFUSE = 3u,
-  GBUF_SSS = 4u,
+  GBUF_DIFFUSE = 1u,
+  GBUF_TRANSLUCENT = 2u,
+  GBUF_REFLECTION = 3u,
+  GBUF_REFRACTION = 4u,
+  GBUF_SUBSURFACE = 5u,
 
-  /** Special configurations. Packs multiple closures into 1 layer. */
-  GBUF_OPAQUE_DIELECTRIC = 4u,
+  /** Parameter Optimized. Packs one closure into less layer. */
+  GBUF_REFLECTION_COLORLESS = 12u,
+  GBUF_REFRACTION_COLORLESS = 13u,
 
-  /** Set for surfaces without lit closures. This stores only the normal to the surface. */
-  GBUF_UNLIT = 15u,
+  /** Special configurations. Packs multiple closures into less layer. */
+  /* TODO(@fclem): This is isn't currently working due to monolithic nature of the evaluation. */
+  GBUF_METAL_CLEARCOAT = 15u,
 
   /** IMPORTANT: Needs to be less than 16 for correct packing in g-buffer header. */
 };
@@ -1230,10 +1311,11 @@ struct RayTraceData {
   float roughness_mask_bias;
   /** If set to true will bypass spatial denoising. */
   bool1 skip_denoise;
+  /** If set to false will bypass tracing for refractive closures. */
+  bool1 trace_refraction;
   /** Closure being ray-traced. */
-  eClosureBits closure_active;
+  int closure_index;
   int _pad0;
-  int _pad1;
 };
 BLI_STATIC_ASSERT_ALIGN(RayTraceData, 16)
 
@@ -1317,76 +1399,8 @@ static inline float3 burley_eval(float3 d, float r)
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name Reflection Probes
+/** \name Light-probe Planar Data
  * \{ */
-
-struct ReflectionProbeLowFreqLight {
-  packed_float3 direction;
-  float ambient;
-};
-BLI_STATIC_ASSERT_ALIGN(ReflectionProbeLowFreqLight, 16)
-
-enum LightProbeShape : uint32_t {
-  SHAPE_ELIPSOID = 0u,
-  SHAPE_CUBOID = 1u,
-};
-
-struct ReflectionProbeAtlasCoordinate {
-  /** On which layer of the texture array is this reflection probe stored. */
-  int layer;
-  /**
-   * Subdivision of the layer. 0 = no subdivision and resolution would be
-   * ReflectionProbeModule::MAX_RESOLUTION.
-   */
-  int layer_subdivision;
-  /**
-   * Which area of the subdivided layer is the reflection probe located.
-   *
-   * A layer has (2^layer_subdivision)^2 areas.
-   */
-  int area_index;
-  int _pad1;
-};
-BLI_STATIC_ASSERT_ALIGN(ReflectionProbeAtlasCoordinate, 16)
-
-/** Mapping data to locate a reflection probe in texture. */
-struct ReflectionProbeData {
-  /** Transform to probe local position with non-uniform scaling. */
-  float3x4 world_to_probe_transposed;
-
-  packed_float3 location;
-  float _pad2;
-
-  /** Shape of the parallax projection. */
-  LightProbeShape parallax_shape;
-  LightProbeShape influence_shape;
-  float parallax_distance;
-  /** Influence factor based on the distance to the parallax shape. */
-  float influence_scale;
-  float influence_bias;
-  /** LOD factor for mipmap selection. */
-  float lod_factor;
-  float _pad0;
-  float _pad1;
-
-  ReflectionProbeAtlasCoordinate atlas_coord;
-
-  /**
-   * Irradiance at the probe location encoded as spherical harmonics.
-   * Only contain the average luminance. Used for cube-map normalization.
-   */
-  ReflectionProbeLowFreqLight low_freq_light;
-};
-BLI_STATIC_ASSERT_ALIGN(ReflectionProbeData, 16)
-
-/** Viewport Display Pass. */
-struct ReflectionProbeDisplayData {
-  int probe_index;
-  float display_size;
-  float _pad0;
-  float _pad1;
-};
-BLI_STATIC_ASSERT_ALIGN(ReflectionProbeDisplayData, 16)
 
 struct ProbePlanarData {
   /** Matrices used to render the planar capture. */
@@ -1418,19 +1432,21 @@ struct ProbePlanarDisplayData {
 BLI_STATIC_ASSERT_ALIGN(ProbePlanarDisplayData, 16)
 
 /** \} */
+
 /* -------------------------------------------------------------------- */
 /** \name Pipeline Data
  * \{ */
 
 struct PipelineInfoData {
   float alpha_hash_scale;
-  float _pad0;
-  float _pad1;
-  float _pad3;
+  bool1 is_probe_reflection;
+  bool1 use_combined_lightprobe_eval;
+  float _pad2;
 };
 BLI_STATIC_ASSERT_ALIGN(PipelineInfoData, 16)
 
 /** \} */
+
 /* -------------------------------------------------------------------- */
 /** \name Uniform Data
  * \{ */
@@ -1473,6 +1489,15 @@ BLI_STATIC_ASSERT_ALIGN(UniformData, 16)
 
 /* __cplusplus is true when compiling with MSL, so include if inside a shader. */
 #if !defined(__cplusplus) || defined(GPU_SHADER)
+
+#  if defined(GPU_FRAGMENT_SHADER)
+#    define UTIL_TEXEL vec2(gl_FragCoord.xy)
+#  elif defined(GPU_COMPUTE_SHADER)
+#    define UTIL_TEXEL vec2(gl_GlobalInvocationID.xy)
+#  else
+#    define UTIL_TEXEL vec2(gl_VertexID, 0)
+#  endif
+
 /* Fetch texel. Wrapping if above range. */
 float4 utility_tx_fetch(sampler2DArray util_tx, float2 texel, float layer)
 {
@@ -1528,6 +1553,7 @@ float4 utility_tx_sample_lut(sampler2DArray util_tx, float cos_theta, float roug
 
 using AOVsInfoDataBuf = draw::StorageBuffer<AOVsInfoData>;
 using CameraDataBuf = draw::UniformBuffer<CameraData>;
+using ClosureTileBuf = draw::StorageArrayBuffer<uint, 1024, true>;
 using DepthOfFieldDataBuf = draw::UniformBuffer<DepthOfFieldData>;
 using DepthOfFieldScatterListBuf = draw::StorageArrayBuffer<ScatterRect, 16, true>;
 using DrawIndirectBuf = draw::StorageBuffer<DrawCommand, true>;

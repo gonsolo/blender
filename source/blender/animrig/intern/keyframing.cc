@@ -23,18 +23,18 @@
 #include "BKE_fcurve.h"
 #include "BKE_fcurve_driver.h"
 #include "BKE_idtype.h"
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_nla.h"
 #include "BKE_report.h"
 
 #include "BLI_dynstr.h"
+#include "BLI_math_base.h"
 #include "BLI_utildefines.h"
 #include "BLT_translation.h"
 
 #include "DEG_depsgraph.hh"
 #include "DEG_depsgraph_query.hh"
 #include "DNA_anim_types.h"
-#include "ED_keyframing.hh"
 #include "MEM_guardedalloc.h"
 #include "RNA_access.hh"
 #include "RNA_path.hh"
@@ -45,22 +45,44 @@
 
 namespace blender::animrig {
 
+void update_autoflags_fcurve_direct(FCurve *fcu, PropertyRNA *prop)
+{
+  /* Set additional flags for the F-Curve (i.e. only integer values). */
+  fcu->flag &= ~(FCURVE_INT_VALUES | FCURVE_DISCRETE_VALUES);
+  switch (RNA_property_type(prop)) {
+    case PROP_FLOAT:
+      /* Do nothing. */
+      break;
+    case PROP_INT:
+      /* Do integer (only 'whole' numbers) interpolation between all points. */
+      fcu->flag |= FCURVE_INT_VALUES;
+      break;
+    default:
+      /* Do 'discrete' (i.e. enum, boolean values which cannot take any intermediate
+       * values at all) interpolation between all points.
+       *    - however, we must also ensure that evaluated values are only integers still.
+       */
+      fcu->flag |= (FCURVE_DISCRETE_VALUES | FCURVE_INT_VALUES);
+      break;
+  }
+}
+
 /** Used to make curves newly added to a cyclic Action cycle with the correct period. */
-static void make_new_fcurve_cyclic(const bAction *act, FCurve *fcu)
+static void make_new_fcurve_cyclic(FCurve *fcu, const blender::float2 &action_range)
 {
   /* The curve must contain one (newly-added) keyframe. */
   if (fcu->totvert != 1 || !fcu->bezt) {
     return;
   }
 
-  const float period = act->frame_end - act->frame_start;
+  const float period = action_range[1] - action_range[0];
 
   if (period < 0.1f) {
     return;
   }
 
   /* Move the keyframe into the range. */
-  const float frame_offset = fcu->bezt[0].vec[1][0] - act->frame_start;
+  const float frame_offset = fcu->bezt[0].vec[1][0] - action_range[0];
   const float fix = floorf(frame_offset / period) * period;
 
   fcu->bezt[0].vec[0][0] -= fix;
@@ -310,19 +332,22 @@ static bool insert_keyframe_value(
     }
   }
 
+  KeyframeSettings settings = get_keyframe_settings((flag & INSERTKEY_NO_USERPREF) == 0);
+  settings.keyframe_type = keytype;
+
   if (flag & INSERTKEY_NEEDED) {
     if (!new_key_needed(fcu, cfra, curval)) {
       return false;
     }
 
-    if (insert_vert_fcurve(fcu, cfra, curval, keytype, flag) < 0) {
+    if (insert_vert_fcurve(fcu, {cfra, curval}, settings, flag) < 0) {
       return false;
     }
 
     return true;
   }
 
-  return insert_vert_fcurve(fcu, cfra, curval, keytype, flag) >= 0;
+  return insert_vert_fcurve(fcu, {cfra, curval}, settings, flag) >= 0;
 }
 
 bool insert_keyframe_direct(ReportList *reports,
@@ -350,7 +375,7 @@ bool insert_keyframe_direct(ReportList *reports,
     PointerRNA tmp_ptr;
 
     if (RNA_path_resolve_property(&ptr, fcu->rna_path, &tmp_ptr, &prop) == false) {
-      const char *idname = (ptr.owner_id) ? ptr.owner_id->name : TIP_("<No ID pointer>");
+      const char *idname = (ptr.owner_id) ? ptr.owner_id->name : RPT_("<No ID pointer>");
 
       BKE_reportf(reports,
                   RPT_ERROR,
@@ -445,7 +470,7 @@ static bool insert_keyframe_fcurve_value(Main *bmain,
   const bool is_cyclic_action = (flag & INSERTKEY_CYCLE_AWARE) && BKE_action_is_cyclic(act);
 
   if (is_cyclic_action && fcu->totvert == 1) {
-    make_new_fcurve_cyclic(act, fcu);
+    make_new_fcurve_cyclic(fcu, {act->frame_start, act->frame_end});
   }
 
   /* Update F-Curve flags to ensure proper behavior for property type. */
@@ -469,7 +494,7 @@ static bool insert_keyframe_fcurve_value(Main *bmain,
 
   /* If the curve is new, make it cyclic if appropriate. */
   if (is_cyclic_action && is_new_curve) {
-    make_new_fcurve_cyclic(act, fcu);
+    make_new_fcurve_cyclic(fcu, {act->frame_start, act->frame_end});
   }
 
   return success;
@@ -504,14 +529,14 @@ int insert_keyframe(Main *bmain,
         reports,
         RPT_ERROR,
         "Could not insert keyframe, as RNA path is invalid for the given ID (ID = %s, path = %s)",
-        (id) ? id->name : TIP_("<Missing ID block>"),
+        (id) ? id->name : RPT_("<Missing ID block>"),
         rna_path);
     return 0;
   }
 
   /* If no action is provided, keyframe to the default one attached to this ID-block. */
   if (act == nullptr) {
-    act = ED_id_action_ensure(bmain, id);
+    act = id_action_ensure(bmain, id);
     if (act == nullptr) {
       BKE_reportf(reports,
                   RPT_ERROR,
@@ -911,7 +936,7 @@ void insert_key_rna(PointerRNA *rna_pointer,
                     ReportList *reports)
 {
   ID *id = rna_pointer->owner_id;
-  bAction *action = ED_id_action_ensure(bmain, id);
+  bAction *action = id_action_ensure(bmain, id);
   if (action == nullptr) {
     BKE_reportf(reports,
                 RPT_ERROR,

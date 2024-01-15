@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 4.1.0 Alpha (b'72b6c44e759b')\n"
+"Project-Id-Version: Blender 4.1.0 Alpha (b'acbb91b192da')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-04 11:06:00\n"
+"POT-Creation-Date: 2024-01-15 10:52:30\n"
 "PO-Revision-Date: 2012-09-07 22:32+0100\n"
 "Last-Translator: Nikola Radovanovic <cobisimo@gmail.com>\n"
 "Language-Team: Nikola Radovanovic\n"
@@ -1265,6 +1265,10 @@ msgstr "Релативна путања"
 
 msgid "Bones"
 msgstr "Кости"
+
+
+msgid "Index"
+msgstr "Индекс"
 
 
 msgid "Visible"
@@ -2956,10 +2960,6 @@ msgid "View"
 msgstr "Поглед"
 
 
-msgid "Index"
-msgstr "Индекс"
-
-
 msgid "Segments"
 msgstr "Сегмената"
 
@@ -4239,6 +4239,18 @@ msgstr "Параметри избора датотека"
 
 msgid "Save"
 msgstr "Сачувај"
+
+
+msgid "File Extensions"
+msgstr "Наставци датотека"
+
+
+msgid "Operator"
+msgstr "Оператор"
+
+
+msgid "Label"
+msgstr "Назив"
 
 
 msgid "Relative Path"
@@ -6692,10 +6704,6 @@ msgstr "Датотека филма"
 
 msgid "Node tree consisting of linked nodes used for shading, textures and compositing"
 msgstr "Дрво чворова које чине повезани чворови сенчења, текстура и слагања"
-
-
-msgid "Label"
-msgstr "Назив"
 
 
 msgid "Grease Pencil Data"
@@ -11563,6 +11571,10 @@ msgid "Component"
 msgstr "Компонента"
 
 
+msgid "Bake"
+msgstr "Испеци"
+
+
 msgid "Original"
 msgstr "Оригинал"
 
@@ -13551,9 +13563,35 @@ msgid "Reset Original Length"
 msgstr "Врати оригиналну дужину"
 
 
+msgid "Duplicate"
+msgstr "Дуплирај"
+
+
+msgid "Extrude selected control point(s)"
+msgstr "Извуци изабране и помери контролне тачке"
+
+
+msgctxt "Operator"
+msgid "Extrude Curve and Move"
+msgstr "Извуци криву и помери"
+
+
+msgid "Extrude curve and move result"
+msgstr "Извлачи криву и помера резултат"
+
+
 msgctxt "Operator"
 msgid "Select Random"
 msgstr "Изабери насумично"
+
+
+msgctxt "Operator"
+msgid "Clear Tilt"
+msgstr "Очисти увртање"
+
+
+msgid "Clear the tilt of selected control points"
+msgstr "Чисти увртање изабраних контролних тачака"
 
 
 msgid "Cyclic U"
@@ -13604,10 +13642,6 @@ msgid "Duplicate Curve"
 msgstr "Дуплирај криву"
 
 
-msgid "Extrude selected control point(s)"
-msgstr "Извуци изабране и помери контролне тачке"
-
-
 msgid "Resize"
 msgstr "Увећање"
 
@@ -13630,15 +13664,6 @@ msgstr "Клизај ивицу"
 
 msgid "Sequence Slide"
 msgstr "Клизај секвенцу"
-
-
-msgctxt "Operator"
-msgid "Extrude Curve and Move"
-msgstr "Извуци криву и помери"
-
-
-msgid "Extrude curve and move result"
-msgstr "Извлачи криву и помера резултат"
 
 
 msgctxt "Operator"
@@ -13850,15 +13875,6 @@ msgid "Subdivide selected segments"
 msgstr "Издели изабране сегменте"
 
 
-msgctxt "Operator"
-msgid "Clear Tilt"
-msgstr "Очисти увртање"
-
-
-msgid "Clear the tilt of selected control points"
-msgstr "Чисти увртање изабраних контролних тачака"
-
-
 msgid "Add a new control point (linked to only selected end-curve one, if any)"
 msgstr "Додаје нову контролну тачку (повезану са изабраним делом криве, уколико постоји)"
 
@@ -13988,11 +14004,6 @@ msgstr "Ојлер (ZXY)"
 
 msgid "Euler (ZYX)"
 msgstr "Ојлер (ZYX)"
-
-
-msgctxt "Operator"
-msgid "Export STL"
-msgstr "Извоз у STL"
 
 
 msgid "Ascii"
@@ -14872,10 +14883,6 @@ msgid "Flat"
 msgstr "Равно"
 
 
-msgid "Duplicate"
-msgstr "Дуплирај"
-
-
 msgctxt "Operator"
 msgid "Select Mode"
 msgstr "Мод изабора"
@@ -15067,11 +15074,6 @@ msgstr "Релативне путање"
 
 msgid "Shadeless"
 msgstr "Сенчења"
-
-
-msgctxt "Operator"
-msgid "Import STL"
-msgstr "Увоз у STL"
 
 
 msgctxt "Operator"
@@ -18068,10 +18070,6 @@ msgid "Bake physics"
 msgstr "Пече физику"
 
 
-msgid "Bake"
-msgstr "Испеци"
-
-
 msgctxt "Operator"
 msgid "Bake All Physics"
 msgstr "Испеци сву физику"
@@ -18460,10 +18458,6 @@ msgstr "Игнориши клик на позадину"
 
 msgid "Falloff Type"
 msgstr "Врста опадања"
-
-
-msgid "Operator"
-msgstr "Оператор"
 
 
 msgid "Sharpen"
@@ -20368,6 +20362,16 @@ msgid "Splash Screen"
 msgstr "Почетни екран"
 
 
+msgctxt "Operator"
+msgid "Export STL"
+msgstr "Извоз у STL"
+
+
+msgctxt "Operator"
+msgid "Import STL"
+msgstr "Увоз у STL"
+
+
 msgid "URL"
 msgstr "Адреса"
 
@@ -22127,10 +22131,6 @@ msgstr "Ручно одреди број процеса"
 
 msgid "Process the render result through the compositing pipeline, if compositing nodes are enabled"
 msgstr "Обради резултат рендеровања кроз процес слагање, ако су омогућени чворови слагања"
-
-
-msgid "File Extensions"
-msgstr "Наставци датотека"
 
 
 msgid "Draw stylized strokes using Freestyle"
@@ -26322,6 +26322,10 @@ msgid "Browse Particle Settings to be linked"
 msgstr "Изаберите поставке честица за повезивање"
 
 
+msgid "Modified"
+msgstr "Измењен"
+
+
 msgctxt "Object"
 msgid "New"
 msgstr "Ново"
@@ -27483,10 +27487,6 @@ msgstr "Blender-ов преглед датотека"
 
 msgid "unable to open the file"
 msgstr "Не могу да отворим датотеку"
-
-
-msgid "Modified"
-msgstr "Измењен"
 
 
 msgid "Not a library"

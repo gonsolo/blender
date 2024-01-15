@@ -172,7 +172,9 @@ void Light::shape_parameters_set(const ::Light *la, const float scale[3])
       _area_size_x = tanf(min_ff(la->sun_angle, DEG2RADF(179.9f)) / 2.0f);
     }
     else {
-      _area_size_x = la->radius;
+      /* Ensure a minimum radius/energy ratio to avoid harsh cut-offs. (See 114284) */
+      float min_radius = la->energy * 2e-05f;
+      _area_size_x = std::max(la->radius, min_radius);
     }
     _area_size_y = _area_size_x = max_ff(0.001f, _area_size_x);
     radius_squared = square_f(_area_size_x);
@@ -237,8 +239,8 @@ float Light::point_radiance_get(const ::Light *la)
 
 void Light::debug_draw()
 {
-#ifdef DEBUG
-  drw_debug_sphere(_position, influence_radius_max, float4(0.8f, 0.3f, 0.0f, 1.0f));
+#ifndef NDEBUG
+  drw_debug_sphere(float3(_position), influence_radius_max, float4(0.8f, 0.3f, 0.0f, 1.0f));
 #endif
 }
 
@@ -437,8 +439,8 @@ void LightModule::debug_pass_sync()
     debug_draw_ps_.init();
     debug_draw_ps_.state_set(DRW_STATE_WRITE_COLOR | DRW_STATE_BLEND_CUSTOM);
     debug_draw_ps_.shader_set(inst_.shaders.static_shader_get(LIGHT_CULLING_DEBUG));
-    inst_.bind_uniform_data(&debug_draw_ps_);
-    inst_.hiz_buffer.bind_resources(debug_draw_ps_);
+    debug_draw_ps_.bind_resources(inst_.uniform_data);
+    debug_draw_ps_.bind_resources(inst_.hiz_buffer.front);
     debug_draw_ps_.bind_ssbo("light_buf", &culling_light_buf_);
     debug_draw_ps_.bind_ssbo("light_cull_buf", &culling_data_buf_);
     debug_draw_ps_.bind_ssbo("light_zbin_buf", &culling_zbin_buf_);

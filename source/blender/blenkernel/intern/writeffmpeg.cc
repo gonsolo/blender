@@ -8,10 +8,10 @@
  */
 
 #ifdef WITH_FFMPEG
-#  include <stdio.h>
-#  include <string.h>
+#  include <cstdio>
+#  include <cstring>
 
-#  include <stdlib.h>
+#  include <cstdlib>
 
 #  include "MEM_guardedalloc.h"
 
@@ -32,7 +32,7 @@
 #  include "BKE_global.h"
 #  include "BKE_idprop.h"
 #  include "BKE_image.h"
-#  include "BKE_lib_id.h"
+#  include "BKE_lib_id.hh"
 #  include "BKE_main.hh"
 #  include "BKE_report.h"
 #  include "BKE_sound.h"
@@ -45,6 +45,7 @@
 extern "C" {
 #  include <libavcodec/avcodec.h>
 #  include <libavformat/avformat.h>
+#  include <libavutil/buffer.h>
 #  include <libavutil/channel_layout.h>
 #  include <libavutil/imgutils.h>
 #  include <libavutil/opt.h>
@@ -117,10 +118,7 @@ static void ffmpeg_filepath_get(FFMpegContext *context,
 static void delete_picture(AVFrame *f)
 {
   if (f) {
-    if (f->data[0]) {
-      MEM_freeN(f->data[0]);
-    }
-    av_free(f);
+    av_frame_free(&f);
   }
 }
 
@@ -233,24 +231,22 @@ static int write_audio_frame(FFMpegContext *context)
 /* Allocate a temporary frame */
 static AVFrame *alloc_picture(AVPixelFormat pix_fmt, int width, int height)
 {
-  AVFrame *f;
-  uint8_t *buf;
-  int size;
-
   /* allocate space for the struct */
-  f = av_frame_alloc();
-  if (!f) {
-    return nullptr;
-  }
-  size = av_image_get_buffer_size(pix_fmt, width, height, 1);
-  /* allocate the actual picture buffer */
-  buf = static_cast<uint8_t *>(MEM_mallocN(size, "AVFrame buffer"));
-  if (!buf) {
-    free(f);
+  AVFrame *f = av_frame_alloc();
+  if (f == nullptr) {
     return nullptr;
   }
 
-  av_image_fill_arrays(f->data, f->linesize, buf, pix_fmt, width, height, 1);
+  /* allocate the actual picture buffer */
+  int size = av_image_get_buffer_size(pix_fmt, width, height, 1);
+  AVBufferRef *buf = av_buffer_alloc(size);
+  if (buf == nullptr) {
+    av_frame_free(&f);
+    return nullptr;
+  }
+
+  av_image_fill_arrays(f->data, f->linesize, buf->data, pix_fmt, width, height, 1);
+  f->buf[0] = buf;
   f->format = pix_fmt;
   f->width = width;
   f->height = height;
@@ -424,13 +420,7 @@ static AVFrame *generate_video_frame(FFMpegContext *context, const uint8_t *pixe
   /* Convert to the output pixel format, if it's different that Blender's internal one. */
   if (context->img_convert_frame != nullptr) {
     BLI_assert(context->img_convert_ctx != NULL);
-    sws_scale(context->img_convert_ctx,
-              (const uint8_t *const *)rgb_frame->data,
-              rgb_frame->linesize,
-              0,
-              codec->height,
-              context->current_frame->data,
-              context->current_frame->linesize);
+    BKE_ffmpeg_sws_scale_frame(context->img_convert_ctx, context->current_frame, rgb_frame);
   }
 
   return context->current_frame;
@@ -567,7 +557,7 @@ static const AVCodec *get_av1_encoder(
           break;
       }
       if (context->ffmpeg_crf >= 0) {
-        /* `libsvtav1` does not support `crf` until FFmpeg builds since 2022-02-24,
+        /* `libsvtav1` does not support CRF until FFMPEG builds since 2022-02-24,
          * use `qp` as fallback. */
         ffmpeg_dict_set_int(opts, "qp", context->ffmpeg_crf);
       }
@@ -677,6 +667,53 @@ static const AVCodec *get_av1_encoder(
   return codec;
 }
 
+SwsContext *BKE_ffmpeg_sws_get_context(
+    int width, int height, int av_src_format, int av_dst_format, int sws_flags)
+{
+#  if defined(FFMPEG_SWSCALE_THREADING)
+  /* sws_getContext does not allow passing flags that ask for multi-threaded
+   * scaling context, so do it the hard way. */
+  SwsContext *c = sws_alloc_context();
+  if (c == nullptr) {
+    return nullptr;
+  }
+  av_opt_set_int(c, "srcw", width, 0);
+  av_opt_set_int(c, "srch", height, 0);
+  av_opt_set_int(c, "src_format", av_src_format, 0);
+  av_opt_set_int(c, "dstw", width, 0);
+  av_opt_set_int(c, "dsth", height, 0);
+  av_opt_set_int(c, "dst_format", av_dst_format, 0);
+  av_opt_set_int(c, "sws_flags", sws_flags, 0);
+  av_opt_set_int(c, "threads", BLI_system_thread_count(), 0);
+
+  if (sws_init_context(c, nullptr, nullptr) < 0) {
+    sws_freeContext(c);
+    return nullptr;
+  }
+#  else
+  SwsContext *c = sws_getContext(width,
+                                 height,
+                                 AVPixelFormat(av_src_format),
+                                 width,
+                                 height,
+                                 AVPixelFormat(av_dst_format),
+                                 sws_flags,
+                                 nullptr,
+                                 nullptr,
+                                 nullptr);
+#  endif
+
+  return c;
+}
+void BKE_ffmpeg_sws_scale_frame(SwsContext *ctx, AVFrame *dst, const AVFrame *src)
+{
+#  if defined(FFMPEG_SWSCALE_THREADING)
+  sws_scale_frame(ctx, dst, src);
+#  else
+  sws_scale(ctx, src->data, src->linesize, 0, src->height, dst->data, dst->linesize);
+#  endif
+}
+
 /* prepare a video stream for the output file */
 
 static AVStream *alloc_video_stream(FFMpegContext *context,
@@ -746,7 +783,8 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   if (c->time_base.num != 1) {
     AVRational new_time_base;
     if (av_reduce(
-            &new_time_base.num, &new_time_base.den, c->time_base.num, c->time_base.den, INT_MAX)) {
+            &new_time_base.num, &new_time_base.den, c->time_base.num, c->time_base.den, INT_MAX))
+    {
       /* Exact reduction was possible. Use the new value. */
       c->time_base = new_time_base;
     }
@@ -762,9 +800,9 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   }
   else if (context->ffmpeg_crf >= 0) {
     /* As per https://trac.ffmpeg.org/wiki/Encode/VP9 we must set the bit rate to zero when
-     * encoding with vp9 in crf mode.
+     * encoding with VP9 in CRF mode.
      * Set this to always be zero for other codecs as well.
-     * We don't care about bit rate in crf mode. */
+     * We don't care about bit rate in CRF mode. */
     c->bit_rate = 0;
     ffmpeg_dict_set_int(&opts, "crf", context->ffmpeg_crf);
   }
@@ -776,11 +814,11 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   }
 
   if (context->ffmpeg_preset) {
-    /* 'preset' is used by h.264, 'deadline' is used by webm/vp9. I'm not
+    /* 'preset' is used by h.264, 'deadline' is used by WEBM/VP9. I'm not
      * setting those properties conditionally based on the video codec,
      * as the FFmpeg encoder simply ignores unknown settings anyway. */
-    char const *preset_name = nullptr;   /* used by h.264 */
-    char const *deadline_name = nullptr; /* used by webm/vp9 */
+    char const *preset_name = nullptr;   /* Used by h.264. */
+    char const *deadline_name = nullptr; /* Used by WEBM/VP9. */
     switch (context->ffmpeg_preset) {
       case FFM_PRESET_GOOD:
         preset_name = "medium";
@@ -799,7 +837,7 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
     }
     /* "codec_id != AV_CODEC_ID_AV1" is required due to "preset" already being set by an AV1 codec.
      */
-    if (preset_name != NULL && codec_id != AV_CODEC_ID_AV1) {
+    if (preset_name != nullptr && codec_id != AV_CODEC_ID_AV1) {
       av_dict_set(&opts, "preset", preset_name, 0);
     }
     if (deadline_name != nullptr) {
@@ -818,7 +856,7 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   }
 
   if (context->ffmpeg_type == FFMPEG_XVID) {
-    /* arghhhh ... */
+    /* Alas! */
     c->pix_fmt = AV_PIX_FMT_YUV420P;
     c->codec_tag = (('D' << 24) + ('I' << 16) + ('V' << 8) + 'X');
   }
@@ -903,7 +941,7 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   }
   av_dict_free(&opts);
 
-  /* FFmpeg expects its data in the output pixel format. */
+  /* FFMPEG expects its data in the output pixel format. */
   context->current_frame = alloc_picture(c->pix_fmt, c->width, c->height);
 
   if (c->pix_fmt == AV_PIX_FMT_RGBA) {
@@ -914,16 +952,8 @@ static AVStream *alloc_video_stream(FFMpegContext *context,
   else {
     /* Output pixel format is different, allocate frame for conversion. */
     context->img_convert_frame = alloc_picture(AV_PIX_FMT_RGBA, c->width, c->height);
-    context->img_convert_ctx = sws_getContext(c->width,
-                                              c->height,
-                                              AV_PIX_FMT_RGBA,
-                                              c->width,
-                                              c->height,
-                                              c->pix_fmt,
-                                              SWS_BICUBIC,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr);
+    context->img_convert_ctx = BKE_ffmpeg_sws_get_context(
+        c->width, c->height, AV_PIX_FMT_RGBA, c->pix_fmt, SWS_BICUBIC);
   }
 
   avcodec_parameters_from_context(st->codecpar, c);
@@ -1003,8 +1033,8 @@ static AVStream *alloc_audio_stream(FFMpegContext *context,
 
   if (codec->sample_fmts) {
     /* Check if the preferred sample format for this codec is supported.
-     * this is because, depending on the version of libav,
-     * and with the whole ffmpeg/libav fork situation,
+     * this is because, depending on the version of LIBAV,
+     * and with the whole FFMPEG/LIBAV fork situation,
      * you have various implementations around.
      * Float samples in particular are not always supported. */
     const enum AVSampleFormat *p = codec->sample_fmts;
@@ -1051,14 +1081,14 @@ static AVStream *alloc_audio_stream(FFMpegContext *context,
   }
 
   /* Need to prevent floating point exception when using VORBIS audio codec,
-   * initialize this value in the same way as it's done in FFmpeg itself (sergey) */
+   * initialize this value in the same way as it's done in FFMPEG itself (sergey) */
   c->time_base.num = 1;
   c->time_base.den = c->sample_rate;
 
   if (c->frame_size == 0) {
     /* Used to be if ((c->codec_id >= CODEC_ID_PCM_S16LE) && (c->codec_id <= CODEC_ID_PCM_DVD))
      * not sure if that is needed anymore, so let's try out if there are any
-     * complaints regarding some FFmpeg versions users might have. */
+     * complaints regarding some FFMPEG versions users might have. */
     context->audio_input_samples = AV_INPUT_BUFFER_MIN_SIZE * 8 / c->bits_per_coded_sample /
                                    num_channels;
   }
@@ -1134,7 +1164,7 @@ static int start_ffmpeg_impl(FFMpegContext *context,
   /* Determine the correct filename */
   ffmpeg_filepath_get(context, filepath, rd, context->ffmpeg_preview, suffix);
   PRINT(
-      "Starting output to %s(ffmpeg)...\n"
+      "Starting output to %s(FFMPEG)...\n"
       "  Using type=%d, codec=%d, audio_codec=%d,\n"
       "  video_bitrate=%d, audio_bitrate=%d,\n"
       "  gop_size=%d, autosplit=%d\n"
@@ -1157,7 +1187,7 @@ static int start_ffmpeg_impl(FFMpegContext *context,
     return 0;
   }
 
-  fmt = av_guess_format(NULL, exts[0], nullptr);
+  fmt = av_guess_format(nullptr, exts[0], nullptr);
   if (!fmt) {
     BKE_report(reports, RPT_ERROR, "No valid formats found");
     return 0;
@@ -1165,7 +1195,7 @@ static int start_ffmpeg_impl(FFMpegContext *context,
 
   of = avformat_alloc_context();
   if (!of) {
-    BKE_report(reports, RPT_ERROR, "Can't allocate ffmpeg format context");
+    BKE_report(reports, RPT_ERROR, "Can't allocate FFMPEG format context");
     return 0;
   }
 
@@ -1236,7 +1266,7 @@ static int start_ffmpeg_impl(FFMpegContext *context,
     if (context->ffmpeg_audio_codec != AV_CODEC_ID_NONE &&
         rd->ffcodecdata.audio_mixrate != 48000 && rd->ffcodecdata.audio_channels != 2)
     {
-      BKE_report(reports, RPT_ERROR, "FFmpeg only supports 48khz / stereo audio for DV!");
+      BKE_report(reports, RPT_ERROR, "FFMPEG only supports 48khz / stereo audio for DV!");
       goto fail;
     }
   }
@@ -1571,7 +1601,7 @@ int BKE_ffmpeg_append(void *context_v,
 
 static void end_ffmpeg_impl(FFMpegContext *context, int is_autosplit)
 {
-  PRINT("Closing ffmpeg...\n");
+  PRINT("Closing FFMPEG...\n");
 
 #  ifdef WITH_AUDASPACE
   if (is_autosplit == false) {
@@ -1619,7 +1649,7 @@ static void end_ffmpeg_impl(FFMpegContext *context, int is_autosplit)
     context->img_convert_frame = nullptr;
   }
 
-  if (context->outfile != NULL && context->outfile->oformat) {
+  if (context->outfile != nullptr && context->outfile->oformat) {
     if (!(context->outfile->oformat->flags & AVFMT_NOFILE)) {
       avio_close(context->outfile->pb);
     }
@@ -1825,9 +1855,9 @@ bool BKE_ffmpeg_alpha_channel_is_supported(const RenderData *rd)
 
 void *BKE_ffmpeg_context_create()
 {
-  /* new ffmpeg data struct */
+  /* New FFMPEG data struct. */
   FFMpegContext *context = static_cast<FFMpegContext *>(
-      MEM_callocN(sizeof(FFMpegContext), "new ffmpeg context"));
+      MEM_callocN(sizeof(FFMpegContext), "new FFMPEG context"));
 
   context->ffmpeg_codec = AV_CODEC_ID_MPEG4;
   context->ffmpeg_audio_codec = AV_CODEC_ID_NONE;

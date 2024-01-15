@@ -296,7 +296,8 @@ static GlyphBLF *blf_glyph_cache_add_glyph(FontBLF *font,
     if (ELEM(glyph->bitmap.pixel_mode,
              FT_PIXEL_MODE_GRAY,
              FT_PIXEL_MODE_GRAY2,
-             FT_PIXEL_MODE_GRAY4)) {
+             FT_PIXEL_MODE_GRAY4))
+    {
       /* Scale 1, 2, 4-bit gray to 8-bit. */
       const char scale = char(255 / (glyph->bitmap.num_grays - 1));
       for (int i = 0; i < buffer_size; i++) {
@@ -347,7 +348,7 @@ static GlyphBLF *blf_glyph_cache_add_glyph(FontBLF *font,
       }
     }
     else {
-      memcpy(g->bitmap, glyph->bitmap.buffer, (size_t)buffer_size);
+      memcpy(g->bitmap, glyph->bitmap.buffer, size_t(buffer_size));
     }
   }
 
@@ -765,7 +766,7 @@ static FT_UInt blf_glyph_index_from_charcode(FontBLF **font, const uint charcode
     }
   }
 
-#ifdef DEBUG
+#ifndef NDEBUG
   printf("Unicode character U+%04X not found in loaded fonts. \n", charcode);
 #endif
 
@@ -1368,7 +1369,7 @@ static void blf_glyph_calc_rect_test(rcti *rect, GlyphBLF *g, const int x, const
   /* Intentionally check with `g->advance`, because this is the
    * width used by BLF_width. This allows that the text slightly
    * overlaps the clipping border to achieve better alignment. */
-  rect->xmin = x + g->pos[0] + 1;
+  rect->xmin = x + abs(g->pos[0]) + 1;
   rect->xmax = x + std::min(ft_pix_to_int(g->advance_x), g->dims[0]);
   rect->ymin = y;
   rect->ymax = rect->ymin - g->dims[1];
@@ -1662,7 +1663,8 @@ static void blf_glyph_to_curves(FT_Outline ftoutline, ListBase *nurbsbase, const
       {
         const int l_next = (k < n - 1) ? (l + 1) : l_first;
         if (ftoutline.tags[l] == FT_Curve_Tag_Conic &&
-            ftoutline.tags[l_next] == FT_Curve_Tag_Conic) {
+            ftoutline.tags[l_next] == FT_Curve_Tag_Conic)
+        {
           onpoints[j]++;
         }
       }
@@ -1697,7 +1699,8 @@ static void blf_glyph_to_curves(FT_Outline ftoutline, ListBase *nurbsbase, const
       {
         const int l_next = (k < n - 1) ? (l + 1) : l_first;
         if (ftoutline.tags[l] == FT_Curve_Tag_Conic &&
-            ftoutline.tags[l_next] == FT_Curve_Tag_Conic) {
+            ftoutline.tags[l_next] == FT_Curve_Tag_Conic)
+        {
           dx = float(ftoutline.points[l].x + ftoutline.points[l_next].x) * scale / 2.0f;
           dy = float(ftoutline.points[l].y + ftoutline.points[l_next].y) * scale / 2.0f;
 
@@ -1831,10 +1834,7 @@ static FT_GlyphSlot blf_glyphslot_ensure_outline(FontBLF *font, const uint charc
   return glyph;
 }
 
-float blf_character_to_curves(FontBLF *font,
-                              unsigned int unicode,
-                              ListBase *nurbsbase,
-                              const float scale)
+float blf_character_to_curves(FontBLF *font, uint unicode, ListBase *nurbsbase, const float scale)
 {
   FT_GlyphSlot glyph = blf_glyphslot_ensure_outline(font, unicode);
   if (!glyph) {

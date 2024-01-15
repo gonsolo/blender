@@ -64,7 +64,7 @@ inline GPUAttachmentType &operator--(GPUAttachmentType &a)
 namespace blender {
 namespace gpu {
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #  define DEBUG_NAME_LEN 64
 #else
 #  define DEBUG_NAME_LEN 16
@@ -129,8 +129,13 @@ class FrameBuffer {
                        int dst_offset_x,
                        int dst_offset_y) = 0;
 
-  virtual void subpass_transition(const GPUAttachmentState depth_attachment_state,
-                                  Span<GPUAttachmentState> color_attachment_states) = 0;
+ protected:
+  virtual void subpass_transition_impl(const GPUAttachmentState depth_attachment_state,
+                                       Span<GPUAttachmentState> color_attachment_states) = 0;
+
+ public:
+  void subpass_transition(const GPUAttachmentState depth_attachment_state,
+                          Span<GPUAttachmentState> color_attachment_states);
 
   void load_store_config_array(const GPULoadStore *load_store_actions, uint actions_len);
 

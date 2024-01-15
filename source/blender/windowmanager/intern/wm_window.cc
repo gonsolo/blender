@@ -15,6 +15,8 @@
 #include <cstring>
 #include <thread>
 
+#include "CLG_log.h"
+
 #include "DNA_listBase.h"
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
@@ -48,13 +50,13 @@
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
-#include "wm_event_system.h"
+#include "wm_event_system.hh"
 #include "wm_files.hh"
-#include "wm_platform_support.h"
+#include "wm_platform_support.hh"
 #include "wm_window.hh"
-#include "wm_window_private.h"
+#include "wm_window_private.hh"
 #ifdef WITH_XR_OPENXR
-#  include "wm_xr.h"
+#  include "wm_xr.hh"
 #endif
 
 #include "ED_anim_api.hh"
@@ -782,7 +784,7 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
     }
 #endif
     /* until screens get drawn, make it nice gray */
-    GPU_clear_color(0.55f, 0.55f, 0.55f, 1.0f);
+    GPU_clear_color(0.25f, 0.25f, 0.25f, 1.0f);
 
     /* needed here, because it's used before it reads userdef */
     WM_window_set_dpi(win);
@@ -790,7 +792,7 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
     wm_window_swap_buffers(win);
 
     /* Clear double buffer to avoids flickering of new windows on certain drivers. (See #97600) */
-    GPU_clear_color(0.55f, 0.55f, 0.55f, 1.0f);
+    GPU_clear_color(0.25f, 0.25f, 0.25f, 1.0f);
 
     GPU_render_end();
   }
@@ -1293,18 +1295,100 @@ void wm_window_reset_drawable()
   }
 }
 
+#ifndef NDEBUG
+/**
+ * Time-stamp validation that uses basic heuristics to warn about bad time-stamps.
+ * Issues here should be resolved in GHOST.
+ */
+static void ghost_event_proc_timestamp_warning(GHOST_EventHandle ghost_event)
+{
+  /* NOTE: The following time constants can be tweaked if they're reporting false positives. */
+
+  /* The reference event time-stamp must have happened in this time-frame. */
+  constexpr uint64_t event_time_ok_ms = 1000;
+  /* The current event time-stamp must be outside this time-frame to be considered an error. */
+  constexpr uint64_t event_time_error_ms = 5000;
+
+  static uint64_t event_ms_ref_last = std::numeric_limits<uint64_t>::max();
+  const uint64_t event_ms = GHOST_GetEventTime(ghost_event);
+  const uint64_t event_ms_ref = event_ms_ref_last;
+
+  /* Assign first (allow early returns). */
+  event_ms_ref_last = event_ms;
+
+  if (event_ms_ref == std::numeric_limits<uint64_t>::max()) {
+    return;
+  }
+  /* Check the events are recent enough to be used for testing. */
+  const uint64_t now_ms = GHOST_GetMilliSeconds(g_system);
+  /* Ensure the reference time occurred in the last #event_time_ok_ms.
+   * If not, the reference time it's self may be a bad time-stamp. */
+  if (event_ms_ref < event_time_error_ms || (event_ms_ref < (now_ms - event_time_ok_ms)) ||
+      (event_ms_ref > (now_ms + event_time_ok_ms)))
+  {
+    /* Skip, the reference time not recent enough to be used. */
+    return;
+  }
+
+  /* NOTE: Regarding time-stamps from the future.
+   * Generally this shouldn't happen but may do depending on the kinds of events.
+   * Different input methods may detect and trigger events in a way that wont ensure
+   * monotonic event times, so only consider this an error for large time deltas. */
+  double time_delta = 0.0;
+  if (event_ms < (event_ms_ref - event_time_error_ms)) {
+    /* New event time is after (to be expected). */
+    time_delta = double(now_ms - event_ms) / -1000.0;
+  }
+  else if (event_ms > (event_ms_ref + event_time_error_ms)) {
+    /* New event time is before (unexpected but not an error). */
+    time_delta = double(event_ms - now_ms) / 1000.0;
+  }
+  else {
+    /* Time is in range. */
+    return;
+  }
+
+  const char *time_unit = "seconds";
+  const struct {
+    const char *unit;
+    double scale;
+  } unit_table[] = {{"minutes", 60}, {"hours", 60}, {"days", 24}, {"weeks", 7}, {"years", 52}};
+  for (int i = 0; i < ARRAY_SIZE(unit_table); i++) {
+    if (std::abs(time_delta) <= unit_table[i].scale) {
+      break;
+    }
+    time_delta /= unit_table[i].scale;
+    time_unit = unit_table[i].unit;
+  }
+
+  fprintf(stderr,
+          "GHOST: suspicious time-stamp from far in the %s: %.2f %s, "
+          "absolute value is %" PRIu64 ", current time is %" PRIu64 ", for type %d\n",
+          time_delta < 0.0f ? "past" : "future",
+          std::abs(time_delta),
+          time_unit,
+          event_ms,
+          now_ms,
+          int(GHOST_GetEventType(ghost_event)));
+}
+#endif /* !NDEBUG */
+
 /**
  * Called by ghost, here we handle events for windows themselves or send to event system.
  *
  * Mouse coordinate conversion happens here.
  */
-static bool ghost_event_proc(GHOST_EventHandle evt, GHOST_TUserDataPtr C_void_ptr)
+static bool ghost_event_proc(GHOST_EventHandle ghost_event, GHOST_TUserDataPtr C_void_ptr)
 {
   bContext *C = static_cast<bContext *>(C_void_ptr);
   wmWindowManager *wm = CTX_wm_manager(C);
-  GHOST_TEventType type = GHOST_GetEventType(evt);
+  GHOST_TEventType type = GHOST_GetEventType(ghost_event);
 
-  GHOST_WindowHandle ghostwin = GHOST_GetEventWindow(evt);
+  GHOST_WindowHandle ghostwin = GHOST_GetEventWindow(ghost_event);
+
+#ifndef NDEBUG
+  ghost_event_proc_timestamp_warning(ghost_event);
+#endif
 
   if (type == GHOST_kEventQuitRequest) {
     /* Find an active window to display quit dialog in. */
@@ -1326,8 +1410,8 @@ static bool ghost_event_proc(GHOST_EventHandle evt, GHOST_TUserDataPtr C_void_pt
     return true;
   }
 
-  GHOST_TEventDataPtr data = GHOST_GetEventData(evt);
-  const uint64_t event_time_ms = GHOST_GetEventTime(evt);
+  GHOST_TEventDataPtr data = GHOST_GetEventData(ghost_event);
+  const uint64_t event_time_ms = GHOST_GetEventTime(ghost_event);
 
   /* Ghost now can call this function for life resizes,
    * but it should return if WM didn't initialize yet.
@@ -1571,14 +1655,17 @@ static bool ghost_event_proc(GHOST_EventHandle evt, GHOST_TUserDataPtr C_void_pt
       if (ddd->dataType == GHOST_kDragnDropTypeFilenames) {
         const GHOST_TStringArray *stra = static_cast<const GHOST_TStringArray *>(ddd->data);
 
-        for (int a = 0; a < stra->count; a++) {
-          printf("drop file %s\n", stra->strings[a]);
-          /* try to get icon type from extension */
-          int icon = ED_file_extension_icon((char *)stra->strings[a]);
-          wmDragPath *path_data = WM_drag_create_path_data((char *)stra->strings[a]);
+        if (stra->count) {
+          CLOG_INFO(WM_LOG_EVENTS, 1, "Drop %d files:", stra->count);
+          for (const char *path : blender::Span((char **)stra->strings, stra->count)) {
+            CLOG_INFO(WM_LOG_EVENTS, 1, "%s", path);
+          }
+          /* Try to get icon type from extension of the first path. */
+          int icon = ED_file_extension_icon((char *)stra->strings[0]);
+          wmDragPath *path_data = WM_drag_create_path_data(
+              blender::Span((char **)stra->strings, stra->count));
           WM_event_start_drag(C, icon, WM_DRAG_PATH, path_data, 0.0, WM_DRAG_NOP);
           /* Void pointer should point to string, it makes a copy. */
-          break; /* only one drop element supported now */
         }
       }
 
@@ -1644,7 +1731,7 @@ static bool wm_window_timers_process(const bContext *C, int *sleep_us_p)
   bool has_event = false;
 
   const int sleep_us = *sleep_us_p;
-  /* The nearest time an active timer is scheduled to run.  */
+  /* The nearest time an active timer is scheduled to run. */
   double ntime_min = DBL_MAX;
 
   /* Mutable in case the timer gets removed. */
@@ -1896,13 +1983,13 @@ static uiBlock *block_create_opengl_usage_warning(bContext *C, ARegion *region, 
 
   /* Title and explanation text. */
   uiLayout *col = uiLayoutColumn(layout, false);
-  uiItemL_ex(col, TIP_("Python script uses OpenGL for drawing"), ICON_NONE, true, false);
-  uiItemL(col, TIP_("This may lead to unexpected behavior"), ICON_NONE);
+  uiItemL_ex(col, RPT_("Python script uses OpenGL for drawing"), ICON_NONE, true, false);
+  uiItemL(col, RPT_("This may lead to unexpected behavior"), ICON_NONE);
   uiItemL(col,
-          TIP_("One of the add-ons or scripts is using OpenGL and will not work correct on Metal"),
+          RPT_("One of the add-ons or scripts is using OpenGL and will not work correct on Metal"),
           ICON_NONE);
   uiItemL(col,
-          TIP_("Please contact the developer of the add-on to migrate to use 'gpu' module"),
+          RPT_("Please contact the developer of the add-on to migrate to use 'gpu' module"),
           ICON_NONE);
   if (G.opengl_deprecation_usage_filename) {
     char location[1024];
@@ -1910,7 +1997,7 @@ static uiBlock *block_create_opengl_usage_warning(bContext *C, ARegion *region, 
         location, "%s:%d", G.opengl_deprecation_usage_filename, G.opengl_deprecation_usage_lineno);
     uiItemL(col, location, ICON_NONE);
   }
-  uiItemL(col, TIP_("See system tab in preferences to switch to OpenGL backend"), ICON_NONE);
+  uiItemL(col, RPT_("See system tab in preferences to switch to OpenGL backend"), ICON_NONE);
 
   uiItemS(layout);
 
@@ -1937,11 +2024,10 @@ void wm_test_opengl_deprecation_warning(bContext *C)
   wmWindowManager *wm = CTX_wm_manager(C);
   wmWindow *win = static_cast<wmWindow *>((wm->winactive) ? wm->winactive : wm->windows.first);
 
-  BKE_report(
-      &wm->reports,
-      RPT_ERROR,
-      TIP_("One of the add-ons or scripts is using OpenGL and will not work correct on Metal. "
-           "Please contact the developer of the add-on to migrate to use 'gpu' module"));
+  BKE_report(&wm->reports,
+             RPT_ERROR,
+             "One of the add-ons or scripts is using OpenGL and will not work correct on Metal. "
+             "Please contact the developer of the add-on to migrate to use 'gpu' module");
 
   if (win) {
     wmWindow *prevwin = CTX_wm_window(C);

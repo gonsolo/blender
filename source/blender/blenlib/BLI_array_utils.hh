@@ -83,6 +83,19 @@ inline void scatter(const Span<T> src,
   });
 }
 
+template<typename T>
+inline void scatter(const Span<T> src,
+                    const IndexMask &indices,
+                    MutableSpan<T> dst,
+                    const int64_t grain_size = 4096)
+{
+  BLI_assert(indices.size() == src.size());
+  BLI_assert(indices.min_array_size() <= dst.size());
+  indices.foreach_index_optimized<int64_t>(
+      GrainSize(grain_size),
+      [&](const int64_t index, const int64_t pos) { dst[index] = src[pos]; });
+}
+
 /**
  * Fill the destination span by gathering indexed values from the `src` array.
  */
@@ -222,6 +235,7 @@ void invert_booleans(MutableSpan<bool> span);
 void invert_booleans(MutableSpan<bool> span, const IndexMask &mask);
 
 int64_t count_booleans(const VArray<bool> &varray);
+int64_t count_booleans(const VArray<bool> &varray, const IndexMask &mask);
 
 enum class BooleanMix {
   None,
@@ -268,5 +282,18 @@ template<typename T> inline void fill_index_range(MutableSpan<T> span, const T s
 {
   std::iota(span.begin(), span.end(), start);
 }
+
+template<typename T>
+bool indexed_data_equal(const Span<T> all_values, const Span<int> indices, const Span<T> values)
+{
+  for (const int i : indices.index_range()) {
+    if (all_values[indices[i]] != values[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool indices_are_range(Span<int> indices, IndexRange range);
 
 }  // namespace blender::array_utils

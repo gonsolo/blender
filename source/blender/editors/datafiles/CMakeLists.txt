@@ -110,6 +110,8 @@ set(ICON_NAMES
   speaker
   tool_settings
   shaderfx
+  record_off
+  record_on
   fake_user_off
   fake_user_on
   view3d
@@ -906,6 +908,7 @@ if(WITH_BLENDER)
     # Blend files.
     data_to_c_simple(../../../../release/datafiles/preview.blend SRC)
     data_to_c_simple(../../../../release/datafiles/preview_grease_pencil.blend SRC)
+    data_to_c_simple(../../../../release/datafiles/preview_grease_pencil_legacy.blend SRC)
 
     # Images.
     data_to_c_simple(../../../../release/datafiles/splash.png SRC)

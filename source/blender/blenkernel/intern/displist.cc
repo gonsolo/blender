@@ -35,7 +35,7 @@
 #include "BKE_displist.h"
 #include "BKE_geometry_set.hh"
 #include "BKE_key.h"
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_mball.h"
 #include "BKE_mesh.hh"
 #include "BKE_modifier.hh"
@@ -744,7 +744,7 @@ static blender::bke::GeometrySet curve_calc_modifiers_post(Depsgraph *depsgraph,
 
     if (mti->type == ModifierTypeType::OnlyDeform) {
       mti->deform_verts(md, &mectx_deform, mesh, mesh->vert_positions_for_write());
-      BKE_mesh_tag_positions_changed(mesh);
+      mesh->tag_positions_changed();
     }
     else {
       Mesh *output_mesh = mti->modify_mesh(md, &mectx_apply, mesh);

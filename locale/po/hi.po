@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 4.1.0 Alpha (b'72b6c44e759b')\n"
+"Project-Id-Version: Blender 4.1.0 Alpha (b'acbb91b192da')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-04 11:06:00\n"
+"POT-Creation-Date: 2024-01-15 10:52:30\n"
 "PO-Revision-Date: 2015-03-03 16:21+0530\n"
 "Last-Translator: Roshan Lal Gumasta <roshan@anisecrets.com>\n"
 "Language-Team: Hindi <www.anisecrets.com>\n"
@@ -619,6 +619,10 @@ msgid "Bones"
 msgstr "हड्डियों"
 
 
+msgid "Index"
+msgstr "सूचकांक"
+
+
 msgid "Count"
 msgstr "गिनती"
 
@@ -1032,10 +1036,6 @@ msgid "View"
 msgstr "दृश्य"
 
 
-msgid "Index"
-msgstr "सूचकांक"
-
-
 msgid "Render"
 msgstr " प्रतिपादन"
 
@@ -1399,6 +1399,14 @@ msgstr "मुद्र्"
 
 msgid "Save"
 msgstr "सहेजें"
+
+
+msgid "Operator"
+msgstr "संचालक"
+
+
+msgid "Label"
+msgstr "सूचक पत्र"
 
 
 msgid "Relative Path"
@@ -2220,10 +2228,6 @@ msgstr "शिरोबिन्दु"
 
 msgid "Never"
 msgstr "कभी नहीं"
-
-
-msgid "Label"
-msgstr "सूचक पत्र"
 
 
 msgid "Links"
@@ -3250,6 +3254,10 @@ msgid "Equal"
 msgstr "बराबर"
 
 
+msgid "Bake"
+msgstr "भर्जन"
+
+
 msgid "Z Up"
 msgstr "Z ऊर्ध्व"
 
@@ -3590,6 +3598,10 @@ msgid "Report"
 msgstr "विवरण"
 
 
+msgid "Duplicate"
+msgstr "अनुकृति"
+
+
 msgctxt "Operator"
 msgid "Toggle Cyclic"
 msgstr "चक्रीय बंद/बुझ"
@@ -3774,10 +3786,6 @@ msgstr "अगले अनुबोधक चिन्ह"
 
 msgid "Flat"
 msgstr "समतल"
-
-
-msgid "Duplicate"
-msgstr "अनुकृति"
 
 
 msgctxt "Operator"
@@ -4110,10 +4118,6 @@ msgid "Copy Pose"
 msgstr "मुद्रा की प्रतिलिपि बनाएँ"
 
 
-msgid "Bake"
-msgstr "भर्जन"
-
-
 msgctxt "Operator"
 msgid "Bake All Physics"
 msgstr "सभी भौतिकी भर्जन"
@@ -4203,10 +4207,6 @@ msgstr "पिछला दोहराएँ"
 msgctxt "Operator"
 msgid "Sculpt"
 msgstr "गढन"
-
-
-msgid "Operator"
-msgstr "संचालक"
 
 
 msgctxt "Operator"
@@ -4627,10 +4627,6 @@ msgstr "तालाबंदी x"
 
 msgid "Lock Y"
 msgstr "तालाबंदी y"
-
-
-msgid "Refraction"
-msgstr "अपवर्तन"
 
 
 msgid "Film"
@@ -5591,6 +5587,10 @@ msgid "Auto-Step"
 msgstr "स्वत:-चरण"
 
 
+msgid "Refraction"
+msgstr "अपवर्तन"
+
+
 msgid "Paths:"
 msgstr "पथ:"
 
@@ -6339,6 +6339,10 @@ msgid "Stop animation playback"
 msgstr "अनुप्राणन चलाएँ रोकें"
 
 
+msgid "Modified"
+msgstr "संशोधित"
+
+
 msgctxt "Object"
 msgid "New"
 msgstr "नई"
@@ -6436,6 +6440,10 @@ msgstr "नई"
 
 msgid "%d items"
 msgstr "%d वस्तु"
+
+
+msgid "Rigging"
+msgstr "हेराफेरी"
 
 
 msgctxt "Mesh"
@@ -6932,10 +6940,6 @@ msgid "Blender File View"
 msgstr "ब्लेंडर संचिका दृश्य"
 
 
-msgid "Modified"
-msgstr "संशोधित"
-
-
 msgid "ON"
 msgstr "ऑन"
 
@@ -6959,10 +6963,6 @@ msgstr "जाल जोड़ें"
 
 msgid "Import-Export"
 msgstr "आयात-निर्यात"
-
-
-msgid "Rigging"
-msgstr "हेराफेरी"
 
 
 msgid "English (English)"

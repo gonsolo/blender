@@ -10,8 +10,10 @@ if(WITH_COMPOSITOR_CPU)
     intern
     nodes
     operations
+    realtime_compositor
     ../blenkernel
     ../blentranslation
+    ../imbuf
     ../makesrna
     ../nodes
     ../windowmanager
@@ -116,8 +118,6 @@ if(WITH_COMPOSITOR_CPU)
     nodes/COM_MaskNode.h
     nodes/COM_MovieClipNode.cc
     nodes/COM_MovieClipNode.h
-    nodes/COM_OutputFileNode.cc
-    nodes/COM_OutputFileNode.h
     nodes/COM_RenderLayersNode.cc
     nodes/COM_RenderLayersNode.h
     nodes/COM_SceneTimeNode.cc
@@ -138,6 +138,8 @@ if(WITH_COMPOSITOR_CPU)
     # output nodes
     nodes/COM_CompositorNode.cc
     nodes/COM_CompositorNode.h
+    nodes/COM_FileOutputNode.cc
+    nodes/COM_FileOutputNode.h
     nodes/COM_ViewLevelsNode.cc
     nodes/COM_ViewLevelsNode.h
     nodes/COM_ViewerNode.cc
@@ -418,10 +420,8 @@ if(WITH_COMPOSITOR_CPU)
     operations/COM_CompositorOperation.h
     operations/COM_ConvertDepthToRadiusOperation.cc
     operations/COM_ConvertDepthToRadiusOperation.h
-    operations/COM_OutputFileMultiViewOperation.cc
-    operations/COM_OutputFileMultiViewOperation.h
-    operations/COM_OutputFileOperation.cc
-    operations/COM_OutputFileOperation.h
+    operations/COM_FileOutputOperation.cc
+    operations/COM_FileOutputOperation.h
     operations/COM_PreviewOperation.cc
     operations/COM_PreviewOperation.h
     operations/COM_SplitOperation.cc
@@ -599,9 +599,9 @@ if(WITH_COMPOSITOR_CPU)
     PRIVATE bf::blenlib
     PRIVATE bf::depsgraph
     PRIVATE bf::dna
-    PRIVATE bf::imbuf
     PRIVATE bf::intern::clog
     PRIVATE bf::intern::guardedalloc
+    bf_realtime_compositor
     extern_clew
     PRIVATE bf::intern::atomic
   )
@@ -648,10 +648,7 @@ if(WITH_COMPOSITOR_CPU)
 
   blender_add_lib(bf_compositor "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
 
-  if(WITH_UNITY_BUILD)
-    set_target_properties(bf_compositor PROPERTIES UNITY_BUILD ON)
-    set_target_properties(bf_compositor PROPERTIES UNITY_BUILD_BATCH_SIZE 10)
-  endif()
+  blender_set_target_unity_build(bf_compositor 10)
 
   if(COMMAND target_precompile_headers)
     target_precompile_headers(bf_compositor PRIVATE COM_precomp.h)
@@ -674,8 +671,7 @@ if(WITH_COMPOSITOR_CPU)
     set(TEST_LIB
       bf_compositor
     )
-    include(GTestTesting)
-    blender_add_test_lib(bf_compositor_tests "${TEST_SRC}" "${INC};${TEST_INC}" "${INC_SYS}" "${LIB};${TEST_LIB}")
+    blender_add_test_suite_lib(compositor "${TEST_SRC}" "${INC};${TEST_INC}" "${INC_SYS}" "${LIB};${TEST_LIB}")
   endif()
 
   # RNA_prototypes.h

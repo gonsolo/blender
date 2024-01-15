@@ -10,7 +10,9 @@ set(INC
   ../../blenloader
   ../../blentranslation
   ../../draw
+  ../../functions
   ../../gpu
+  ../../imbuf
   ../../makesrna
   ../../nodes
   ../../python
@@ -65,6 +67,7 @@ set(SRC
   interface_style.cc
   interface_template_asset_view.cc
   interface_template_attribute_search.cc
+  interface_template_bone_collection_tree.cc
   interface_template_light_linking.cc
   interface_template_list.cc
   interface_template_node_tree_interface.cc
@@ -99,8 +102,6 @@ set(LIB
   PRIVATE bf::depsgraph
   PRIVATE bf::dna
   bf_editor_datafiles
-  PRIVATE bf::functions
-  PRIVATE bf::imbuf
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::animrig
 )

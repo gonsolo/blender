@@ -170,7 +170,7 @@ static void edbm_bevel_update_status_text(bContext *C, wmOperator *op)
       C, op->ptr, prop, RNA_property_enum_get(op->ptr, prop), &affect_str);
 
   SNPRINTF(status_text,
-           TIP_("%s: Confirm, "
+           RPT_("%s: Confirm, "
                 "%s: Cancel, "
                 "%s: Width Type (%s), "
                 "%s: Width (%s), "
@@ -380,7 +380,7 @@ static bool edbm_bevel_calc(wmOperator *op)
     }
 
     EDBMUpdate_Params params{};
-    params.calc_looptri = true;
+    params.calc_looptris = true;
     params.calc_normals = true;
     params.is_destructive = true;
     EDBM_update(static_cast<Mesh *>(obedit->data), &params);
@@ -430,7 +430,7 @@ static void edbm_bevel_cancel(bContext *C, wmOperator *op)
       EDBM_redo_state_restore_and_free(&opdata->ob_store[ob_index].mesh_backup, em, true);
 
       EDBMUpdate_Params params{};
-      params.calc_looptri = false;
+      params.calc_looptris = false;
       params.calc_normals = true;
       params.is_destructive = true;
       EDBM_update(static_cast<Mesh *>(obedit->data), &params);

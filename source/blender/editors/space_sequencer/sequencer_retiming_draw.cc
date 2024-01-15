@@ -155,8 +155,6 @@ static rctf keys_box_get(const bContext *C, const Sequence *seq)
   rctf rect = strip_box_get(C, seq);
   rect.ymax = KEY_CENTER + KEY_SIZE / 2;
   rect.ymin = KEY_CENTER - KEY_SIZE / 2;
-  rect.xmax += RETIME_KEY_MOUSEOVER_THRESHOLD;
-  rect.xmin -= RETIME_KEY_MOUSEOVER_THRESHOLD;
   return rect;
 }
 
@@ -170,7 +168,7 @@ int left_fake_key_frame_get(const bContext *C, const Sequence *seq)
 int right_fake_key_frame_get(const bContext *C, const Sequence *seq)
 {
   const Scene *scene = CTX_data_scene(C);
-  const int content_end = SEQ_time_content_end_frame_get(scene, seq);
+  const int content_end = SEQ_time_content_end_frame_get(scene, seq) - 1;
   return min_ii(content_end, SEQ_time_right_handle_frame_get(scene, seq));
 }
 
@@ -201,7 +199,14 @@ SeqRetimingKey *try_to_realize_virtual_key(const bContext *C, Sequence *seq, con
     int frame = SEQ_time_left_handle_frame_get(scene, seq);
     key = SEQ_retiming_add_key(scene, seq, frame);
   }
-  if (retiming_fake_key_is_clicked(C, seq, right_fake_key_frame_get(C, seq), mval)) {
+
+  int right_key_frame = right_fake_key_frame_get(C, seq);
+  /* `key_x_get()` compensates 1 frame offset of last key, however this can not
+   * be conveyed via `fake_key` alone. Therefore the same offset must be emulated. */
+  if (SEQ_time_right_handle_frame_get(scene, seq) >= SEQ_time_content_end_frame_get(scene, seq)) {
+    right_key_frame += 1;
+  }
+  if (retiming_fake_key_is_clicked(C, seq, right_key_frame, mval)) {
     SEQ_retiming_data_ensure(seq);
     const int frame = SEQ_time_right_handle_frame_get(scene, seq);
     key = SEQ_retiming_add_key(scene, seq, frame);
@@ -224,7 +229,14 @@ static SeqRetimingKey *mouse_over_key_get_from_strip(const bContext *C,
     int distance = round_fl_to_int(
         fabsf(UI_view2d_view_to_region_x(v2d, key_x_get(scene, seq, &key)) - mval[0]));
 
-    if (distance < RETIME_KEY_MOUSEOVER_THRESHOLD && distance < best_distance) {
+    int threshold = RETIME_KEY_MOUSEOVER_THRESHOLD;
+    if (key_x_get(scene, seq, &key) == SEQ_time_left_handle_frame_get(scene, seq) ||
+        key_x_get(scene, seq, &key) == SEQ_time_right_handle_frame_get(scene, seq))
+    {
+      threshold *= 2; /* Make first and last key easier to select. */
+    }
+
+    if (distance < threshold && distance < best_distance) {
       best_distance = distance;
       best_key = &key;
     }
@@ -236,7 +248,6 @@ static SeqRetimingKey *mouse_over_key_get_from_strip(const bContext *C,
 SeqRetimingKey *retiming_mousover_key_get(const bContext *C, const int mval[2], Sequence **r_seq)
 {
   for (Sequence *seq : sequencer_visible_strips_get(C)) {
-
     rctf box = keys_box_get(C, seq);
     if (!BLI_rctf_isect_pt(&box, mval[0], mval[1])) {
       continue;
@@ -376,18 +387,27 @@ static bool fake_keys_draw(const bContext *C,
 
   const Scene *scene = CTX_data_scene(C);
   const int left_key_frame = left_fake_key_frame_get(C, seq);
-  const int right_key_frame = right_fake_key_frame_get(C, seq);
+  int right_key_frame = right_fake_key_frame_get(C, seq);
 
   if (SEQ_retiming_key_get_by_timeline_frame(scene, seq, left_key_frame) == nullptr) {
     SeqRetimingKey fake_key;
-    fake_key.strip_frame_index = left_key_frame - SEQ_time_start_frame_get(seq);
+    fake_key.strip_frame_index = (left_key_frame - SEQ_time_start_frame_get(seq)) *
+                                 SEQ_time_media_playback_rate_factor_get(scene, seq);
     fake_key.flag = 0;
     retime_key_draw(C, seq, &fake_key, sh_bindings, selection);
   }
 
   if (SEQ_retiming_key_get_by_timeline_frame(scene, seq, right_key_frame) == nullptr) {
+    /* `key_x_get()` compensates 1 frame offset of last key, however this can not
+     * be conveyed via `fake_key` alone. Therefore the same offset must be emulated. */
+    if (SEQ_time_right_handle_frame_get(scene, seq) >= SEQ_time_content_end_frame_get(scene, seq))
+    {
+      right_key_frame += 1;
+    }
+
     SeqRetimingKey fake_key;
-    fake_key.strip_frame_index = right_key_frame - SEQ_time_start_frame_get(seq);
+    fake_key.strip_frame_index = (right_key_frame - SEQ_time_start_frame_get(seq)) *
+                                 SEQ_time_media_playback_rate_factor_get(scene, seq);
     fake_key.flag = 0;
     retime_key_draw(C, seq, &fake_key, sh_bindings, selection);
   }

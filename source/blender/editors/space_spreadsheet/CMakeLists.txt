@@ -8,6 +8,7 @@ set(INC
   ../../blenloader
   ../../blentranslation
   ../../bmesh
+  ../../functions
   ../../gpu
   ../../makesrna
   ../../nodes
@@ -52,11 +53,13 @@ set(LIB
   PRIVATE bf::blenlib
   PRIVATE bf::depsgraph
   PRIVATE bf::dna
-  PRIVATE bf::functions
   PRIVATE bf::intern::guardedalloc
 )
 
 if(WITH_OPENVDB)
+  list(APPEND INC
+    ../../../../intern/openvdb
+  )
   list(APPEND INC_SYS
     ${OPENVDB_INCLUDE_DIRS}
   )

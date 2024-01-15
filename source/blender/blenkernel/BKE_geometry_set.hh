@@ -13,9 +13,11 @@
 
 #include "BLI_bounds_types.hh"
 #include "BLI_function_ref.hh"
+#include "BLI_implicit_sharing_ptr.hh"
 #include "BLI_map.hh"
 #include "BLI_math_vector_types.hh"
 
+/* For #Map. */
 #include "BKE_attribute.hh"
 
 struct Curves;
@@ -25,11 +27,18 @@ struct PointCloud;
 struct Volume;
 struct GreasePencil;
 namespace blender::bke {
+class AnonymousAttributePropagationInfo;
+class AttributeIDRef;
+struct AttributeKind;
+class AttributeAccessor;
+struct AttributeMetaData;
 class ComponentAttributeProviders;
 class CurvesEditHints;
 class Instances;
 class GeometryComponent;
 class GreasePencilEditHints;
+class MutableAttributeAccessor;
+enum class AttrDomain : int8_t;
 }  // namespace blender::bke
 
 namespace blender::bke {
@@ -78,7 +87,7 @@ class GeometryComponent : public ImplicitSharingMixin {
   virtual ~GeometryComponent() = default;
   static GeometryComponentPtr create(Type component_type);
 
-  int attribute_domain_size(eAttrDomain domain) const;
+  int attribute_domain_size(AttrDomain domain) const;
 
   /**
    * Get access to the attributes in this geometry component. May return none if the geometry does
@@ -186,12 +195,12 @@ struct GeometrySet {
   /**
    * Remove all geometry components with types that are not in the provided list.
    */
-  void keep_only(const Span<GeometryComponent::Type> component_types);
+  void keep_only(Span<GeometryComponent::Type> component_types);
   /**
    * Keeps the provided geometry types, but also instances and edit data.
    * Instances must not be removed while using #modify_geometry_sets.
    */
-  void keep_only_during_modify(const Span<GeometryComponent::Type> component_types);
+  void keep_only_during_modify(Span<GeometryComponent::Type> component_types);
   void remove_geometry_during_modify();
 
   void add(const GeometryComponent &component);
@@ -438,6 +447,7 @@ class MeshComponent : public GeometryComponent {
 
  public:
   MeshComponent();
+  MeshComponent(Mesh *mesh, GeometryOwnershipType ownership = GeometryOwnershipType::Owned);
   ~MeshComponent();
   GeometryComponentPtr copy() const override;
 
@@ -492,6 +502,8 @@ class PointCloudComponent : public GeometryComponent {
 
  public:
   PointCloudComponent();
+  PointCloudComponent(PointCloud *pointcloud,
+                      GeometryOwnershipType ownership = GeometryOwnershipType::Owned);
   ~PointCloudComponent();
   GeometryComponentPtr copy() const override;
 
@@ -552,6 +564,7 @@ class CurveComponent : public GeometryComponent {
 
  public:
   CurveComponent();
+  CurveComponent(Curves *curve, GeometryOwnershipType ownership = GeometryOwnershipType::Owned);
   ~CurveComponent();
   GeometryComponentPtr copy() const override;
 
@@ -593,6 +606,8 @@ class InstancesComponent : public GeometryComponent {
 
  public:
   InstancesComponent();
+  InstancesComponent(Instances *instances,
+                     GeometryOwnershipType ownership = GeometryOwnershipType::Owned);
   ~InstancesComponent();
   GeometryComponentPtr copy() const override;
 

@@ -13,18 +13,16 @@
 #include "BLI_math_vector.h"
 #include "BLI_vector.hh"
 
-#include "DNA_mesh_types.h"
-#include "DNA_meshdata_types.h"
 #include "DNA_object_types.h"
 
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_lib_query.h"
 #include "BKE_mesh.hh"
 #include "BKE_mesh_fair.hh"
 #include "BKE_mesh_mapping.hh"
 
-#include "bmesh.h"
-#include "bmesh_tools.h"
+#include "bmesh.hh"
+#include "bmesh_tools.hh"
 
 #include "MEM_guardedalloc.h"
 #include "eigen_capi.h"
@@ -196,8 +194,8 @@ class MeshFairingContext : public FairingContext {
  public:
   MeshFairingContext(Mesh *mesh, MutableSpan<float3> deform_positions)
   {
-    totvert_ = mesh->totvert;
-    totloop_ = mesh->totloop;
+    totvert_ = mesh->verts_num;
+    totloop_ = mesh->corners_num;
 
     MutableSpan<float3> positions = mesh->vert_positions_for_write();
     edges_ = mesh->edges();
@@ -207,14 +205,14 @@ class MeshFairingContext : public FairingContext {
     vlmap_ = mesh->vert_to_corner_map();
 
     /* Deformation coords. */
-    co_.reserve(mesh->totvert);
+    co_.resize(mesh->verts_num);
     if (!deform_positions.is_empty()) {
-      for (int i = 0; i < mesh->totvert; i++) {
+      for (int i = 0; i < mesh->verts_num; i++) {
         co_[i] = deform_positions[i];
       }
     }
     else {
-      for (int i = 0; i < mesh->totvert; i++) {
+      for (int i = 0; i < mesh->verts_num; i++) {
         co_[i] = positions[i];
       }
     }
@@ -229,9 +227,9 @@ class MeshFairingContext : public FairingContext {
     using namespace blender;
     const int vert = corner_verts_[loop];
     const blender::IndexRange face = faces[loop_to_face_map_[loop]];
-    const int2 adjecent_verts = bke::mesh::face_find_adjecent_verts(face, corner_verts_, vert);
-    copy_v3_v3(r_adj_next, co_[adjecent_verts[0]]);
-    copy_v3_v3(r_adj_prev, co_[adjecent_verts[1]]);
+    const int2 adjacent_verts = bke::mesh::face_find_adjacent_verts(face, corner_verts_, vert);
+    copy_v3_v3(r_adj_next, co_[adjacent_verts[0]]);
+    copy_v3_v3(r_adj_prev, co_[adjacent_verts[1]]);
   }
 
   int other_vertex_index_from_loop(const int loop, const int v) override
@@ -261,7 +259,7 @@ class BMeshFairingContext : public FairingContext {
     BM_mesh_elem_index_ensure(bm, BM_LOOP);
 
     /* Deformation coords. */
-    co_.reserve(bm->totvert);
+    co_.resize(bm->totvert);
     for (int i = 0; i < bm->totvert; i++) {
       BMVert *v = BM_vert_at_index(bm, i);
       co_[i] = v->co;
@@ -319,7 +317,7 @@ class UniformVertexWeight : public VertexWeight {
   UniformVertexWeight(FairingContext *fairing_context)
   {
     const int totvert = fairing_context->vertex_count_get();
-    vertex_weights_.reserve(totvert);
+    vertex_weights_.resize(totvert);
     for (int i = 0; i < totvert; i++) {
       const int tot_loop = fairing_context->vertex_loop_map_get(i).size();
       if (tot_loop != 0) {
@@ -347,7 +345,7 @@ class VoronoiVertexWeight : public VertexWeight {
   {
 
     const int totvert = fairing_context->vertex_count_get();
-    vertex_weights_.reserve(totvert);
+    vertex_weights_.resize(totvert);
     for (int i = 0; i < totvert; i++) {
 
       float area = 0.0f;

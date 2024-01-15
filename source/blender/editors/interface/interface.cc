@@ -1383,8 +1383,8 @@ static bool ui_but_event_property_operator_string(const bContext *C,
 {
   /* Context toggle operator names to check. */
 
-  /* This function could use a refactor to generalize button type to operator relationship
-   * as well as which operators use properties. - Campbell */
+  /* NOTE(@ideasman42): This function could use a refactor to generalize button type to operator
+   * relationship as well as which operators use properties. */
   const char *ctx_toggle_opnames[] = {
       "WM_OT_context_toggle",
       "WM_OT_context_toggle_enum",
@@ -2070,11 +2070,17 @@ void ui_fontscale(float *points, float aspect)
 
 void ui_but_to_pixelrect(rcti *rect, const ARegion *region, const uiBlock *block, const uiBut *but)
 {
-  rctf rectf;
+  *rect = ui_to_pixelrect(region, block, (but) ? &but->rect : &block->rect);
+}
 
-  ui_block_to_window_rctf(region, block, &rectf, (but) ? &but->rect : &block->rect);
-  BLI_rcti_rctf_copy_round(rect, &rectf);
-  BLI_rcti_translate(rect, -region->winrct.xmin, -region->winrct.ymin);
+rcti ui_to_pixelrect(const ARegion *region, const uiBlock *block, const rctf *src_rect)
+{
+  rctf rectf;
+  ui_block_to_window_rctf(region, block, &rectf, src_rect);
+  rcti recti;
+  BLI_rcti_rctf_copy_round(&recti, &rectf);
+  BLI_rcti_translate(&recti, -region->winrct.xmin, -region->winrct.ymin);
+  return recti;
 }
 
 static bool ui_but_pixelrect_in_view(const ARegion *region, const rcti *rect)
@@ -2129,7 +2135,8 @@ void UI_block_draw(const bContext *C, uiBlock *block)
     ui_draw_menu_back(&style, block, &rect);
   }
   else if (block->panel) {
-    ui_draw_aligned_panel(&style,
+    ui_draw_aligned_panel(region,
+                          &style,
                           block,
                           &rect,
                           UI_panel_category_is_visible(region),
@@ -2465,7 +2472,8 @@ bool ui_but_is_bool(const uiBut *but)
   }
 
   if ((but->rnaprop && RNA_property_type(but->rnaprop) == PROP_ENUM) &&
-      (but->type == UI_BTYPE_ROW)) {
+      (but->type == UI_BTYPE_ROW))
+  {
     return true;
   }
 
@@ -3027,7 +3035,7 @@ char *ui_but_string_get_dynamic(uiBut *but, int *r_str_size)
  * Report a generic error prefix when evaluating a string with #BPY_run_string_as_number
  * as the Python error on its own doesn't provide enough context.
  */
-#define UI_NUMBER_EVAL_ERROR_PREFIX IFACE_("Error evaluating number, see Info editor for details")
+#define UI_NUMBER_EVAL_ERROR_PREFIX RPT_("Error evaluating number, see Info editor for details")
 
 static bool ui_number_from_string_units(
     bContext *C, const char *str, const int unit_type, const UnitSettings *unit, double *r_value)
@@ -4349,6 +4357,8 @@ static void ui_def_but_rna__menu(bContext *C, uiLayout *layout, void *but_p)
     }
     if (!item->identifier[0] && item->name) {
       categories++;
+      /* The category name adds to the column length. */
+      col_rows++;
     }
     if (item->icon) {
       has_item_with_icon = true;
@@ -4375,7 +4385,7 @@ static void ui_def_but_rna__menu(bContext *C, uiLayout *layout, void *but_p)
   }
 
   /* If the estimated width is greater than available size, collapse to one column. */
-  if (columns > 1 && text_width > win->sizex) {
+  if (columns > 1 && text_width > WM_window_pixels_x(win)) {
     columns = 1;
     rows = totitems;
   }
@@ -4532,7 +4542,7 @@ static void ui_def_but_rna__panel_type(bContext *C, uiLayout *layout, void *but_
   }
   else {
     char msg[256];
-    SNPRINTF(msg, TIP_("Missing Panel: %s"), panel_type);
+    SNPRINTF(msg, RPT_("Missing Panel: %s"), panel_type);
     uiItemL(layout, msg, ICON_NONE);
   }
 }
@@ -4561,7 +4571,7 @@ static void ui_def_but_rna__menu_type(bContext *C, uiLayout *layout, void *but_p
   }
   else {
     char msg[256];
-    SNPRINTF(msg, TIP_("Missing Menu: %s"), menu_type);
+    SNPRINTF(msg, RPT_("Missing Menu: %s"), menu_type);
     uiItemL(layout, msg, ICON_NONE);
   }
 }
@@ -6380,7 +6390,7 @@ void UI_but_func_search_set(uiBut *but,
   search_but->arg_free_fn = search_arg_free_fn;
 
   if (search_exec_fn) {
-#ifdef DEBUG
+#ifndef NDEBUG
     if (but->func) {
       /* watch this, can be cause of much confusion, see: #47691 */
       printf("%s: warning, overwriting button callback with search function callback!\n",
@@ -6829,8 +6839,11 @@ void UI_but_string_info_get(bContext *C, uiBut *but, ...)
         }
       }
     }
+    /* NOTE: Menus will already have their shortcuts displayed.
+     * Pie menus are an exception as they already have a shortcut on display
+     * however this is only used within the context of the pie menu. */
     else if (type == BUT_GET_OP_KEYMAP) {
-      if (!ui_block_is_menu(but->block)) {
+      if (!(ui_block_is_menu(but->block) && !ui_block_is_pie_menu(but->block))) {
         char buf[128];
         if (ui_but_event_operator_string(C, but, buf, sizeof(buf))) {
           tmp = BLI_strdup(buf);

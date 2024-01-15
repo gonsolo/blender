@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 4.1.0 Alpha (b'72b6c44e759b')\n"
+"Project-Id-Version: Blender 4.1.0 Alpha (b'acbb91b192da')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-04 11:06:00\n"
+"POT-Creation-Date: 2024-01-15 10:52:30\n"
 "PO-Revision-Date: 2017-08-26 11:13+0200\n"
 "Last-Translator: Mikołaj Juda <mikolaj.juda@gmail.com>\n"
 "Language: pl\n"
@@ -1788,6 +1788,10 @@ msgstr "Transformacje względne"
 
 msgid "Object children will use relative transform, like deform"
 msgstr "Obiekty potomne będą używać transformacji względnych, takich jak deformacje"
+
+
+msgid "Index"
+msgstr "Indeks"
 
 
 msgid "Visible"
@@ -4571,10 +4575,6 @@ msgid "Plane"
 msgstr "Płaszczyzna"
 
 
-msgid "Index"
-msgstr "Indeks"
-
-
 msgid "Scene"
 msgstr "Scena"
 
@@ -6684,10 +6684,6 @@ msgid "Col"
 msgstr "Kol"
 
 
-msgid "PreviewCol"
-msgstr "KolorPodglądu"
-
-
 msgid "TexturedCol"
 msgstr "TeksturowanyKolor"
 
@@ -6710,10 +6706,6 @@ msgstr "KluczKształtu"
 
 msgid "OS Loop"
 msgstr "OS Loop"
-
-
-msgid "PreviewLoopCol"
-msgstr "PreviewLoopCol"
 
 
 msgid "Not enough free memory"
@@ -7933,6 +7925,10 @@ msgstr "Nie mogę utworzyć pliku do eksportu"
 
 msgid "Can't overwrite export file"
 msgstr "Nie mogę nadpisać pliku do eksportu"
+
+
+msgid "Rigging"
+msgstr "Rigowanie"
 
 
 msgctxt "Mesh"
@@ -9266,6 +9262,10 @@ msgid "Update Dependencies"
 msgstr "Odśwież Zależności"
 
 
+msgid "Delete target variable"
+msgstr "Usuń docelową zmienną"
+
+
 msgid "F-Curve only has F-Modifiers"
 msgstr "Krzywa F ma tylko modyfikatory F"
 
@@ -9312,10 +9312,6 @@ msgstr "PODPOWIEDŹ: Użyj w zamian krzywych F dla animacji proceduralnych"
 
 msgid "F-Modifiers can generate curves for those too"
 msgstr "Modyfikatory-F mogą również tworzyć krzywe dla tych"
-
-
-msgid "Delete target variable"
-msgstr "Usuń docelową zmienną"
 
 
 msgid "<No ID>"
@@ -9578,6 +9574,10 @@ msgid "File '%s' could not be loaded"
 msgstr "Plik '%s' nie mógł być załadowany"
 
 
+msgid "Please select all related strips"
+msgstr "Proszę zaznaczyć wszystkie powiązane paski"
+
+
 msgid "Cannot apply effects to audio sequence strips"
 msgstr "Nie można zaaplikować efektów na dźwiękowe paski sekwencji"
 
@@ -9600,10 +9600,6 @@ msgstr "TODO: w jakich przypadkach tak się dzieje?"
 
 msgid "No valid inputs to swap"
 msgstr "Brak prawidłowych wejść do zamiany"
-
-
-msgid "Please select all related strips"
-msgstr "Proszę zaznaczyć wszystkie powiązane paski"
 
 
 msgid "Please select two strips"
@@ -11115,10 +11111,6 @@ msgstr "Dodaj Siatkę"
 
 msgid "Import-Export"
 msgstr "Import-Eksport"
-
-
-msgid "Rigging"
-msgstr "Rigowanie"
 
 
 msgid "English (English)"

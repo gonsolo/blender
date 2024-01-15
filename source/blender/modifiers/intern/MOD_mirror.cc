@@ -16,7 +16,7 @@
 #include "DNA_screen_types.h"
 
 #include "BKE_context.hh"
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_lib_query.h"
 #include "BKE_mesh_mirror.hh"
 #include "BKE_modifier.hh"
@@ -86,7 +86,7 @@ static Mesh *mirror_apply_on_axis(MirrorModifierData *mmd,
     if (vert_merge_map_len) {
       Mesh *tmp = result;
       result = geometry::mesh_merge_verts(
-          *tmp, MutableSpan<int>{vert_merge_map, result->totvert}, vert_merge_map_len, false);
+          *tmp, MutableSpan<int>{vert_merge_map, result->verts_num}, vert_merge_map_len, false);
       BKE_id_free(nullptr, tmp);
     }
     MEM_freeN(vert_merge_map);
@@ -145,7 +145,7 @@ static void panel_draw(const bContext * /*C*/, Panel *panel)
   PointerRNA *ptr = modifier_panel_get_property_pointers(panel, &ob_ptr);
   MirrorModifierData *mmd = (MirrorModifierData *)ptr->data;
   bool has_bisect = (mmd->flag &
-                     (MOD_MIR_BISECT_AXIS_X | MOD_MIR_BISECT_AXIS_X | MOD_MIR_BISECT_AXIS_X));
+                     (MOD_MIR_BISECT_AXIS_X | MOD_MIR_BISECT_AXIS_Y | MOD_MIR_BISECT_AXIS_Z));
 
   col = uiLayoutColumn(layout, false);
   uiLayoutSetPropSep(col, true);

@@ -20,7 +20,7 @@
 #include "BKE_attribute_math.hh"
 #include "BKE_brush.hh"
 #include "BKE_bvhutils.hh"
-#include "BKE_colortools.h"
+#include "BKE_colortools.hh"
 #include "BKE_context.hh"
 #include "BKE_crazyspace.hh"
 #include "BKE_curves.hh"
@@ -32,8 +32,6 @@
 #include "DNA_brush_enums.h"
 #include "DNA_brush_types.h"
 #include "DNA_curves_types.h"
-#include "DNA_mesh_types.h"
-#include "DNA_meshdata_types.h"
 #include "DNA_object_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -93,8 +91,6 @@ struct CombOperationExecutor {
   float brush_radius_factor_;
   float brush_strength_;
 
-  eBrushFalloffShape falloff_shape_;
-
   Object *curves_ob_orig_ = nullptr;
   Curves *curves_id_orig_ = nullptr;
   CurvesGeometry *curves_orig_ = nullptr;
@@ -130,12 +126,12 @@ struct CombOperationExecutor {
     brush_radius_factor_ = brush_radius_factor(*brush_, stroke_extension);
     brush_strength_ = brush_strength_get(*ctx_.scene, *brush_, stroke_extension);
 
-    falloff_shape_ = static_cast<eBrushFalloffShape>(brush_->falloff_shape);
+    const eBrushFalloffShape falloff_shape = eBrushFalloffShape(brush_->falloff_shape);
 
     transforms_ = CurvesSurfaceTransforms(*curves_ob_orig_, curves_id_orig_->surface);
 
     point_factors_ = *curves_orig_->attributes().lookup_or_default<float>(
-        ".selection", ATTR_DOMAIN_POINT, 1.0f);
+        ".selection", bke::AttrDomain::Point, 1.0f);
     curve_selection_ = curves::retrieve_selected_curves(*curves_id_orig_, selected_curve_memory_);
 
     brush_pos_prev_re_ = self_->brush_pos_last_re_;
@@ -143,7 +139,7 @@ struct CombOperationExecutor {
     brush_pos_diff_re_ = brush_pos_re_ - brush_pos_prev_re_;
 
     if (stroke_extension.is_first) {
-      if (falloff_shape_ == PAINT_FALLOFF_SHAPE_SPHERE) {
+      if (falloff_shape == PAINT_FALLOFF_SHAPE_SPHERE) {
         this->initialize_spherical_brush_reference_point();
       }
       self_->constraint_solver_.initialize(
@@ -165,10 +161,10 @@ struct CombOperationExecutor {
 
     Array<bool> changed_curves(curves_orig_->curves_num(), false);
 
-    if (falloff_shape_ == PAINT_FALLOFF_SHAPE_TUBE) {
+    if (falloff_shape == PAINT_FALLOFF_SHAPE_TUBE) {
       this->comb_projected_with_symmetry(changed_curves);
     }
-    else if (falloff_shape_ == PAINT_FALLOFF_SHAPE_SPHERE) {
+    else if (falloff_shape == PAINT_FALLOFF_SHAPE_SPHERE) {
       this->comb_spherical_with_symmetry(changed_curves);
     }
     else {
@@ -210,8 +206,7 @@ struct CombOperationExecutor {
         bke::crazyspace::get_evaluated_curves_deformation(*ctx_.depsgraph, *curves_ob_orig_);
     const OffsetIndices points_by_curve = curves_orig_->points_by_curve();
 
-    float4x4 projection;
-    ED_view3d_ob_project_mat_get(ctx_.rv3d, curves_ob_orig_, projection.ptr());
+    const float4x4 projection = ED_view3d_ob_project_mat_get(ctx_.rv3d, curves_ob_orig_);
 
     const float brush_radius_re = brush_radius_base_re_ * brush_radius_factor_;
     const float brush_radius_sq_re = pow2f(brush_radius_re);
@@ -237,9 +232,8 @@ struct CombOperationExecutor {
           const float3 old_symm_pos_cu = math::transform_point(brush_transform_inv, old_pos_cu);
 
           /* Find the position of the point in screen space. */
-          float2 old_symm_pos_re;
-          ED_view3d_project_float_v2_m4(
-              ctx_.region, old_symm_pos_cu, old_symm_pos_re, projection.ptr());
+          const float2 old_symm_pos_re = ED_view3d_project_float_v2_m4(
+              ctx_.region, old_symm_pos_cu, projection);
 
           const float distance_to_brush_sq_re = dist_squared_to_line_segment_v2(
               old_symm_pos_re, brush_pos_prev_re_, brush_pos_re_);
@@ -291,9 +285,6 @@ struct CombOperationExecutor {
    */
   void comb_spherical_with_symmetry(MutableSpan<bool> r_changed_curves)
   {
-    float4x4 projection;
-    ED_view3d_ob_project_mat_get(ctx_.rv3d, curves_ob_orig_, projection.ptr());
-
     float3 brush_start_wo, brush_end_wo;
     ED_view3d_win_to_3d(
         ctx_.v3d,

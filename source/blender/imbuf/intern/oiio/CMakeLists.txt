@@ -7,6 +7,7 @@ set(INC
   ..
   ../..
   ../../../blenkernel
+  ../../../../../intern/utfconv
 )
 
 set(INC_SYS
@@ -26,7 +27,6 @@ set(LIB
   PRIVATE bf::blenlib
   PRIVATE bf::dna
   PRIVATE bf::intern::guardedalloc
-  PRIVATE bf::intern::utfconv
 )
 
 if(WITH_PUGIXML)
@@ -36,6 +36,15 @@ if(WITH_PUGIXML)
 endif()
 
 if(WITH_IMAGE_OPENEXR)
+  # Keep until APPLE/ARM libraries are updated.
+  if(APPLE)
+    if(CMAKE_OSX_ARCHITECTURES MATCHES arm64)
+      list(APPEND INC_SYS
+        ${IMATH_INCLUDE_DIRS}
+      )
+    endif()
+  endif()
+
   list(APPEND INC_SYS
     ${OPENEXR_INCLUDE_DIRS}
   )

@@ -21,7 +21,7 @@
 #include "BKE_global.h"
 #include "BKE_idprop.h"
 #include "BKE_idtype.h"
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_lib_query.h"
 #include "BKE_main.hh"
 #include "BKE_object.hh"
@@ -379,7 +379,7 @@ WorkSpaceLayout *BKE_workspace_layout_add(Main *bmain,
   WorkSpaceLayout *layout = MEM_cnew<WorkSpaceLayout>(__func__);
 
   BLI_assert(!workspaces_is_screen_used(bmain, screen));
-#ifndef DEBUG
+#ifdef NDEBUG
   UNUSED_VARS(bmain);
 #endif
   layout->screen = screen;

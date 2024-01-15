@@ -29,6 +29,10 @@
 
 namespace blender::eevee {
 
+void *Instance::debug_scope_render_sample = nullptr;
+void *Instance::debug_scope_irradiance_setup = nullptr;
+void *Instance::debug_scope_irradiance_sample = nullptr;
+
 /* -------------------------------------------------------------------- */
 /** \name Initialization
  *
@@ -41,6 +45,7 @@ namespace blender::eevee {
 
 void Instance::init(const int2 &output_res,
                     const rcti *output_rect,
+                    const rcti *visible_rect,
                     RenderEngine *render_,
                     Depsgraph *depsgraph_,
                     Object *camera_object_,
@@ -90,6 +95,7 @@ void Instance::init(const int2 &output_res,
   reflection_probes.init();
   irradiance_cache.init();
   volume.init();
+  lookdev.init(visible_rect);
 }
 
 void Instance::init_light_bake(Depsgraph *depsgraph, draw::Manager *manager)
@@ -123,6 +129,7 @@ void Instance::init_light_bake(Depsgraph *depsgraph, draw::Manager *manager)
   reflection_probes.init();
   irradiance_cache.init();
   volume.init();
+  lookdev.init(&empty_rect);
 }
 
 void Instance::set_time(float time)
@@ -182,6 +189,7 @@ void Instance::begin_sync()
   render_buffers.sync();
   ambient_occlusion.sync();
   irradiance_cache.sync();
+  lookdev.sync();
 
   if (is_viewport() && velocity.camera_has_motion()) {
     sampling.reset();
@@ -288,7 +296,7 @@ void Instance::end_sync()
   reflection_probes.end_sync();
   planar_probes.end_sync();
 
-  global_ubo_.push_update();
+  uniform_data.push_update();
 
   depsgraph_last_update_ = DEG_get_update_count(depsgraph);
 }
@@ -355,11 +363,12 @@ bool Instance::do_planar_probe_sync() const
 /**
  * Conceptually renders one sample per pixel.
  * Everything based on random sampling should be done here (i.e: DRWViews jitter)
- **/
+ */
 void Instance::render_sample()
 {
   if (sampling.finished_viewport()) {
     film.display();
+    lookdev.display();
     return;
   }
 
@@ -368,12 +377,16 @@ void Instance::render_sample()
     render_sync();
   }
 
+  DebugScope debug_scope(debug_scope_render_sample, "EEVEE.render_sample");
+
   sampling.step();
 
   capture_view.render_world();
   capture_view.render_probes();
 
   main_view.render();
+
+  lookdev_view.render();
 
   motion_blur.step();
 }
@@ -486,9 +499,8 @@ void Instance::render_frame(RenderLayer *render_layer, const char *view_name)
   this->render_read_result(render_layer, view_name);
 }
 
-void Instance::draw_viewport(DefaultFramebufferList *dfbl)
+void Instance::draw_viewport()
 {
-  UNUSED_VARS(dfbl);
   render_sample();
   velocity.step_swap();
 
@@ -509,6 +521,14 @@ void Instance::draw_viewport(DefaultFramebufferList *dfbl)
     ss << "Optimizing Shaders (" << materials.queued_optimize_shaders_count << " remaining)";
     info = ss.str();
   }
+}
+
+void Instance::draw_viewport_image_render()
+{
+  while (!sampling.finished_viewport()) {
+    this->render_sample();
+  }
+  velocity.step_swap();
 }
 
 void Instance::store_metadata(RenderResult *render_result)
@@ -612,6 +632,8 @@ void Instance::light_bake_irradiance(
     render_sync();
     manager->end_sync();
 
+    DebugScope debug_scope(debug_scope_irradiance_setup, "EEVEE.irradiance_setup");
+
     capture_view.render_world();
 
     irradiance_cache.bake.surfels_create(probe);
@@ -633,7 +655,8 @@ void Instance::light_bake_irradiance(
   sampling.init(probe);
   while (!sampling.finished()) {
     context_wrapper([&]() {
-      GPU_debug_capture_begin();
+      DebugScope debug_scope(debug_scope_irradiance_sample, "EEVEE.irradiance_sample");
+
       /* Batch ray cast by pack of 16. Avoids too much overhead of the update function & context
        * switch. */
       /* TODO(fclem): Could make the number of iteration depend on the computation time. */
@@ -661,7 +684,6 @@ void Instance::light_bake_irradiance(
 
       float progress = sampling.sample_index() / float(sampling.sample_count());
       result_update(cache_frame, progress);
-      GPU_debug_capture_end();
     });
 
     if (stop()) {

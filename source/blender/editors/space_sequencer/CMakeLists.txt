@@ -9,6 +9,7 @@ set(INC
   ../../blentranslation
   ../../draw
   ../../gpu
+  ../../imbuf
   ../../makesrna
   ../../sequencer
   ../../windowmanager
@@ -25,6 +26,7 @@ set(SRC
   sequencer_buttons.cc
   sequencer_channels_draw.cc
   sequencer_channels_edit.cc
+  sequencer_clipboard.cc
   sequencer_drag_drop.cc
   sequencer_edit.cc
   sequencer_modifier.cc
@@ -44,6 +46,7 @@ set(SRC
 
   sequencer_intern.hh
   sequencer_quads_batch.hh
+  sequencer_scopes.hh
 )
 
 set(LIB
@@ -53,9 +56,9 @@ set(LIB
   PRIVATE bf::dna
   bf_editor_interface
   bf_editor_util
-  PRIVATE bf::imbuf
   PRIVATE bf::intern::atomic
   PRIVATE bf::intern::guardedalloc
+  PRIVATE bf::animrig
 )
 
 if(WITH_AUDASPACE)
@@ -69,6 +72,16 @@ if(WITH_AUDASPACE)
     )
   endif()
   add_definitions(-DWITH_AUDASPACE)
+endif()
+
+if(WITH_TBB)
+  add_definitions(-DWITH_TBB)
+  list(APPEND INC_SYS
+    ${TBB_INCLUDE_DIRS}
+  )
+  list(APPEND LIB
+    ${TBB_LIBRARIES}
+  )
 endif()
 
 

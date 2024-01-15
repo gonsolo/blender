@@ -10,8 +10,10 @@ set(INC
   ../../blenkernel
   ../../blentranslation
   ../../bmesh
+  ../../functions
   ../../geometry
   ../../gpu
+  ../../imbuf
   ../../makesrna
   ../../modifiers
   ../../render
@@ -29,6 +31,7 @@ set(SRC
   nodes/node_geo_attribute_capture.cc
   nodes/node_geo_attribute_domain_size.cc
   nodes/node_geo_attribute_statistic.cc
+  nodes/node_geo_bake.cc
   nodes/node_geo_blur_attribute.cc
   nodes/node_geo_boolean.cc
   nodes/node_geo_bounding_box.cc
@@ -75,11 +78,13 @@ set(SRC
   nodes/node_geo_extrude_mesh.cc
   nodes/node_geo_flip_faces.cc
   nodes/node_geo_geometry_to_instance.cc
+  nodes/node_geo_get_named_grid.cc
   nodes/node_geo_image.cc
   nodes/node_geo_image_info.cc
   nodes/node_geo_image_texture.cc
   nodes/node_geo_index_of_nearest.cc
   nodes/node_geo_index_switch.cc
+  nodes/node_geo_input_active_camera.cc
   nodes/node_geo_input_curve_handles.cc
   nodes/node_geo_input_curve_tilt.cc
   nodes/node_geo_input_edge_smooth.cc
@@ -174,8 +179,10 @@ set(SRC
   nodes/node_geo_set_spline_resolution.cc
   nodes/node_geo_simulation_input.cc
   nodes/node_geo_simulation_output.cc
+  nodes/node_geo_sort_elements.cc
   nodes/node_geo_split_to_instances.cc
   nodes/node_geo_store_named_attribute.cc
+  nodes/node_geo_store_named_grid.cc
   nodes/node_geo_string_join.cc
   nodes/node_geo_string_to_curves.cc
   nodes/node_geo_subdivision_surface.cc
@@ -205,9 +212,8 @@ set(LIB
   bf_bmesh
   PRIVATE bf::depsgraph
   PRIVATE bf::dna
-  PRIVATE bf::functions
+  bf_functions
   bf_geometry
-  PRIVATE bf::imbuf
   PRIVATE bf::intern::guardedalloc
   bf_nodes
   extern_fmtlib
@@ -257,6 +263,9 @@ if(WITH_GMP)
 endif()
 
 if(WITH_OPENVDB)
+  list(APPEND INC
+    ../../../../intern/openvdb
+  )
   list(APPEND INC_SYS
     ${OPENVDB_INCLUDE_DIRS}
   )
@@ -277,10 +286,7 @@ list(APPEND LIB
 blender_add_lib(bf_nodes_geometry "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
 target_link_libraries(bf_nodes_geometry_generated bf_nodes_geometry)
 
-if(WITH_UNITY_BUILD)
-  set_target_properties(bf_nodes_geometry PROPERTIES UNITY_BUILD ON)
-  set_target_properties(bf_nodes_geometry PROPERTIES UNITY_BUILD_BATCH_SIZE 10)
-endif()
+blender_set_target_unity_build(bf_nodes_geometry 10)
 
 # RNA_prototypes.h
 add_dependencies(bf_nodes_geometry bf_rna)

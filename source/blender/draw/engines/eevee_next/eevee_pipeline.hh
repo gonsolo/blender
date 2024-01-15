@@ -12,7 +12,9 @@
 
 #pragma once
 
-#include "DRW_render.h"
+#include "BLI_math_bits.h"
+
+#include "DRW_render.hh"
 #include "draw_shader_shared.h"
 
 #include "eevee_lut.hh"
@@ -175,25 +177,44 @@ struct DeferredLayerBase {
   PassMain::Sub *prepass_double_sided_moving_ps_ = nullptr;
 
   PassMain gbuffer_ps_ = {"Shading"};
+  /* Shaders that use the ClosureToRGBA node needs to be rendered first.
+   * Consider they hybrid forward and deferred. */
+  PassMain::Sub *gbuffer_single_sided_hybrid_ps_ = nullptr;
+  PassMain::Sub *gbuffer_double_sided_hybrid_ps_ = nullptr;
   PassMain::Sub *gbuffer_single_sided_ps_ = nullptr;
   PassMain::Sub *gbuffer_double_sided_ps_ = nullptr;
 
   /* Closures bits from the materials in this pass. */
   eClosureBits closure_bits_ = CLOSURE_NONE;
+  /* Maximum closure count considering all material in this pass. */
+  int closure_count_ = 0;
 
   /* Return the amount of gbuffer layer needed. */
   int closure_layer_count() const
   {
-    return count_bits_i(closure_bits_ &
-                        (CLOSURE_REFRACTION | CLOSURE_REFLECTION | CLOSURE_DIFFUSE | CLOSURE_SSS));
+    /* Diffuse and translucent require only one layer. */
+    int count = count_bits_i(closure_bits_ & (CLOSURE_DIFFUSE | CLOSURE_TRANSLUCENT));
+    /* SSS require an additional layer compared to diffuse. */
+    count += count_bits_i(closure_bits_ & CLOSURE_SSS);
+    /* Reflection and refraction can have at most two layers. */
+    count += 2 * count_bits_i(closure_bits_ & (CLOSURE_REFRACTION | CLOSURE_REFLECTION));
+    return count;
   }
 
   /* Return the amount of gbuffer layer needed. */
-  int color_layer_count() const
+  int normal_layer_count() const
   {
-    return count_bits_i(closure_bits_ &
-                        (CLOSURE_REFRACTION | CLOSURE_REFLECTION | CLOSURE_DIFFUSE));
+    /* TODO(fclem): We could count the number of different tangent frame in the shader and use
+     * min(tangent_frame_count, closure_count) once we have the normal reuse optimization.
+     * For now, allocate a split normal layer for each Closure. */
+    int count = count_bits_i(closure_bits_ & (CLOSURE_REFRACTION | CLOSURE_REFLECTION |
+                                              CLOSURE_DIFFUSE | CLOSURE_TRANSLUCENT));
+    /* Count the additional infos layer needed by some closures. */
+    count += count_bits_i(closure_bits_ & (CLOSURE_SSS | CLOSURE_TRANSLUCENT));
+    return count;
   }
+
+  void gbuffer_pass_sync(Instance &inst);
 };
 
 class DeferredPipeline;
@@ -203,6 +224,8 @@ class DeferredLayer : DeferredLayerBase {
 
  private:
   Instance &inst_;
+
+  static constexpr int max_lighting_tile_count_ = 128 * 128;
 
   /* Evaluate all light objects contribution. */
   PassSimple eval_light_ps_ = {"EvalLights"};
@@ -216,20 +239,27 @@ class DeferredLayer : DeferredLayerBase {
    * BSDF color and do additive blending for each of the lighting step.
    *
    * NOTE: Not to be confused with the render passes.
+   * NOTE: Using array of texture instead of texture array to allow to use TextureFromPool.
    */
-  TextureFromPool direct_diffuse_tx_ = {"direct_diffuse_tx"};
-  TextureFromPool direct_reflect_tx_ = {"direct_reflect_tx"};
-  TextureFromPool direct_refract_tx_ = {"direct_refract_tx"};
-  /* Reference to ray-tracing result. */
-  GPUTexture *indirect_diffuse_tx_ = nullptr;
-  GPUTexture *indirect_reflect_tx_ = nullptr;
-  GPUTexture *indirect_refract_tx_ = nullptr;
+  TextureFromPool direct_radiance_txs_[3] = {
+      {"direct_radiance_1"}, {"direct_radiance_2"}, {"direct_radiance_3"}};
+  Texture dummy_black_tx = {"dummy_black_tx"};
+  /* Reference to ray-tracing results. */
+  GPUTexture *indirect_radiance_txs_[3] = {nullptr};
+
+  /**
+   * Tile texture containing several bool per tile indicating presence of feature.
+   * It is used to select specialized shader for each tile.
+   */
+  Texture tile_mask_tx_ = {"tile_mask_tx_"};
 
   /* TODO(fclem): This should be a TextureFromPool. */
   Texture radiance_behind_tx_ = {"radiance_behind_tx"};
   /* TODO(fclem): This shouldn't be part of the pipeline but of the view. */
   Texture radiance_feedback_tx_ = {"radiance_feedback_tx"};
   float4x4 radiance_feedback_persmat_;
+
+  bool use_combined_lightprobe_eval = true;
 
  public:
   DeferredLayer(Instance &inst) : inst_(inst){};
@@ -260,6 +290,8 @@ class DeferredPipeline {
 
   PassSimple debug_draw_ps_ = {"debug_gbuffer"};
 
+  bool use_combined_lightprobe_eval;
+
  public:
   DeferredPipeline(Instance &inst)
       : opaque_layer_(inst), refraction_layer_(inst), volumetric_layer_(inst){};
@@ -286,9 +318,9 @@ class DeferredPipeline {
   }
 
   /* Return the maximum amount of gbuffer layer needed. */
-  int color_layer_count() const
+  int normal_layer_count() const
   {
-    return max_ii(opaque_layer_.color_layer_count(), refraction_layer_.color_layer_count());
+    return max_ii(opaque_layer_.normal_layer_count(), refraction_layer_.normal_layer_count());
   }
 
   void debug_draw(draw::View &view, GPUFrameBuffer *combined_fb);
@@ -502,9 +534,9 @@ class DeferredProbePipeline {
   }
 
   /* Return the maximum amount of gbuffer layer needed. */
-  int color_layer_count() const
+  int normal_layer_count() const
   {
-    return opaque_layer_.color_layer_count();
+    return opaque_layer_.normal_layer_count();
   }
 };
 
@@ -529,8 +561,11 @@ class PlanarProbePipeline : DeferredLayerBase {
   PassMain::Sub *prepass_add(::Material *material, GPUMaterial *gpumat);
   PassMain::Sub *material_add(::Material *material, GPUMaterial *gpumat);
 
-  void render(
-      View &view, Framebuffer &gbuffer, Framebuffer &combined_fb, int layer_id, int2 extent);
+  void render(View &view,
+              GPUTexture *depth_layer_tx,
+              Framebuffer &gbuffer,
+              Framebuffer &combined_fb,
+              int2 extent);
 };
 
 /** \} */
@@ -673,6 +708,7 @@ class PipelineModule {
 
   void begin_sync()
   {
+    data.is_probe_reflection = false;
     probe.begin_sync();
     planar.begin_sync();
     deferred.begin_sync();

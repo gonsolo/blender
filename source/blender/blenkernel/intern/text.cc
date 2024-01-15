@@ -36,7 +36,7 @@
 
 #include "BKE_bpath.h"
 #include "BKE_idtype.h"
-#include "BKE_lib_id.h"
+#include "BKE_lib_id.hh"
 #include "BKE_main.hh"
 #include "BKE_node.h"
 #include "BKE_text.h"
@@ -106,7 +106,7 @@ static void text_init_data(ID *id)
  *
  * WARNING! This function will not handle ID user count!
  *
- * \param flag: Copying options (see BKE_lib_id.h's LIB_ID_COPY_... flags for more).
+ * \param flag: Copying options (see BKE_lib_id.hh's LIB_ID_COPY_... flags for more).
  */
 static void text_copy_data(Main * /*bmain*/, ID *id_dst, const ID *id_src, const int /*flag*/)
 {
@@ -1283,7 +1283,6 @@ void txt_sel_line(Text *text)
 void txt_sel_set(Text *text, int startl, int startc, int endl, int endc)
 {
   TextLine *froml, *tol;
-  int fromllen, tollen;
 
   /* Support negative indices. */
   if (startl < 0 || endl < 0) {
@@ -1312,19 +1311,15 @@ void txt_sel_set(Text *text, int startl, int startc, int endl, int endc)
     }
   }
 
-  fromllen = BLI_strlen_utf8(froml->line);
-  tollen = BLI_strlen_utf8(tol->line);
-
   /* Support negative indices. */
   if (startc < 0) {
-    startc = fromllen + startc + 1;
+    const int fromllen = BLI_strlen_utf8(froml->line);
+    startc = std::max(0, fromllen + startc + 1);
   }
   if (endc < 0) {
-    endc = tollen + endc + 1;
+    const int tollen = BLI_strlen_utf8(tol->line);
+    endc = std::max(0, tollen + endc + 1);
   }
-
-  CLAMP(startc, 0, fromllen);
-  CLAMP(endc, 0, tollen);
 
   text->curl = froml;
   text->curc = BLI_str_utf8_offset_from_index(froml->line, froml->len, startc);
@@ -2370,7 +2365,7 @@ int text_check_identifier_nodigit_unicode(const uint ch)
 {
   return (ch < 255 && text_check_identifier_nodigit(char(ch)));
 }
-#endif /* WITH_PYTHON */
+#endif /* !WITH_PYTHON */
 
 bool text_check_whitespace(const char ch)
 {
