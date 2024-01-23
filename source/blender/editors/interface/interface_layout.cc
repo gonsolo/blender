@@ -6,6 +6,7 @@
  * \ingroup edinterface
  */
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <cstdlib>
@@ -1311,7 +1312,7 @@ static void ui_item_menu_hold(bContext *C, ARegion *butregion, uiBut *but)
   block->flag |= UI_BLOCK_POPUP_HOLD;
 
   char direction = UI_DIR_DOWN;
-  if (!but->drawstr[0]) {
+  if (but->drawstr.empty()) {
     switch (RGN_ALIGN_ENUM_FROM_MASK(butregion->alignment)) {
       case RGN_ALIGN_LEFT:
         direction = UI_DIR_RIGHT;
@@ -2536,7 +2537,7 @@ void uiItemFullR(uiLayout *layout,
 
   /* ensure text isn't added to icon_only buttons */
   if (but && icon_only) {
-    BLI_assert(but->str[0] == '\0');
+    BLI_assert(but->str.empty());
   }
 }
 
@@ -2863,7 +2864,7 @@ uiBut *ui_but_add_search(uiBut *but,
     if (RNA_property_type(prop) == PROP_ENUM) {
       /* XXX, this will have a menu string,
        * but in this case we just want the text */
-      but->str[0] = 0;
+      but->str.clear();
     }
 
     UI_but_func_search_set_results_are_suggestions(but, results_are_suggestions);
@@ -3602,7 +3603,7 @@ static int menu_item_enum_opname_menu_active(bContext *C, uiBut *but, MenuItemLe
   WM_operator_properties_sanitize(&ptr, false);
   PropertyRNA *prop = RNA_struct_find_property(&ptr, lvl->propname);
   RNA_property_enum_items_gettexted(C, &ptr, prop, &item_array, &totitem, &free);
-  int active = RNA_enum_from_name(item_array, but->str);
+  int active = RNA_enum_from_name(item_array, but->str.c_str());
   if (free) {
     MEM_freeN((void *)item_array);
   }
@@ -4302,7 +4303,7 @@ static void ui_litem_estimate_column_flow(uiLayout *litem)
   int totitem = 0;
   LISTBASE_FOREACH (uiItem *, item, &litem->items) {
     ui_item_size(item, &itemw, &itemh);
-    maxw = MAX2(maxw, itemw);
+    maxw = std::max(maxw, itemw);
     toth += itemh;
     totitem++;
   }
@@ -5405,7 +5406,7 @@ static bool block_search_panel_label_matches(const uiBlock *block, const char *s
 static bool button_matches_search_filter(uiBut *but, const char *search_filter)
 {
   /* Do the shorter checks first for better performance in case there is a match. */
-  if (BLI_strcasestr(but->str, search_filter)) {
+  if (BLI_strcasestr(but->str.c_str(), search_filter)) {
     return true;
   }
 
@@ -5891,7 +5892,7 @@ void ui_layout_add_but(uiLayout *layout, uiBut *but)
   ui_item_size((uiItem *)bitem, &w, &h);
   /* XXX uiBut hasn't scaled yet
    * we can flag the button as not expandable, depending on its size */
-  if (w <= 2 * UI_UNIT_X && (!but->str || but->str[0] == '\0')) {
+  if (w <= 2 * UI_UNIT_X && but->str.empty()) {
     bitem->item.flag |= UI_ITEM_FIXED_SIZE;
   }
 
@@ -6114,7 +6115,7 @@ wmOperatorType *UI_but_operatortype_get_from_enum_menu(uiBut *but, PropertyRNA *
   return nullptr;
 }
 
-MenuType *UI_but_menutype_get(uiBut *but)
+MenuType *UI_but_menutype_get(const uiBut *but)
 {
   if (but->menu_create_func == ui_item_menutype_func) {
     return (MenuType *)but->poin;
@@ -6122,7 +6123,7 @@ MenuType *UI_but_menutype_get(uiBut *but)
   return nullptr;
 }
 
-PanelType *UI_but_paneltype_get(uiBut *but)
+PanelType *UI_but_paneltype_get(const uiBut *but)
 {
   if (but->menu_create_func == ui_item_paneltype_func) {
     return (PanelType *)but->poin;
@@ -6166,7 +6167,7 @@ static bool ui_layout_has_panel_label(const uiLayout *layout, const PanelType *p
     if (subitem->type == ITEM_BUTTON) {
       uiButtonItem *bitem = (uiButtonItem *)subitem;
       if (!(bitem->but->flag & UI_HIDDEN) &&
-          STREQ(bitem->but->str, CTX_IFACE_(pt->translation_context, pt->label)))
+          bitem->but->str == CTX_IFACE_(pt->translation_context, pt->label))
       {
         return true;
       }
@@ -6264,7 +6265,7 @@ static void ui_layout_introspect_button(DynStr *ds, uiButtonItem *bitem)
 {
   uiBut *but = bitem->but;
   BLI_dynstr_appendf(ds, "'type':%d, ", int(but->type));
-  BLI_dynstr_appendf(ds, "'draw_string':'''%s''', ", but->drawstr);
+  BLI_dynstr_appendf(ds, "'draw_string':'''%s''', ", but->drawstr.c_str());
   /* Not exactly needed, rna has this. */
   BLI_dynstr_appendf(ds, "'tip':'''%s''', ", but->tip ? but->tip : "");
 
@@ -6382,7 +6383,7 @@ uiLayout *uiItemsAlertBox(uiBlock *block, const int size, const eAlertIcon icon)
 {
   const uiStyle *style = UI_style_get_dpi();
   const short icon_size = 64 * UI_SCALE_FAC;
-  const int text_points_max = MAX2(style->widget.points, style->widgetlabel.points);
+  const int text_points_max = std::max(style->widget.points, style->widgetlabel.points);
   const int dialog_width = icon_size + (text_points_max * size * UI_SCALE_FAC);
   /* By default, the space between icon and text/buttons will be equal to the 'columnspace',
    * this extra padding will add some space by increasing the left column width,

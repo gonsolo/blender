@@ -36,6 +36,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "ED_sculpt.hh"
+
 #include "sculpt_intern.hh"
 
 #include "RNA_access.hh"
@@ -1400,7 +1402,8 @@ static void cloth_filter_apply_forces_task(Object *ob,
     auto_mask::node_update(automask_data, vd);
 
     float fade = vd.mask;
-    fade *= auto_mask::factor_get(ss->filter_cache->automasking, ss, vd.vertex, &automask_data);
+    fade *= auto_mask::factor_get(
+        ss->filter_cache->automasking.get(), ss, vd.vertex, &automask_data);
     fade = 1.0f - fade;
     float force[3] = {0.0f, 0.0f, 0.0f};
     float disp[3], temp[3], transform[3][3];
@@ -1537,6 +1540,10 @@ static int sculpt_cloth_filter_invoke(bContext *C, wmOperator *op, const wmEvent
 
   /* Needs mask data to be available as it is used when solving the constraints. */
   BKE_sculpt_update_object_for_edit(depsgraph, ob, false);
+
+  if (ED_sculpt_report_if_shape_key_is_locked(ob, op->reports)) {
+    return OPERATOR_CANCELLED;
+  }
 
   SCULPT_stroke_id_next(ob);
 

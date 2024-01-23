@@ -18,8 +18,8 @@
 #include "DNA_color_types.h"
 #include "DNA_defs.h"
 #include "DNA_listBase.h"
-#include "DNA_session_uuid_types.h" /* for #SessionUUID */
-#include "DNA_vec_types.h"          /* for #rctf */
+#include "DNA_session_uid_types.h" /* for #SessionUID */
+#include "DNA_vec_types.h"         /* for #rctf */
 
 struct Ipo;
 struct MovieClip;
@@ -139,7 +139,7 @@ typedef struct SeqRetimingKey {
 } SeqRetimingKey;
 
 typedef struct SequenceRuntime {
-  SessionUUID session_uuid;
+  SessionUID session_uid;
 } SequenceRuntime;
 
 /**
@@ -643,7 +643,7 @@ enum {
 };
 
 /**
- * \warning has to be same as `IMB_imbuf.h`: `IMB_PROXY_*` and `IMB_TC_*`.
+ * \warning has to be same as `IMB_imbuf.hh`: `IMB_PROXY_*` and `IMB_TC_*`.
  */
 enum {
   SEQ_PROXY_IMAGE_SIZE_25 = 1 << 0,
@@ -653,7 +653,7 @@ enum {
 };
 
 /**
- * \warning has to be same as `IMB_imbuf.h`: `IMB_TC_*`.
+ * \warning has to be same as `IMB_imbuf.hh`: `IMB_TC_*`.
  */
 enum {
   SEQ_PROXY_TC_NONE = 0,

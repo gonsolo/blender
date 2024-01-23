@@ -24,7 +24,7 @@
 #include "BKE_deform.h"
 #include "BKE_editmesh.hh"
 #include "BKE_lib_id.hh"
-#include "BKE_lib_query.h"
+#include "BKE_lib_query.hh"
 #include "BKE_mesh.hh"
 #include "BKE_mesh_runtime.hh"
 #include "BKE_mesh_wrapper.hh"
@@ -1367,7 +1367,7 @@ static void deformVert(void *__restrict userdata,
 
   int max_verts = 0;
   for (int j = 0; j < sdbind_num; j++) {
-    max_verts = MAX2(max_verts, sdbind[j].verts_num);
+    max_verts = std::max(max_verts, int(sdbind[j].verts_num));
   }
 
   /* Allocate a `coords_buffer` that fits all the temp-data. */
@@ -1745,4 +1745,5 @@ ModifierTypeInfo modifierType_SurfaceDeform = {
     /*panel_register*/ panel_register,
     /*blend_write*/ blend_write,
     /*blend_read*/ blend_read,
+    /*foreach_cache*/ nullptr,
 };

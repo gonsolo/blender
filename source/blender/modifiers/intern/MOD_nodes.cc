@@ -47,7 +47,7 @@
 #include "BKE_global.h"
 #include "BKE_idprop.hh"
 #include "BKE_lib_id.hh"
-#include "BKE_lib_query.h"
+#include "BKE_lib_query.hh"
 #include "BKE_main.hh"
 #include "BKE_mesh.hh"
 #include "BKE_modifier.hh"
@@ -1565,7 +1565,7 @@ static NodesModifierData *get_modifier_data(Main &bmain,
     return nullptr;
   }
 
-  const Object *object = (Object *)BKE_libblock_find_session_uuid(
+  const Object *object = (Object *)BKE_libblock_find_session_uid(
       &bmain, ID_OB, data.object_session_uid);
   if (object == nullptr) {
     return nullptr;
@@ -1702,7 +1702,7 @@ static void add_attribute_search_button(const bContext &C,
   }
 
   AttributeSearchData *data = MEM_new<AttributeSearchData>(__func__);
-  data->object_session_uid = object->id.session_uuid;
+  data->object_session_uid = object->id.session_uid;
   STRNCPY(data->modifier_name, nmd.modifier.name);
   STRNCPY(data->socket_identifier, socket.identifier);
   data->is_output = is_output;
@@ -1931,37 +1931,48 @@ static void draw_interface_panel_content(const bContext *C,
   }
 }
 
+static bool has_output_attribute(const NodesModifierData &nmd)
+{
+  if (!nmd.node_group) {
+    return false;
+  }
+  for (const bNodeTreeInterfaceSocket *interface_socket : nmd.node_group->interface_outputs()) {
+    const bNodeSocketType *typeinfo = interface_socket->socket_typeinfo();
+    const eNodeSocketDatatype type = typeinfo ? eNodeSocketDatatype(typeinfo->type) : SOCK_CUSTOM;
+    if (nodes::socket_type_has_attribute_toggle(type)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static void draw_output_attributes_panel(const bContext *C,
                                          uiLayout *layout,
                                          const NodesModifierData &nmd,
                                          PointerRNA *ptr)
 {
-  bool has_output_attribute = false;
   if (nmd.node_group != nullptr && nmd.settings.properties != nullptr) {
     for (const bNodeTreeInterfaceSocket *socket : nmd.node_group->interface_outputs()) {
       const bNodeSocketType *typeinfo = socket->socket_typeinfo();
       const eNodeSocketDatatype type = typeinfo ? eNodeSocketDatatype(typeinfo->type) :
                                                   SOCK_CUSTOM;
       if (nodes::socket_type_has_attribute_toggle(type)) {
-        has_output_attribute = true;
         draw_property_for_output_socket(*C, layout, nmd, ptr, *socket);
       }
     }
   }
-  if (!has_output_attribute) {
-    uiItemL(layout, RPT_("No group output attributes connected"), ICON_INFO);
-  }
 }
 
-static void draw_internal_dependencies_panel(uiLayout *layout,
-                                             PointerRNA *ptr,
-                                             const NodesModifierData &nmd)
+static void draw_bake_panel(uiLayout *layout, PointerRNA *modifier_ptr)
 {
   uiLayout *col = uiLayoutColumn(layout, false);
   uiLayoutSetPropSep(col, true);
   uiLayoutSetPropDecorate(col, false);
-  uiItemR(col, ptr, "bake_directory", UI_ITEM_NONE, IFACE_("Bake"), ICON_NONE);
+  uiItemR(col, modifier_ptr, "bake_directory", UI_ITEM_NONE, IFACE_("Bake Path"), ICON_NONE);
+}
 
+static void draw_named_attributes_panel(uiLayout *layout, NodesModifierData &nmd)
+{
   geo_log::GeoTreeLog *tree_log = get_root_tree_log(nmd);
   if (tree_log == nullptr) {
     return;
@@ -2026,6 +2037,23 @@ static void draw_internal_dependencies_panel(uiLayout *layout,
   }
 }
 
+static void draw_manage_panel(const bContext *C,
+                              uiLayout *layout,
+                              PointerRNA *modifier_ptr,
+                              NodesModifierData &nmd)
+{
+  if (uiLayout *panel_layout = uiLayoutPanel(
+          C, layout, IFACE_("Bake"), modifier_ptr, "open_bake_panel"))
+  {
+    draw_bake_panel(panel_layout, modifier_ptr);
+  }
+  if (uiLayout *panel_layout = uiLayoutPanel(
+          C, layout, IFACE_("Named Attributes"), modifier_ptr, "open_named_attributes_panel"))
+  {
+    draw_named_attributes_panel(panel_layout, nmd);
+  }
+}
+
 static void panel_draw(const bContext *C, Panel *panel)
 {
   uiLayout *layout = panel->layout;
@@ -2069,15 +2097,17 @@ static void panel_draw(const bContext *C, Panel *panel)
 
   modifier_panel_end(layout, ptr);
 
-  if (uiLayout *panel_layout = uiLayoutPanel(
-          C, layout, IFACE_("Output Attributes"), ptr, "open_output_attributes_panel"))
-  {
-    draw_output_attributes_panel(C, panel_layout, *nmd, ptr);
+  if (has_output_attribute(*nmd)) {
+    if (uiLayout *panel_layout = uiLayoutPanel(
+            C, layout, IFACE_("Output Attributes"), ptr, "open_output_attributes_panel"))
+    {
+      draw_output_attributes_panel(C, panel_layout, *nmd, ptr);
+    }
   }
   if (uiLayout *panel_layout = uiLayoutPanel(
-          C, layout, IFACE_("Internal Dependencies"), ptr, "open_internal_dependencies_panel"))
+          C, layout, IFACE_("Manage"), ptr, "open_manage_panel"))
   {
-    draw_internal_dependencies_panel(panel_layout, ptr, *nmd);
+    draw_manage_panel(C, panel_layout, ptr, *nmd);
   }
 }
 
@@ -2264,4 +2294,5 @@ ModifierTypeInfo modifierType_Nodes = {
     /*panel_register*/ blender::panel_register,
     /*blend_write*/ blender::blend_write,
     /*blend_read*/ blender::blend_read,
+    /*foreach_cache*/ nullptr,
 };

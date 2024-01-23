@@ -2655,10 +2655,11 @@ class BatchRenameAction(bpy.types.PropertyGroup):
 
 
 class WM_OT_batch_rename(Operator):
+    """Rename multiple items at once"""
+
     bl_idname = "wm.batch_rename"
     bl_label = "Batch Rename"
 
-    bl_description = "Rename multiple items at once"
     bl_options = {'UNDO'}
 
     data_type: EnumProperty(
@@ -3228,7 +3229,7 @@ class WM_MT_splash_quick_setup(Menu):
             )
             col.operator(
                 "wm.url_open", text="See What's New...", icon='URL',
-            ).url = "https://wiki.blender.org/wiki/Reference/Release_Notes/4.0"
+            ).url = "https://developer.blender.org/docs/release_notes/%d.%d" % bpy.app.version[:2]
             col.separator(factor=2.0)
 
         if can_import:

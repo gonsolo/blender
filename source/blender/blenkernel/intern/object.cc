@@ -95,13 +95,13 @@
 #include "BKE_gpencil_modifier_legacy.h"
 #include "BKE_grease_pencil.hh"
 #include "BKE_idprop.h"
-#include "BKE_idtype.h"
+#include "BKE_idtype.hh"
 #include "BKE_image.h"
 #include "BKE_key.h"
 #include "BKE_lattice.hh"
 #include "BKE_layer.h"
 #include "BKE_lib_id.hh"
-#include "BKE_lib_query.h"
+#include "BKE_lib_query.hh"
 #include "BKE_lib_remap.hh"
 #include "BKE_light.h"
 #include "BKE_lightprobe.h"
@@ -587,6 +587,22 @@ static void object_foreach_path(ID *id, BPathForeachPathData *bpath_data)
   }
 }
 
+static void object_foreach_cache(ID *id,
+                                 IDTypeForeachCacheFunctionCallback function_callback,
+                                 void *user_data)
+{
+  Object *ob = reinterpret_cast<Object *>(id);
+  LISTBASE_FOREACH (ModifierData *, md, &ob->modifiers) {
+    if (const ModifierTypeInfo *info = BKE_modifier_get_info(ModifierType(md->type))) {
+      if (info->foreach_cache) {
+        info->foreach_cache(ob, md, [&](const IDCacheKey &cache_key, void **cache_p, uint flags) {
+          function_callback(id, &cache_key, cache_p, flags, user_data);
+        });
+      }
+    }
+  }
+}
+
 static void object_blend_write(BlendWriter *writer, ID *id, const void *id_address)
 {
   Object *ob = (Object *)id;
@@ -1069,7 +1085,7 @@ IDTypeInfo IDType_ID_OB = {
     /*free_data*/ object_free_data,
     /*make_local*/ nullptr,
     /*foreach_id*/ object_foreach_id,
-    /*foreach_cache*/ nullptr,
+    /*foreach_cache*/ object_foreach_cache,
     /*foreach_path*/ object_foreach_path,
     /*owner_pointer_get*/ nullptr,
 
@@ -5320,10 +5336,10 @@ void BKE_object_to_curve_clear(Object *object)
   object->runtime->object_as_temp_curve = nullptr;
 }
 
-void BKE_object_check_uuids_unique_and_report(const Object *object)
+void BKE_object_check_uids_unique_and_report(const Object *object)
 {
-  BKE_pose_check_uuids_unique_and_report(object->pose);
-  BKE_modifier_check_uuids_unique_and_report(object);
+  BKE_pose_check_uids_unique_and_report(object->pose);
+  BKE_modifier_check_uids_unique_and_report(object);
 }
 
 SubsurfModifierData *BKE_object_get_last_subsurf_modifier(const Object *ob)

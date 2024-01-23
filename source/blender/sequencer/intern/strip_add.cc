@@ -8,6 +8,7 @@
  * \ingroup bke
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -34,10 +35,10 @@
 
 #include "DEG_depsgraph_query.hh"
 
-#include "IMB_colormanagement.h"
-#include "IMB_imbuf.h"
-#include "IMB_imbuf_types.h"
-#include "IMB_metadata.h"
+#include "IMB_colormanagement.hh"
+#include "IMB_imbuf.hh"
+#include "IMB_imbuf_types.hh"
+#include "IMB_metadata.hh"
 
 #include "SEQ_add.hh"
 #include "SEQ_edit.hh"
@@ -323,7 +324,7 @@ Sequence *SEQ_add_sound_strip(Main *bmain, Scene *scene, ListBase *seqbase, SeqL
    * nearest frame as the audio track usually overshoots or undershoots the
    * end frame of the video by a little bit.
    * See #47135 for under shoot example. */
-  seq->len = MAX2(1, round((info.length - sound->offset_time) * FPS));
+  seq->len = std::max(1, int(round((info.length - sound->offset_time) * FPS)));
 
   Strip *strip = seq->strip;
   /* We only need 1 element to store the filename. */

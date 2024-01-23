@@ -6,6 +6,7 @@
  * \ingroup sptext
  */
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <sstream>
@@ -19,10 +20,9 @@
 #include "BLI_math_vector.h"
 #include "BLI_string_cursor_utf8.h"
 #include "BLI_string_utf8.h"
+#include "BLI_time.h"
 
 #include "BLT_translation.h"
-
-#include "PIL_time.h"
 
 #include "BKE_context.hh"
 #include "BKE_lib_id.hh"
@@ -1768,7 +1768,7 @@ static int space_text_get_cursor_rel(
 
   for (i = 0, j = 0; loop; j += BLI_str_utf8_size_safe(linein->line + j)) {
     int chars;
-    int columns = BLI_str_utf8_char_width_safe(linein->line + j); /* = 1 for tab */
+    const int columns = BLI_str_utf8_char_width_safe(linein->line + j); /* = 1 for tab */
 
     /* Mimic replacement of tabs */
     ch = linein->line[j];
@@ -1791,7 +1791,7 @@ static int space_text_get_cursor_rel(
         curs = j;
       }
       if (i + columns - start > max) {
-        end = MIN2(end, i);
+        end = std::min(end, i);
 
         if (found) {
           /* exact cursor position was found, check if it's */
@@ -1972,7 +1972,7 @@ static void txt_wrap_move_bol(SpaceText *st, ARegion *region, const bool sel)
 
   for (i = 0, j = 0; loop; j += BLI_str_utf8_size_safe((*linep)->line + j)) {
     int chars;
-    int columns = BLI_str_utf8_char_width_safe((*linep)->line + j); /* = 1 for tab */
+    const int columns = BLI_str_utf8_char_width_safe((*linep)->line + j); /* = 1 for tab */
 
     /* Mimic replacement of tabs */
     ch = (*linep)->line[j];
@@ -1986,7 +1986,7 @@ static void txt_wrap_move_bol(SpaceText *st, ARegion *region, const bool sel)
 
     while (chars--) {
       if (i + columns - start > max) {
-        end = MIN2(end, i);
+        end = std::min(end, i);
 
         *charp = endj;
 
@@ -2059,7 +2059,7 @@ static void txt_wrap_move_eol(SpaceText *st, ARegion *region, const bool sel)
 
   for (i = 0, j = 0; loop; j += BLI_str_utf8_size_safe((*linep)->line + j)) {
     int chars;
-    int columns = BLI_str_utf8_char_width_safe((*linep)->line + j); /* = 1 for tab */
+    const int columns = BLI_str_utf8_char_width_safe((*linep)->line + j); /* = 1 for tab */
 
     /* Mimic replacement of tabs */
     ch = (*linep)->line[j];
@@ -2073,7 +2073,7 @@ static void txt_wrap_move_eol(SpaceText *st, ARegion *region, const bool sel)
 
     while (chars--) {
       if (i + columns - start > max) {
-        end = MIN2(end, i);
+        end = std::min(end, i);
 
         if (chop) {
           endj = BLI_str_find_prev_char_utf8((*linep)->line + j, (*linep)->line) - (*linep)->line;
@@ -3063,12 +3063,9 @@ static int flatten_width(SpaceText *st, const char *str)
   int total = 0;
 
   for (int i = 0; str[i]; i += BLI_str_utf8_size_safe(str + i)) {
-    if (str[i] == '\t') {
-      total += st->tabnumber - total % st->tabnumber;
-    }
-    else {
-      total += BLI_str_utf8_char_width_safe(str + i);
-    }
+    const int columns = (str[i] == '\t') ? (st->tabnumber - total % st->tabnumber) :
+                                           BLI_str_utf8_char_width_safe(str + i);
+    total += columns;
   }
 
   return total;
@@ -3076,16 +3073,11 @@ static int flatten_width(SpaceText *st, const char *str)
 
 static int flatten_column_to_offset(SpaceText *st, const char *str, int index)
 {
-  int i = 0, j = 0, col;
+  int i = 0, j = 0;
 
   while (*(str + j)) {
-    if (str[j] == '\t') {
-      col = st->tabnumber - i % st->tabnumber;
-    }
-    else {
-      col = BLI_str_utf8_char_width_safe(str + j);
-    }
-
+    const int col = (str[j] == '\t') ? (st->tabnumber - i % st->tabnumber) :
+                                       BLI_str_utf8_char_width_safe(str + j);
     if (i + col > index) {
       break;
     }
@@ -3142,7 +3134,7 @@ static void space_text_cursor_set_to_pos_wrapped(
          j += BLI_str_utf8_size_safe(linep->line + j))
     {
       int chars;
-      int columns = BLI_str_utf8_char_width_safe(linep->line + j); /* = 1 for tab */
+      const int columns = BLI_str_utf8_char_width_safe(linep->line + j); /* = 1 for tab */
 
       /* Mimic replacement of tabs */
       if (ch == '\t') {
@@ -3173,7 +3165,7 @@ static void space_text_cursor_set_to_pos_wrapped(
           curs = j;
         }
         if (i + columns - start > max) {
-          end = MIN2(end, i);
+          end = std::min(end, i);
 
           if (found) {
             /* exact cursor position was found, check if it's still on needed line
@@ -3528,7 +3520,7 @@ static int text_line_number_invoke(bContext *C, wmOperator * /*op*/, const wmEve
     return OPERATOR_PASS_THROUGH;
   }
 
-  time = PIL_check_seconds_timer();
+  time = BLI_check_seconds_timer();
   if (last_jump < time - 1) {
     jump_to = 0;
   }
