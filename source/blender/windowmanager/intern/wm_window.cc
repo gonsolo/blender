@@ -37,7 +37,7 @@
 #include "BKE_context.hh"
 #include "BKE_global.h"
 #include "BKE_icons.h"
-#include "BKE_layer.h"
+#include "BKE_layer.hh"
 #include "BKE_main.hh"
 #include "BKE_report.h"
 #include "BKE_screen.hh"
@@ -72,7 +72,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 
-#include "BLF_api.h"
+#include "BLF_api.hh"
 #include "GPU_batch.h"
 #include "GPU_batch_presets.h"
 #include "GPU_context.h"

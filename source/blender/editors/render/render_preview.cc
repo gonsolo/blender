@@ -52,7 +52,7 @@
 #include "BKE_icons.h"
 #include "BKE_idprop.h"
 #include "BKE_image.h"
-#include "BKE_layer.h"
+#include "BKE_layer.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_light.h"
 #include "BKE_main.hh"
@@ -1332,10 +1332,11 @@ static ImBuf *icon_preview_imbuf_from_brush(Brush *brush)
 
     /* Otherwise lets try to find it in other directories. */
     if (!(brush->icon_imbuf)) {
-      const char *brushicons_dir = BKE_appdir_folder_id(BLENDER_DATAFILES, "brushicons");
+      const std::optional<std::string> brushicons_dir = BKE_appdir_folder_id(BLENDER_DATAFILES,
+                                                                             "brushicons");
       /* Expected to be found, but don't crash if it's not. */
-      if (brushicons_dir) {
-        BLI_path_join(filepath, sizeof(filepath), brushicons_dir, brush->icon_filepath);
+      if (brushicons_dir.has_value()) {
+        BLI_path_join(filepath, sizeof(filepath), brushicons_dir->c_str(), brush->icon_filepath);
 
         /* Use default color spaces. */
         brush->icon_imbuf = IMB_loadiffname(filepath, flags, nullptr);

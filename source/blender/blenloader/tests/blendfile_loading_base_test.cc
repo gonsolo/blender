@@ -12,15 +12,15 @@
 #include "BKE_global.h"
 #include "BKE_idtype.hh"
 #include "BKE_image.h"
-#include "BKE_layer.h"
+#include "BKE_layer.hh"
 #include "BKE_main.hh"
-#include "BKE_mball_tessellate.h"
+#include "BKE_mball_tessellate.hh"
 #include "BKE_modifier.hh"
 #include "BKE_node.hh"
 #include "BKE_scene.h"
 #include "BKE_vfont.hh"
 
-#include "BLF_api.h"
+#include "BLF_api.hh"
 
 #include "BLI_path_util.h"
 #include "BLI_threads.h"

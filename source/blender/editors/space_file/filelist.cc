@@ -22,13 +22,12 @@
 #  include <io.h>
 #endif
 
-#include "AS_asset_library.h"
 #include "AS_asset_library.hh"
 #include "AS_asset_representation.hh"
 
 #include "MEM_guardedalloc.h"
 
-#include "BLF_api.h"
+#include "BLF_api.hh"
 
 #include "BLI_blenlib.h"
 #include "BLI_fileops.h"
@@ -1948,9 +1947,9 @@ void filelist_free(FileList *filelist)
   filelist->flags &= ~(FL_NEED_SORTING | FL_NEED_FILTERING);
 }
 
-AssetLibrary *filelist_asset_library(FileList *filelist)
+blender::asset_system::AssetLibrary *filelist_asset_library(FileList *filelist)
 {
-  return reinterpret_cast<::AssetLibrary *>(filelist->asset_library);
+  return filelist->asset_library;
 }
 
 void filelist_freelib(FileList *filelist)

@@ -21,6 +21,7 @@
 #include "BLI_lasso_2d.h"
 #include "BLI_math_color.h"
 #include "BLI_math_matrix.h"
+#include "BLI_math_vector.hh"
 #include "BLI_rand.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
@@ -43,7 +44,7 @@
 #include "BKE_collection.h"
 #include "BKE_colortools.hh"
 #include "BKE_context.hh"
-#include "BKE_deform.h"
+#include "BKE_deform.hh"
 #include "BKE_gpencil_curve_legacy.h"
 #include "BKE_gpencil_geom_legacy.h"
 #include "BKE_gpencil_legacy.h"
@@ -2893,7 +2894,7 @@ static void gpencil_sbuffer_vertex_color_random(
     int ix = int(tpt->m_xy[0] * seed);
     int iy = int(tpt->m_xy[1] * seed);
     int iz = ix + iy * seed;
-    float hsv[3];
+    blender::float3 hsv;
     float factor_value[3];
     zero_v3(factor_value);
 
@@ -2960,7 +2961,7 @@ static void gpencil_sbuffer_vertex_color_random(
       hsv[0] -= 1.0f;
     }
 
-    CLAMP3(hsv, 0.0f, 1.0f);
+    hsv = blender::math::clamp(hsv, 0.0f, 1.0f);
     hsv_to_rgb_v(hsv, tpt->vert_color);
   }
 }
@@ -3050,10 +3051,10 @@ void ED_gpencil_projected_2d_bound_box(const GP_SpaceConversion *gsc,
 
   /* Ensure the bounding box is oriented to axis. */
   if (r_max[0] < r_min[0]) {
-    SWAP(float, r_min[0], r_max[0]);
+    std::swap(r_min[0], r_max[0]);
   }
   if (r_max[1] < r_min[1]) {
-    SWAP(float, r_min[1], r_max[1]);
+    std::swap(r_min[1], r_max[1]);
   }
 }
 

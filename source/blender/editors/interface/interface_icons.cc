@@ -950,11 +950,11 @@ static void init_internal_icons()
 {
 #  if 0 /* temp disabled */
   if ((btheme != nullptr) && btheme->tui.iconfile[0]) {
-    char *icondir = BKE_appdir_folder_id(BLENDER_DATAFILES, "icons");
+    std::optional<std::string> icondir = BKE_appdir_folder_id(BLENDER_DATAFILES, "icons");
     char iconfilestr[FILE_MAX];
 
-    if (icondir) {
-      BLI_path_join(iconfilestr, sizeof(iconfilestr), icondir, btheme->tui.iconfile);
+    if (icondir.has_value()) {
+      BLI_path_join(iconfilestr, sizeof(iconfilestr), icondir->c_str(), btheme->tui.iconfile);
 
       /* if the image is missing bbuf will just be nullptr */
       bbuf = IMB_loadiffname(iconfilestr, IB_rect, nullptr);
@@ -1054,14 +1054,14 @@ static void init_internal_icons()
 static void init_iconfile_list(ListBase *list)
 {
   BLI_listbase_clear(list);
-  const char *icondir = BKE_appdir_folder_id(BLENDER_DATAFILES, "icons");
+  const std::optional<std::string> icondir = BKE_appdir_folder_id(BLENDER_DATAFILES, "icons");
 
-  if (icondir == nullptr) {
+  if (!icondir.has_value()) {
     return;
   }
 
   direntry *dir;
-  const int totfile = BLI_filelist_dir_contents(icondir, &dir);
+  const int totfile = BLI_filelist_dir_contents(icondir->c_str(), &dir);
 
   int index = 1;
   for (int i = 0; i < totfile; i++) {
@@ -1078,7 +1078,7 @@ static void init_iconfile_list(ListBase *list)
         /* check to see if the image is the right size, continue if not */
         /* copying strings here should go ok, assuming that we never get back
          * a complete path to file longer than 256 chars */
-        BLI_path_join(iconfilestr, sizeof(iconfilestr), icondir, filename);
+        BLI_path_join(iconfilestr, sizeof(iconfilestr), icondir->c_str(), filename);
         bbuf = IMB_loadiffname(iconfilestr, IB_rect);
 
         if (bbuf) {
@@ -2105,7 +2105,7 @@ static int ui_id_brush_get_icon(const bContext *C, ID *id)
   else {
     Object *ob = CTX_data_active_object(C);
     const EnumPropertyItem *items = nullptr;
-    ePaintMode paint_mode = PAINT_MODE_INVALID;
+    PaintMode paint_mode = PaintMode::Invalid;
     ScrArea *area = CTX_wm_area(C);
     char space_type = area->spacetype;
     /* Fallback to 3D view. */
@@ -2119,26 +2119,26 @@ static int ui_id_brush_get_icon(const bContext *C, ID *id)
 
     if ((space_type == SPACE_VIEW3D) && ob) {
       if (ob->mode & OB_MODE_SCULPT) {
-        paint_mode = PAINT_MODE_SCULPT;
+        paint_mode = PaintMode::Sculpt;
       }
       else if (ob->mode & OB_MODE_VERTEX_PAINT) {
-        paint_mode = PAINT_MODE_VERTEX;
+        paint_mode = PaintMode::Vertex;
       }
       else if (ob->mode & OB_MODE_WEIGHT_PAINT) {
-        paint_mode = PAINT_MODE_WEIGHT;
+        paint_mode = PaintMode::Weight;
       }
       else if (ob->mode & OB_MODE_TEXTURE_PAINT) {
-        paint_mode = PAINT_MODE_TEXTURE_3D;
+        paint_mode = PaintMode::Texture3D;
       }
       else if (ob->mode & OB_MODE_SCULPT_CURVES) {
-        paint_mode = PAINT_MODE_SCULPT_CURVES;
+        paint_mode = PaintMode::SculptCurves;
       }
     }
     else if (space_type == SPACE_IMAGE) {
       if (area->spacetype == space_type) {
         const SpaceImage *sima = static_cast<const SpaceImage *>(area->spacedata.first);
         if (sima->mode == SI_MODE_PAINT) {
-          paint_mode = PAINT_MODE_TEXTURE_2D;
+          paint_mode = PaintMode::Texture2D;
         }
       }
     }
@@ -2248,7 +2248,7 @@ static int ui_id_brush_get_icon(const bContext *C, ID *id)
       return id->icon_id;
     }
 
-    if (paint_mode != PAINT_MODE_INVALID) {
+    if (paint_mode != PaintMode::Invalid) {
       items = BKE_paint_get_tool_enum_from_paintmode(paint_mode);
       const uint tool_offset = BKE_paint_get_brush_tool_offset_from_paintmode(paint_mode);
       const int tool_type = *(char *)POINTER_OFFSET(br, tool_offset);
@@ -2584,6 +2584,9 @@ ImBuf *UI_icon_alert_imbuf_get(eAlertIcon icon)
   UNUSED_VARS(icon);
   return nullptr;
 #else
+  if (icon == ALERT_ICON_NONE) {
+    return nullptr;
+  }
   const int ALERT_IMG_SIZE = 256;
   icon = eAlertIcon(std::min<int>(icon, ALERT_ICON_MAX - 1));
   const int left = icon * ALERT_IMG_SIZE;

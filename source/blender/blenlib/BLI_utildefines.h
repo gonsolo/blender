@@ -67,17 +67,6 @@ extern "C" {
   } \
   (void)0
 
-/* swap with a temp value */
-#define SWAP_TVAL(tval, a, b) \
-  { \
-    CHECK_TYPE_PAIR(tval, a); \
-    CHECK_TYPE_PAIR(tval, b); \
-    (tval) = (a); \
-    (a) = (b); \
-    (b) = (tval); \
-  } \
-  (void)0
-
 /* shift around elements */
 #define SHIFT3(type, a, b, c) \
   { \
@@ -219,8 +208,6 @@ inline constexpr int64_t power_of_2_max(const int64_t x)
 /** \name Clamp Macros
  * \{ */
 
-#define CLAMPIS(a, b, c) ((a) < (b) ? (b) : (a) > (c) ? (c) : (a))
-
 #define CLAMP(a, b, c) \
   { \
     if ((a) < (b)) { \
@@ -248,27 +235,6 @@ inline constexpr int64_t power_of_2_max(const int64_t x)
   } \
   (void)0
 
-#define CLAMP2(vec, b, c) \
-  { \
-    CLAMP((vec)[0], b, c); \
-    CLAMP((vec)[1], b, c); \
-  } \
-  (void)0
-
-#define CLAMP2_MIN(vec, b) \
-  { \
-    CLAMP_MIN((vec)[0], b); \
-    CLAMP_MIN((vec)[1], b); \
-  } \
-  (void)0
-
-#define CLAMP2_MAX(vec, b) \
-  { \
-    CLAMP_MAX((vec)[0], b); \
-    CLAMP_MAX((vec)[1], b); \
-  } \
-  (void)0
-
 #define CLAMP3(vec, b, c) \
   { \
     CLAMP((vec)[0], b, c); \
@@ -285,38 +251,12 @@ inline constexpr int64_t power_of_2_max(const int64_t x)
   } \
   (void)0
 
-#define CLAMP3_MAX(vec, b) \
-  { \
-    CLAMP_MAX((vec)[0], b); \
-    CLAMP_MAX((vec)[1], b); \
-    CLAMP_MAX((vec)[2], b); \
-  } \
-  (void)0
-
-#define CLAMP4(vec, b, c) \
-  { \
-    CLAMP((vec)[0], b, c); \
-    CLAMP((vec)[1], b, c); \
-    CLAMP((vec)[2], b, c); \
-    CLAMP((vec)[3], b, c); \
-  } \
-  (void)0
-
 #define CLAMP4_MIN(vec, b) \
   { \
     CLAMP_MIN((vec)[0], b); \
     CLAMP_MIN((vec)[1], b); \
     CLAMP_MIN((vec)[2], b); \
     CLAMP_MIN((vec)[3], b); \
-  } \
-  (void)0
-
-#define CLAMP4_MAX(vec, b) \
-  { \
-    CLAMP_MAX((vec)[0], b); \
-    CLAMP_MAX((vec)[1], b); \
-    CLAMP_MAX((vec)[2], b); \
-    CLAMP_MAX((vec)[3], b); \
   } \
   (void)0
 

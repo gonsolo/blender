@@ -11,6 +11,7 @@ if "bpy" in locals():
     del reload
 
 _modules = [
+    "anim",
     "asset_shelf",
     "node_add_menu",
     "node_add_menu_compositor",
@@ -141,8 +142,8 @@ def register():
         items_unique = set()
 
         for mod in addon_utils.modules(refresh=False):
-            info = addon_utils.module_bl_info(mod)
-            items_unique.add(info["category"])
+            bl_info = addon_utils.module_bl_info(mod)
+            items_unique.add(bl_info["category"])
 
         items.extend([(cat, cat, "") for cat in sorted(items_unique)])
         return items

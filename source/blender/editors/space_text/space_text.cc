@@ -307,7 +307,7 @@ static bool text_drop_poll(bContext * /*C*/, wmDrag *drag, const wmEvent * /*eve
 {
   if (drag->type == WM_DRAG_PATH) {
     const eFileSel_File_Types file_type = eFileSel_File_Types(WM_drag_get_path_file_type(drag));
-    if (ELEM(file_type, 0, FILE_TYPE_PYSCRIPT, FILE_TYPE_TEXT)) {
+    if (ELEM(file_type, FILE_TYPE_PYSCRIPT, FILE_TYPE_TEXT)) {
       return true;
     }
   }
@@ -327,13 +327,11 @@ static bool text_drop_paste_poll(bContext * /*C*/, wmDrag *drag, const wmEvent *
 
 static void text_drop_paste(bContext * /*C*/, wmDrag *drag, wmDropBox *drop)
 {
-  char *text;
   ID *id = WM_drag_get_local_ID(drag, 0);
 
   /* copy drag path to properties */
-  text = RNA_path_full_ID_py(id);
-  RNA_string_set(drop->ptr, "text", text);
-  MEM_freeN(text);
+  std::string text = RNA_path_full_ID_py(id);
+  RNA_string_set(drop->ptr, "text", text.c_str());
 }
 
 /* this region dropbox definition */

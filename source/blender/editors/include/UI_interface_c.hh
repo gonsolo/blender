@@ -589,7 +589,7 @@ using uiButSearchTooltipFn =
 using uiButSearchListenFn = void (*)(const wmRegionListenerParams *params, void *arg);
 
 /** Must return an allocated string. */
-using uiButToolTipFunc = char *(*)(bContext *C, void *argN, const char *tip);
+using uiButToolTipFunc = std::string (*)(bContext *C, void *argN, const char *tip);
 
 using uiButToolTipCustomFunc = void (*)(bContext *C, uiTooltipData *data, void *argN);
 
@@ -988,7 +988,7 @@ bool UI_but_is_userdef(const uiBut *but);
 uiBut *uiDefBut(uiBlock *block,
                 int type,
                 int retval,
-                const char *str,
+                blender::StringRef str,
                 int x,
                 int y,
                 short width,
@@ -1002,7 +1002,7 @@ uiBut *uiDefBut(uiBlock *block,
 uiBut *uiDefButF(uiBlock *block,
                  int type,
                  int retval,
-                 const char *str,
+                 blender::StringRef str,
                  int x,
                  int y,
                  short width,
@@ -1016,7 +1016,7 @@ uiBut *uiDefButF(uiBlock *block,
 uiBut *uiDefButI(uiBlock *block,
                  int type,
                  int retval,
-                 const char *str,
+                 blender::StringRef str,
                  int x,
                  int y,
                  short width,
@@ -1031,7 +1031,7 @@ uiBut *uiDefButBitI(uiBlock *block,
                     int type,
                     int bit,
                     int retval,
-                    const char *str,
+                    blender::StringRef str,
                     int x,
                     int y,
                     short width,
@@ -1045,7 +1045,7 @@ uiBut *uiDefButBitI(uiBlock *block,
 uiBut *uiDefButS(uiBlock *block,
                  int type,
                  int retval,
-                 const char *str,
+                 blender::StringRef str,
                  int x,
                  int y,
                  short width,
@@ -1060,7 +1060,7 @@ uiBut *uiDefButBitS(uiBlock *block,
                     int type,
                     int bit,
                     int retval,
-                    const char *str,
+                    blender::StringRef str,
                     int x,
                     int y,
                     short width,
@@ -1074,7 +1074,7 @@ uiBut *uiDefButBitS(uiBlock *block,
 uiBut *uiDefButC(uiBlock *block,
                  int type,
                  int retval,
-                 const char *str,
+                 blender::StringRef str,
                  int x,
                  int y,
                  short width,
@@ -1089,7 +1089,7 @@ uiBut *uiDefButBitC(uiBlock *block,
                     int type,
                     int bit,
                     int retval,
-                    const char *str,
+                    blender::StringRef str,
                     int x,
                     int y,
                     short width,
@@ -1303,7 +1303,7 @@ uiBut *uiDefIconTextBut(uiBlock *block,
                         int type,
                         int retval,
                         int icon,
-                        const char *str,
+                        blender::StringRef str,
                         int x,
                         int y,
                         short width,
@@ -1318,7 +1318,7 @@ uiBut *uiDefIconTextButF(uiBlock *block,
                          int type,
                          int retval,
                          int icon,
-                         const char *str,
+                         blender::StringRef str,
                          int x,
                          int y,
                          short width,
@@ -1333,7 +1333,7 @@ uiBut *uiDefIconTextButI(uiBlock *block,
                          int type,
                          int retval,
                          int icon,
-                         const char *str,
+                         blender::StringRef str,
                          int x,
                          int y,
                          short width,
@@ -1402,7 +1402,7 @@ uiBut *uiDefIconTextButO_ptr(uiBlock *block,
                              const char *tip);
 
 /** For passing inputs to ButO buttons. */
-PointerRNA *UI_but_operator_ptr_get(uiBut *but);
+PointerRNA *UI_but_operator_ptr_ensure(uiBut *but);
 
 void UI_but_context_ptr_set(uiBlock *block, uiBut *but, const char *name, const PointerRNA *ptr);
 const PointerRNA *UI_but_context_ptr_get(const uiBut *but,
@@ -1496,19 +1496,10 @@ int UI_text_colorid_from_report_type(int type);
 int UI_icon_from_event_type(short event_type, short event_value);
 int UI_icon_from_keymap_item(const wmKeyMapItem *kmi, int r_icon_mod[4]);
 
-uiBut *uiDefPulldownBut(uiBlock *block,
-                        uiBlockCreateFunc func,
-                        void *arg,
-                        const char *str,
-                        int x,
-                        int y,
-                        short width,
-                        short height,
-                        const char *tip);
 uiBut *uiDefMenuBut(uiBlock *block,
                     uiMenuCreateFunc func,
                     void *arg,
-                    const char *str,
+                    blender::StringRef str,
                     int x,
                     int y,
                     short width,
@@ -1518,7 +1509,7 @@ uiBut *uiDefIconTextMenuBut(uiBlock *block,
                             uiMenuCreateFunc func,
                             void *arg,
                             int icon,
-                            const char *str,
+                            blender::StringRef str,
                             int x,
                             int y,
                             short width,
@@ -1537,7 +1528,7 @@ uiBut *uiDefIconMenuBut(uiBlock *block,
 uiBut *uiDefBlockBut(uiBlock *block,
                      uiBlockCreateFunc func,
                      void *arg,
-                     const char *str,
+                     blender::StringRef str,
                      int x,
                      int y,
                      short width,
@@ -1546,7 +1537,7 @@ uiBut *uiDefBlockBut(uiBlock *block,
 uiBut *uiDefBlockButN(uiBlock *block,
                       uiBlockCreateFunc func,
                       void *argN,
-                      const char *str,
+                      blender::StringRef str,
                       int x,
                       int y,
                       short width,
@@ -1566,19 +1557,6 @@ uiBut *uiDefIconBlockBut(uiBlock *block,
                          short width,
                          short height,
                          const char *tip);
-/**
- * Block button containing both string label and icon.
- */
-uiBut *uiDefIconTextBlockBut(uiBlock *block,
-                             uiBlockCreateFunc func,
-                             void *arg,
-                             int icon,
-                             const char *str,
-                             int x,
-                             int y,
-                             short width,
-                             short height,
-                             const char *tip);
 
 /**
  * \param arg: A pointer to string/name, use #UI_but_func_search_set() below to make this work.
@@ -2280,6 +2258,11 @@ Panel *uiLayoutGetRootPanel(uiLayout *layout);
 
 uiLayout *uiLayoutRow(uiLayout *layout, bool align);
 
+struct PanelLayout {
+  uiLayout *header;
+  uiLayout *body;
+};
+
 /**
  * Create a "layout panel" which is a panel that is defined as part of the `uiLayout`. This allows
  * creating expandable sections which can also be nested.
@@ -2291,18 +2274,58 @@ uiLayout *uiLayoutRow(uiLayout *layout, bool align);
  * context even of the open-property is `false`. This can happen with e.g. property search.
  * \param layout: The `uiLayout` that should contain the sub-panel.
  * Only layouts that span the full width of the region are supported for now.
- * \param name: Text that's shown in the panel header. It should already be translated.
  * \param open_prop_owner: Data that contains the open-property.
  * \param open_prop_name: Name of the open-property in `open_prop_owner`.
+ *
+ * \return A #PanelLayout containing layouts for both the header row and the panel body. If the
+ * panel is closed and should not be drawn, the body layout will be NULL.
+ */
+PanelLayout uiLayoutPanelProp(const bContext *C,
+                              uiLayout *layout,
+                              PointerRNA *open_prop_owner,
+                              const char *open_prop_name);
+
+/**
+ * Variant of #uiLayoutPanelProp that automatically creates the header row with the
+ * given label and only returns the body layout.
+ *
+ * \param label: Text that's shown in the panel header. It should already be translated.
+ *
+ * \return NULL if the panel is closed and should not be drawn, otherwise the layout where the
+ * sub-panel should be inserted into.
+ */
+uiLayout *uiLayoutPanelProp(const bContext *C,
+                            uiLayout *layout,
+                            PointerRNA *open_prop_owner,
+                            const char *open_prop_name,
+                            const char *label);
+
+/**
+ * Variant of #uiLayoutPanelProp that automatically stores the open-close-state in the root
+ * panel. When a dynamic number of panels is required, it's recommended to use #uiLayoutPanelProp
+ * instead of passing in generated idnames.
+ *
+ * \param idname: String that identifies the open-close-state in the root panel.
+ */
+PanelLayout uiLayoutPanel(const bContext *C,
+                          uiLayout *layout,
+                          const char *idname,
+                          bool default_closed);
+
+/**
+ * Variant of #uiLayoutPanel that automatically creates the header row with the given label and
+ * only returns the body layout.
+ *
+ * \param label:  Text that's shown in the panel header. It should already be translated.
  *
  * \return NULL if the panel is closed and should not be drawn, otherwise the layout where the
  * sub-panel should be inserted into.
  */
 uiLayout *uiLayoutPanel(const bContext *C,
                         uiLayout *layout,
-                        const char *name,
-                        PointerRNA *open_prop_owner,
-                        const char *open_prop_name);
+                        const char *idname,
+                        bool default_closed,
+                        const char *label);
 
 bool uiLayoutEndsWithPanelHeader(const uiLayout &layout);
 
@@ -3025,10 +3048,15 @@ void uiItemTabsEnumR_prop(uiLayout *layout,
 const char *UI_layout_introspect(uiLayout *layout);
 
 /**
- * Helper to add a big icon and create a split layout for alert popups.
+ * Helpers to add a big icon and create a split layout for alert popups.
  * Returns the layout to place further items into the alert box.
  */
-uiLayout *uiItemsAlertBox(uiBlock *block, int size, eAlertIcon icon);
+uiLayout *uiItemsAlertBox(uiBlock *block,
+                          const uiStyle *style,
+                          const int dialog_width,
+                          const eAlertIcon icon,
+                          const int icon_size);
+uiLayout *uiItemsAlertBox(uiBlock *block, const int size, const eAlertIcon icon);
 
 /* UI Operators */
 struct uiDragColorHandle {
@@ -3052,7 +3080,7 @@ bool UI_context_copy_to_selected_list(bContext *C,
                                       PropertyRNA *prop,
                                       ListBase *r_lb,
                                       bool *r_use_path_from_id,
-                                      char **r_path);
+                                      std::optional<std::string> *r_path);
 bool UI_context_copy_to_selected_check(PointerRNA *ptr,
                                        PointerRNA *ptr_link,
                                        PropertyRNA *prop,

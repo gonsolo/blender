@@ -293,6 +293,10 @@ SDNA_DEFAULT_DECL_STRUCT(WeightVGProximityModifierData);
 SDNA_DEFAULT_DECL_STRUCT(WeldModifierData);
 SDNA_DEFAULT_DECL_STRUCT(WireframeModifierData);
 SDNA_DEFAULT_DECL_STRUCT(GreasePencilSubdivModifierData);
+SDNA_DEFAULT_DECL_STRUCT(GreasePencilNoiseModifierData);
+
+/* Grease Pencil 3.0 modifiers. */
+SDNA_DEFAULT_DECL_STRUCT(GreasePencilSmoothModifierData);
 
 /* DNA_gpencil_modifier_defaults.h */
 SDNA_DEFAULT_DECL_STRUCT(ArmatureGpencilModifierData);
@@ -326,6 +330,9 @@ SDNA_DEFAULT_DECL_STRUCT(EnvelopeGpencilModifierData);
 SDNA_DEFAULT_DECL_STRUCT(GreasePencilOpacityModifierData);
 SDNA_DEFAULT_DECL_STRUCT(GreasePencilColorModifierData);
 SDNA_DEFAULT_DECL_STRUCT(GreasePencilTintModifierData);
+SDNA_DEFAULT_DECL_STRUCT(GreasePencilOffsetModifierData);
+SDNA_DEFAULT_DECL_STRUCT(GreasePencilMirrorModifierData);
+SDNA_DEFAULT_DECL_STRUCT(GreasePencilThickModifierData);
 
 #undef SDNA_DEFAULT_DECL_STRUCT
 
@@ -541,6 +548,10 @@ const void *DNA_default_table[SDNA_TYPE_MAX] = {
     SDNA_DEFAULT_DECL(WeldModifierData),
     SDNA_DEFAULT_DECL(WireframeModifierData),
     SDNA_DEFAULT_DECL(GreasePencilSubdivModifierData),
+    SDNA_DEFAULT_DECL(GreasePencilNoiseModifierData),
+
+    /* Grease Pencil 3.0 defaults. */
+    SDNA_DEFAULT_DECL(GreasePencilSmoothModifierData),
 
     /* DNA_gpencil_modifier_defaults.h */
     SDNA_DEFAULT_DECL(ArmatureGpencilModifierData),
@@ -574,6 +585,9 @@ const void *DNA_default_table[SDNA_TYPE_MAX] = {
     SDNA_DEFAULT_DECL(GreasePencilOpacityModifierData),
     SDNA_DEFAULT_DECL(GreasePencilColorModifierData),
     SDNA_DEFAULT_DECL(GreasePencilTintModifierData),
+    SDNA_DEFAULT_DECL(GreasePencilOffsetModifierData),
+    SDNA_DEFAULT_DECL(GreasePencilMirrorModifierData),
+    SDNA_DEFAULT_DECL(GreasePencilThickModifierData),
 };
 #undef SDNA_DEFAULT_DECL
 #undef SDNA_DEFAULT_DECL_EX
