@@ -47,7 +47,7 @@
 #include "BKE_customdata.hh"
 #include "BKE_geometry_fields.hh"
 #include "BKE_geometry_set_instances.hh"
-#include "BKE_global.h"
+#include "BKE_global.hh"
 #include "BKE_idprop.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_lib_query.hh"
@@ -66,7 +66,7 @@
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -407,6 +407,7 @@ static void update_bakes_from_node_group(NodesModifierData &nmd)
       new_bake.id = id;
       new_bake.frame_start = 1;
       new_bake.frame_end = 100;
+      new_bake.bake_mode = NODES_MODIFIER_BAKE_MODE_STILL;
     }
   }
 
@@ -823,7 +824,7 @@ static void check_property_socket_sync(const Object *ob, ModifierData *md)
 
     IDProperty *property = IDP_GetPropertyFromGroup(nmd->settings.properties, socket->identifier);
     if (property == nullptr) {
-      if (type == SOCK_GEOMETRY) {
+      if (ELEM(type, SOCK_GEOMETRY, SOCK_MATRIX)) {
         geometry_socket_count++;
       }
       else {
@@ -979,7 +980,7 @@ static bool try_find_baked_data(bake::NodeBakeCache &bake,
     bake.frames.append(std::move(frame_cache));
   }
   bake.blobs_dir = bake_path->blobs_dir;
-  bake.blob_sharing = std::make_unique<bake::BlobSharing>();
+  bake.blob_sharing = std::make_unique<bake::BlobReadSharing>();
   return true;
 }
 
@@ -1469,7 +1470,7 @@ class NodesModifierBakeParams : public nodes::GeoNodesBakeParams {
   {
     if (frame_cache.meta_path && frame_cache.state.items_by_id.is_empty()) {
       auto &read_error_info = behavior.behavior.emplace<sim_output::ReadError>();
-      read_error_info.message = RPT_("Can not load the baked data");
+      read_error_info.message = RPT_("Cannot load the baked data");
       return true;
     }
     return false;
@@ -1567,8 +1568,7 @@ static void add_data_block_items_writeback(const ModifierEvalContext &ctx,
 
   deg::sync_writeback::add(
       *depsgraph,
-      [depsgraph = depsgraph,
-       object_eval = ctx.object,
+      [object_eval = ctx.object,
        bmain,
        &nmd_orig,
        &nmd_eval,
@@ -1917,8 +1917,6 @@ static void add_attribute_search_button(const bContext &C,
                                  md_ptr,
                                  rna_path_attribute_name.c_str(),
                                  0,
-                                 0.0f,
-                                 0.0f,
                                  0.0f,
                                  0.0f,
                                  socket.description);

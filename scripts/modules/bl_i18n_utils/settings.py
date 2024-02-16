@@ -89,6 +89,7 @@ LANGUAGES = (
     (50, "Khmer (ខ្មែរ)", "km"),
     (51, "Swahili (Kiswahili)", "sw"),
     (52, "Belarusian (беларуску)", "be"),
+    (53, "Danish (Dansk)", "da"),
 )
 
 # Default context, in py (keep in sync with `BLT_translation.h`)!
@@ -551,6 +552,9 @@ WARN_MSGID_END_POINT_ALLOWED = {
     "Invalid surface UVs on %d curves.",
     "The pose library moved.",
     "in the asset shelf.",
+    "Remove, local files not found.",
+    "Remove all files in \"{}\".",
+    "Remove, keeping local files.",
 }
 
 PARSER_CACHE_HASH = 'sha1'

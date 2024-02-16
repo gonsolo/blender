@@ -14,15 +14,13 @@
 
 #  include "BKE_context.hh"
 #  include "BKE_file_handler.hh"
-#  include "BKE_main.hh"
-#  include "BKE_report.h"
+#  include "BKE_report.hh"
 
-#  include "BLI_blenlib.h"
 #  include "BLI_path_util.h"
 #  include "BLI_string.h"
 #  include "BLI_utildefines.h"
 
-#  include "BLT_translation.h"
+#  include "BLT_translation.hh"
 
 #  include "ED_fileselect.hh"
 #  include "ED_object.hh"
@@ -31,8 +29,6 @@
 
 #  include "RNA_access.hh"
 #  include "RNA_define.hh"
-
-#  include "RNA_enum_types.hh"
 
 #  include "UI_interface.hh"
 #  include "UI_resources.hh"
@@ -44,9 +40,11 @@
 
 #  include "io_usd.hh"
 #  include "io_utils.hh"
-#  include "usd.h"
+#  include "usd.hh"
 
 #  include <cstdio>
+
+using namespace blender::io::usd;
 
 const EnumPropertyItem rna_enum_usd_export_evaluation_mode_items[] = {
     {DAG_EVAL_RENDER,

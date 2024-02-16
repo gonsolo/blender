@@ -1010,8 +1010,6 @@ uiBut *uiDefButF(uiBlock *block,
                  float *poin,
                  float min,
                  float max,
-                 float a1,
-                 float a2,
                  const char *tip);
 uiBut *uiDefButI(uiBlock *block,
                  int type,
@@ -1039,8 +1037,6 @@ uiBut *uiDefButBitI(uiBlock *block,
                     int *poin,
                     float min,
                     float max,
-                    float a1,
-                    float a2,
                     const char *tip);
 uiBut *uiDefButS(uiBlock *block,
                  int type,
@@ -1068,8 +1064,6 @@ uiBut *uiDefButBitS(uiBlock *block,
                     short *poin,
                     float min,
                     float max,
-                    float a1,
-                    float a2,
                     const char *tip);
 uiBut *uiDefButC(uiBlock *block,
                  int type,
@@ -1082,8 +1076,6 @@ uiBut *uiDefButC(uiBlock *block,
                  char *poin,
                  float min,
                  float max,
-                 float a1,
-                 float a2,
                  const char *tip);
 uiBut *uiDefButBitC(uiBlock *block,
                     int type,
@@ -1097,8 +1089,6 @@ uiBut *uiDefButBitC(uiBlock *block,
                     char *poin,
                     float min,
                     float max,
-                    float a1,
-                    float a2,
                     const char *tip);
 uiBut *uiDefButR(uiBlock *block,
                  int type,
@@ -1113,8 +1103,6 @@ uiBut *uiDefButR(uiBlock *block,
                  int index,
                  float min,
                  float max,
-                 float a1,
-                 float a2,
                  const char *tip);
 uiBut *uiDefButR_prop(uiBlock *block,
                       int type,
@@ -1129,8 +1117,6 @@ uiBut *uiDefButR_prop(uiBlock *block,
                       int index,
                       float min,
                       float max,
-                      float a1,
-                      float a2,
                       const char *tip);
 uiBut *uiDefButO(uiBlock *block,
                  int type,
@@ -1146,7 +1132,7 @@ uiBut *uiDefButO_ptr(uiBlock *block,
                      int type,
                      wmOperatorType *ot,
                      wmOperatorCallContext opcontext,
-                     const char *str,
+                     blender::StringRef str,
                      int x,
                      int y,
                      short width,
@@ -1256,8 +1242,6 @@ uiBut *uiDefIconButR(uiBlock *block,
                      int index,
                      float min,
                      float max,
-                     float a1,
-                     float a2,
                      const char *tip);
 uiBut *uiDefIconButR_prop(uiBlock *block,
                           int type,
@@ -1272,8 +1256,6 @@ uiBut *uiDefIconButR_prop(uiBlock *block,
                           int index,
                           float min,
                           float max,
-                          float a1,
-                          float a2,
                           const char *tip);
 uiBut *uiDefIconButO(uiBlock *block,
                      int type,
@@ -1358,8 +1340,6 @@ uiBut *uiDefIconTextButR(uiBlock *block,
                          int index,
                          float min,
                          float max,
-                         float a1,
-                         float a2,
                          const char *tip);
 uiBut *uiDefIconTextButR_prop(uiBlock *block,
                               int type,
@@ -1375,15 +1355,13 @@ uiBut *uiDefIconTextButR_prop(uiBlock *block,
                               int index,
                               float min,
                               float max,
-                              float a1,
-                              float a2,
                               const char *tip);
 uiBut *uiDefIconTextButO(uiBlock *block,
                          int type,
                          const char *opname,
                          wmOperatorCallContext opcontext,
                          int icon,
-                         const char *str,
+                         blender::StringRef str,
                          int x,
                          int y,
                          short width,
@@ -1394,7 +1372,7 @@ uiBut *uiDefIconTextButO_ptr(uiBlock *block,
                              wmOperatorType *ot,
                              wmOperatorCallContext opcontext,
                              int icon,
-                             const char *str,
+                             blender::StringRef str,
                              int x,
                              int y,
                              short width,
@@ -1483,6 +1461,12 @@ enum {
 enum eButProgressType {
   UI_BUT_PROGRESS_TYPE_BAR = 0,
   UI_BUT_PROGRESS_TYPE_RING = 1,
+};
+
+enum class LayoutSeparatorType : int8_t {
+  Auto,
+  Space,
+  Line,
 };
 
 /***************************** ID Utilities *******************************/
@@ -1734,6 +1718,9 @@ void UI_but_node_link_set(uiBut *but, bNodeSocket *socket, const float draw_colo
 void UI_but_number_step_size_set(uiBut *but, float step_size);
 void UI_but_number_precision_set(uiBut *but, float precision);
 
+void UI_but_number_slider_step_size_set(uiBut *but, float step_size);
+void UI_but_number_slider_precision_set(uiBut *but, float precision);
+
 void UI_block_func_handle_set(uiBlock *block, uiBlockHandleFunc func, void *arg);
 void UI_block_func_butmenu_set(uiBlock *block, uiMenuHandleFunc func, void *arg);
 void UI_block_func_set(uiBlock *block, uiButHandleFunc func, void *arg1, void *arg2);
@@ -1888,10 +1875,6 @@ void UI_but_drag_set_rna(uiBut *but, PointerRNA *ptr);
  */
 void UI_but_drag_set_path(uiBut *but, const char *path);
 void UI_but_drag_set_name(uiBut *but, const char *name);
-/**
- * Value from button itself.
- */
-void UI_but_drag_set_value(uiBut *but);
 
 /**
  * Sets #UI_BUT_DRAG_FULL_BUT so the full button can be dragged.
@@ -2303,7 +2286,7 @@ uiLayout *uiLayoutPanelProp(const bContext *C,
 /**
  * Variant of #uiLayoutPanelProp that automatically stores the open-close-state in the root
  * panel. When a dynamic number of panels is required, it's recommended to use #uiLayoutPanelProp
- * instead of passing in generated idnames.
+ * instead of passing in generated id names.
  *
  * \param idname: String that identifies the open-close-state in the root panel.
  */
@@ -2980,7 +2963,9 @@ void uiItemV(uiLayout *layout, const char *name, int icon, int argval);
 /** Separator item */
 void uiItemS(uiLayout *layout);
 /** Separator item */
-void uiItemS_ex(uiLayout *layout, float factor);
+void uiItemS_ex(uiLayout *layout,
+                float factor,
+                LayoutSeparatorType type = LayoutSeparatorType::Auto);
 /** Flexible spacing. */
 void uiItemSpacer(uiLayout *layout);
 
@@ -3293,12 +3278,10 @@ void UI_butstore_unregister(uiButStore *bs_handle, uiBut **but_p);
  * for actions that can also be activated using shortcuts while the cursor is over the button.
  * Without this those shortcuts aren't discoverable for users.
  */
-const char *UI_key_event_operator_string(const bContext *C,
-                                         const char *opname,
-                                         IDProperty *properties,
-                                         const bool is_strict,
-                                         char *result,
-                                         const int result_maxncpy);
+std::optional<std::string> UI_key_event_operator_string(const bContext *C,
+                                                        const char *opname,
+                                                        IDProperty *properties,
+                                                        bool is_strict);
 
 /* ui_interface_region_tooltip.c */
 

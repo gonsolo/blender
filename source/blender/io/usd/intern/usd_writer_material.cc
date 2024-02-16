@@ -2,18 +2,18 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "usd_writer_material.h"
+#include "usd_writer_material.hh"
 
-#include "usd.h"
-#include "usd_exporter_context.h"
-#include "usd_hook.h"
+#include "usd.hh"
+#include "usd_exporter_context.hh"
+#include "usd_hook.hh"
 
 #include "BKE_image.h"
 #include "BKE_image_format.h"
 #include "BKE_main.hh"
 #include "BKE_node.hh"
 #include "BKE_node_runtime.hh"
-#include "BKE_report.h"
+#include "BKE_report.hh"
 
 #include "IMB_colormanagement.hh"
 
@@ -211,9 +211,25 @@ static void create_usd_preview_surface_material(const USDExporterContext &usd_ex
       /* Create the UsdUVTexture node output attribute that should be connected to this input. */
       pxr::TfToken source_name;
       if (input_spec.input_type == pxr::SdfValueTypeNames->Float) {
-        /* If the input is a float, we connect it to either the texture alpha or red channels. */
-        source_name = STREQ(input_link->fromsock->identifier, "Alpha") ? usdtokens::a :
-                                                                         usdtokens::r;
+        /* If the input is a float, we check if there is also a Separate Color node in between, if
+         * there is use the output channel from that, otherwise connect either the texture alpha or
+         * red channels. */
+        bNodeLink *input_link_sep_color = traverse_channel(sock, SH_NODE_SEPARATE_COLOR);
+        if (input_link_sep_color) {
+          if (STREQ(input_link_sep_color->fromsock->identifier, "Red")) {
+            source_name = usdtokens::r;
+          }
+          if (STREQ(input_link_sep_color->fromsock->identifier, "Green")) {
+            source_name = usdtokens::g;
+          }
+          if (STREQ(input_link_sep_color->fromsock->identifier, "Blue")) {
+            source_name = usdtokens::b;
+          }
+        }
+        else {
+          source_name = STREQ(input_link->fromsock->identifier, "Alpha") ? usdtokens::a :
+                                                                           usdtokens::r;
+        }
         usd_shader.CreateOutput(source_name, pxr::SdfValueTypeNames->Float);
       }
       else {
@@ -234,6 +250,45 @@ static void create_usd_preview_surface_material(const USDExporterContext &usd_ex
         export_texture(usd_export_context, input_node);
       }
 
+      /* If a Vector Math node was detected ahead of the texture node, and it has
+       * the correct type, NODE_VECTOR_MATH_MULTIPLY_ADD, assume it's meant to be
+       * used for scale-bias. */
+      bNodeLink *scale_link = traverse_channel(sock, SH_NODE_VECTOR_MATH);
+      if (scale_link) {
+        bNode *vector_math_node = scale_link->fromnode;
+        if (vector_math_node->custom1 == NODE_VECTOR_MATH_MULTIPLY_ADD) {
+          /* Attempt one more traversal in case the current node is not not the
+           * correct NODE_VECTOR_MATH_MULTIPLY_ADD (see code in usd_reader_material). */
+          bNodeSocket *sock_current = nodeFindSocket(vector_math_node, SOCK_IN, "Vector");
+          bNodeLink *temp_link = traverse_channel(sock_current, SH_NODE_VECTOR_MATH);
+          if (temp_link && temp_link->fromnode->custom1 == NODE_VECTOR_MATH_MULTIPLY_ADD) {
+            vector_math_node = temp_link->fromnode;
+          }
+
+          bNodeSocket *sock_scale = nodeFindSocket(vector_math_node, SOCK_IN, "Vector_001");
+          bNodeSocket *sock_bias = nodeFindSocket(vector_math_node, SOCK_IN, "Vector_002");
+          const float *scale_value =
+              static_cast<bNodeSocketValueVector *>(sock_scale->default_value)->value;
+          const float *bias_value =
+              static_cast<bNodeSocketValueVector *>(sock_bias->default_value)->value;
+
+          const pxr::GfVec4f scale(scale_value[0], scale_value[1], scale_value[2], 1.0f);
+          const pxr::GfVec4f bias(bias_value[0], bias_value[1], bias_value[2], 0.0f);
+
+          pxr::UsdShadeInput scale_attr = usd_shader.GetInput(usdtokens::scale);
+          if (!scale_attr) {
+            scale_attr = usd_shader.CreateInput(usdtokens::scale, pxr::SdfValueTypeNames->Float4);
+          }
+          scale_attr.Set(scale);
+
+          pxr::UsdShadeInput bias_attr = usd_shader.GetInput(usdtokens::bias);
+          if (!bias_attr) {
+            bias_attr = usd_shader.CreateInput(usdtokens::bias, pxr::SdfValueTypeNames->Float4);
+          }
+          bias_attr.Set(bias);
+        }
+      }
+
       /* Look for a connected uvmap node. */
       if (bNodeSocket *socket = nodeFindSocket(input_node, SOCK_IN, "Vector")) {
         if (pxr::UsdShadeInput st_input = usd_shader.CreateInput(usdtokens::st,
@@ -243,8 +298,6 @@ static void create_usd_preview_surface_material(const USDExporterContext &usd_ex
               usd_export_context, socket, usd_material, st_input, default_uv_sampler, reports);
         }
       }
-
-      set_normal_texture_range(usd_shader, input_spec);
 
       /* Set opacityThreshold if an alpha cutout is used. */
       if ((input_spec.input_name == usdtokens::opacity) &&

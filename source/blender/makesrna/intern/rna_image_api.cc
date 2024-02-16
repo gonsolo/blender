@@ -30,7 +30,7 @@
 #  include "BKE_image_format.h"
 #  include "BKE_image_save.h"
 #  include "BKE_main.hh"
-#  include "BKE_scene.h"
+#  include "BKE_scene.hh"
 #  include <errno.h>
 
 #  include "IMB_imbuf.hh"
@@ -213,7 +213,7 @@ static int rna_Image_gl_load(
     BKE_image_multilayer_index(image->rr, &iuser);
   }
 
-  GPUTexture *tex = BKE_image_get_gpu_texture(image, &iuser, nullptr);
+  GPUTexture *tex = BKE_image_get_gpu_texture(image, &iuser);
 
   if (tex == nullptr) {
     BKE_reportf(reports, RPT_ERROR, "Failed to load image texture '%s'", image->id.name + 2);

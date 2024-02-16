@@ -73,8 +73,8 @@ Static Source Code Checking
 
 Documentation Checking
 
-   * check_wiki_file_structure:
-     Check the WIKI documentation for the source-tree's file structure
+   * check_docs_file_structure:
+     Check the documentation for the source-tree's file structure
      matches Blender's source-code.
      See: https://developer.blender.org/docs/features/code_layout/
 
@@ -503,9 +503,9 @@ check_clang_array: .FORCE
 check_mypy: .FORCE
 	@$(PYTHON) "$(BLENDER_DIR)/tools/check_source/check_mypy.py"
 
-check_wiki_file_structure: .FORCE
+check_docs_file_structure: .FORCE
 	@PYTHONIOENCODING=utf_8 $(PYTHON) \
-	    "$(BLENDER_DIR)/tools/check_wiki/check_wiki_file_structure.py"
+	    "$(BLENDER_DIR)/tools/check_docs/check_docs_code_layout.py"
 
 check_spelling_py: .FORCE
 	@PYTHONIOENCODING=utf_8 $(PYTHON) \
@@ -535,7 +535,7 @@ check_spelling_shaders: .FORCE
 	    "$(BLENDER_DIR)/source/"
 
 check_descriptions: .FORCE
-	@$(BLENDER_BIN) --background -noaudio --factory-startup --python \
+	@$(BLENDER_BIN) --background --factory-startup --python \
 	    "$(BLENDER_DIR)/tools/check_source/check_descriptions.py"
 
 check_deprecated: .FORCE
@@ -598,7 +598,7 @@ format: .FORCE
 doc_py: .FORCE
 	@ASAN_OPTIONS=halt_on_error=0:${ASAN_OPTIONS} \
 	$(BLENDER_BIN) \
-	    --background -noaudio --factory-startup \
+	    --background --factory-startup \
 	    --python doc/python_api/sphinx_doc_gen.py
 	@sphinx-build -b html -j $(NPROCS) doc/python_api/sphinx-in doc/python_api/sphinx-out
 	@echo "docs written into: '$(BLENDER_DIR)/doc/python_api/sphinx-out/index.html'"
@@ -609,7 +609,7 @@ doc_doxy: .FORCE
 
 doc_dna: .FORCE
 	@$(BLENDER_BIN) \
-	    --background -noaudio --factory-startup \
+	    --background --factory-startup \
 	    --python doc/blender_file_format/BlendFileDnaExporter_25.py
 	@echo "docs written into: '$(BLENDER_DIR)/doc/blender_file_format/dna.html'"
 

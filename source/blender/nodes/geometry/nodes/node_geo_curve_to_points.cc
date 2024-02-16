@@ -5,7 +5,6 @@
 #include "BLI_array.hh"
 #include "BLI_math_matrix.hh"
 #include "BLI_task.hh"
-#include "BLI_timeit.hh"
 
 #include "DNA_pointcloud_types.h"
 
@@ -344,7 +343,7 @@ static void node_rna(StructRNA *srna)
        0,
        "Evaluated",
        "Create points from the curve's evaluated points, based on the resolution attribute for "
-       "NURBS and Bezier splines"},
+       "NURBS and Bézier splines"},
       {GEO_NODE_CURVE_RESAMPLE_COUNT,
        "COUNT",
        0,

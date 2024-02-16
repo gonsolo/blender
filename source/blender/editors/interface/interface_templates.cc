@@ -23,15 +23,12 @@
 #include "DNA_curveprofile_types.h"
 #include "DNA_gpencil_modifier_types.h"
 #include "DNA_node_types.h"
-#include "DNA_object_force_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_shader_fx_types.h"
 #include "DNA_texture_types.h"
 
-#include "BLI_alloca.h"
 #include "BLI_fileops.h"
-#include "BLI_fnmatch.h"
 #include "BLI_listbase.h"
 #include "BLI_math_color.h"
 #include "BLI_math_vector.h"
@@ -44,18 +41,16 @@
 #include "BLI_utildefines.h"
 
 #include "BLF_api.hh"
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
-#include "BKE_action.h"
 #include "BKE_blender_version.h"
 #include "BKE_blendfile.hh"
-#include "BKE_cachefile.h"
 #include "BKE_colorband.hh"
 #include "BKE_colortools.hh"
 #include "BKE_constraint.h"
 #include "BKE_context.hh"
 #include "BKE_curveprofile.h"
-#include "BKE_global.h"
+#include "BKE_global.hh"
 #include "BKE_gpencil_modifier_legacy.h"
 #include "BKE_idprop.h"
 #include "BKE_idtype.hh"
@@ -65,15 +60,13 @@
 #include "BKE_linestyle.h"
 #include "BKE_main.hh"
 #include "BKE_modifier.hh"
-#include "BKE_object.hh"
 #include "BKE_packedFile.h"
-#include "BKE_particle.h"
-#include "BKE_report.h"
-#include "BKE_scene.h"
+#include "BKE_report.hh"
+#include "BKE_scene.hh"
 #include "BKE_screen.hh"
 #include "BKE_shader_fx.h"
 
-#include "BLO_readfile.h"
+#include "BLO_readfile.hh"
 
 #include "DEG_depsgraph.hh"
 #include "DEG_depsgraph_build.hh"
@@ -102,7 +95,6 @@
 #include "UI_interface.hh"
 #include "UI_interface_icons.hh"
 #include "UI_string_search.hh"
-#include "UI_view2d.hh"
 #include "interface_intern.hh"
 
 /* we may want to make this optional, disable for now. */
@@ -1363,8 +1355,6 @@ static void template_ID(const bContext *C,
                     -1,
                     0,
                     0,
-                    -1,
-                    -1,
                     RNA_struct_ui_description(type));
     UI_but_funcN_set(
         but, template_id_cb, MEM_dupallocN(template_ui), POINTER_FROM_INT(UI_ID_RENAME));
@@ -1509,8 +1499,6 @@ static void template_ID(const bContext *C,
                       -1,
                       0,
                       0,
-                      -1,
-                      -1,
                       nullptr);
       }
     }
@@ -1692,8 +1680,6 @@ static void template_ID_tabs(const bContext *C,
                                                0,
                                                0.0f,
                                                sizeof(id->name) - 2,
-                                               0.0f,
-                                               0.0f,
                                                "");
     UI_but_funcN_set(tab, template_ID_set_property_exec_fn, MEM_dupallocN(template_id), id);
     UI_but_drag_set_id(tab, id);
@@ -3463,10 +3449,12 @@ static void colorband_tools_dofunc(bContext *C, void *coba_v, int event)
   ED_region_tag_redraw(CTX_wm_region(C));
 }
 
-static uiBlock *colorband_tools_func(bContext *C, ARegion *region, void *coba_v)
+static uiBlock *colorband_tools_func(bContext *C, ARegion *region, void *arg_cb)
 {
+  RNAUpdateCb *cb = (RNAUpdateCb *)arg_cb;
   const uiStyle *style = UI_style_get_dpi();
-  ColorBand *coba = static_cast<ColorBand *>(coba_v);
+  PointerRNA coba_ptr = RNA_property_pointer_get(&cb->ptr, cb->prop);
+  ColorBand *coba = static_cast<ColorBand *>(coba_ptr.data);
   short yco = 0;
   const short menuwidth = 10 * UI_UNIT_X;
 
@@ -3484,7 +3472,6 @@ static uiBlock *colorband_tools_func(bContext *C, ARegion *region, void *coba_v)
                                      style);
   UI_block_layout_set_current(block, layout);
   {
-    PointerRNA coba_ptr = RNA_pointer_create(nullptr, &RNA_ColorRamp, coba);
     uiLayoutSetContextPointer(layout, "color_ramp", &coba_ptr);
   }
 
@@ -3661,9 +3648,10 @@ static void colorband_buttons_layout(uiLayout *layout,
                         TIP_("Delete the active position"));
   UI_but_funcN_set(bt, colorband_del_cb, MEM_dupallocN(cb), coba);
 
+  RNAUpdateCb *tools_cb = static_cast<RNAUpdateCb *>(MEM_dupallocN(cb));
   bt = uiDefIconBlockBut(block,
                          colorband_tools_func,
-                         coba,
+                         tools_cb,
                          0,
                          ICON_DOWNARROW_HLT,
                          xs + 4.0f * unit,
@@ -3671,7 +3659,7 @@ static void colorband_buttons_layout(uiLayout *layout,
                          2.0f * unit,
                          UI_UNIT_Y,
                          TIP_("Tools"));
-  UI_but_funcN_set(bt, rna_update_cb, MEM_dupallocN(cb), coba);
+  UI_but_funcN_set(bt, rna_update_cb, tools_cb, coba);
 
   UI_block_align_end(block);
   UI_block_emboss_set(block, UI_EMBOSS);
@@ -3902,27 +3890,11 @@ static uiBlock *ui_icon_view_menu_cb(bContext *C, ARegion *region, void *arg_lit
                                    -1,
                                    0,
                                    value,
-                                   -1,
-                                   -1,
                                    nullptr);
     }
     else {
-      but = uiDefIconButR_prop(block,
-                               UI_BTYPE_ROW,
-                               0,
-                               icon,
-                               x,
-                               y,
-                               w,
-                               h,
-                               &args.ptr,
-                               args.prop,
-                               -1,
-                               0,
-                               value,
-                               -1,
-                               -1,
-                               nullptr);
+      but = uiDefIconButR_prop(
+          block, UI_BTYPE_ROW, 0, icon, x, y, w, h, &args.ptr, args.prop, -1, 0, value, nullptr);
     }
     ui_def_but_icon(but, icon, UI_HAS_ICON | UI_BUT_ICON_PREVIEW);
   }
@@ -4297,8 +4269,6 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *region, void *cumap
                     &cumap->flag,
                     0.0,
                     0.0,
-                    10,
-                    0,
                     "");
   UI_but_func_set(bt, curvemap_buttons_setclip, cumap, nullptr);
 
@@ -4314,8 +4284,6 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *region, void *cumap
                  &cumap->clipr.xmin,
                  -100.0,
                  cumap->clipr.xmax,
-                 0,
-                 0,
                  "");
   UI_but_number_step_size_set(bt, 10);
   UI_but_number_precision_set(bt, 2);
@@ -4330,8 +4298,6 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *region, void *cumap
                  &cumap->clipr.ymin,
                  -100.0,
                  cumap->clipr.ymax,
-                 0,
-                 0,
                  "");
   UI_but_number_step_size_set(bt, 10);
   UI_but_number_precision_set(bt, 2);
@@ -4346,8 +4312,6 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *region, void *cumap
                  &cumap->clipr.xmax,
                  cumap->clipr.xmin,
                  100.0,
-                 0,
-                 0,
                  "");
   UI_but_number_step_size_set(bt, 10);
   UI_but_number_precision_set(bt, 2);
@@ -4362,8 +4326,6 @@ static uiBlock *curvemap_clipping_func(bContext *C, ARegion *region, void *cumap
                  &cumap->clipr.ymax,
                  cumap->clipr.ymin,
                  100.0,
-                 0,
-                 0,
                  "");
   UI_but_number_step_size_set(bt, 10);
   UI_but_number_precision_set(bt, 2);
@@ -4889,8 +4851,6 @@ static void curvemap_buttons_layout(uiLayout *layout,
                    &cmp->x,
                    bounds.xmin,
                    bounds.xmax,
-                   0,
-                   0,
                    "");
     UI_but_number_step_size_set(bt, 1);
     UI_but_number_precision_set(bt, 5);
@@ -4905,8 +4865,6 @@ static void curvemap_buttons_layout(uiLayout *layout,
                    &cmp->y,
                    bounds.ymin,
                    bounds.ymax,
-                   0,
-                   0,
                    "");
     UI_but_number_step_size_set(bt, 1);
     UI_but_number_precision_set(bt, 5);
@@ -5533,8 +5491,6 @@ static void CurveProfile_buttons_layout(uiLayout *layout, PointerRNA *ptr, RNAUp
                    selection_x,
                    bounds.xmin,
                    bounds.xmax,
-                   0,
-                   0,
                    "");
     UI_but_number_step_size_set(bt, 1);
     UI_but_number_precision_set(bt, 5);
@@ -5553,8 +5509,6 @@ static void CurveProfile_buttons_layout(uiLayout *layout, PointerRNA *ptr, RNAUp
                    selection_y,
                    bounds.ymin,
                    bounds.ymax,
-                   0,
-                   0,
                    "");
     UI_but_number_step_size_set(bt, 1);
     UI_but_number_precision_set(bt, 5);
@@ -5678,8 +5632,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                -1,
                                                0.0,
                                                0.0,
-                                               0,
-                                               0,
                                                "");
       switch (U.color_picker_type) {
         case USER_CP_SQUARE_SV:
@@ -5712,8 +5664,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                            -1,
                            0.0,
                            0.0,
-                           0,
-                           0,
                            "");
       break;
   }
@@ -5748,8 +5698,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                  -1,
                                                  softmin,
                                                  softmax,
-                                                 0,
-                                                 0,
                                                  "");
         hsv_but->gradient_type = UI_GRAD_L_ALT;
         break;
@@ -5768,8 +5716,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                  -1,
                                                  softmin,
                                                  softmax,
-                                                 0,
-                                                 0,
                                                  "");
         hsv_but->gradient_type = eButGradientType(UI_GRAD_SV + 3);
         break;
@@ -5788,8 +5734,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                  -1,
                                                  softmin,
                                                  softmax,
-                                                 0,
-                                                 0,
                                                  "");
         hsv_but->gradient_type = eButGradientType(UI_GRAD_HS + 3);
         break;
@@ -5808,8 +5752,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                  -1,
                                                  softmin,
                                                  softmax,
-                                                 0,
-                                                 0,
                                                  "");
         hsv_but->gradient_type = eButGradientType(UI_GRAD_HV + 3);
         break;
@@ -5831,8 +5773,6 @@ void uiTemplateColorPicker(uiLayout *layout,
                                                  -1,
                                                  softmin,
                                                  softmax,
-                                                 0,
-                                                 0,
                                                  "");
         hsv_but->gradient_type = UI_GRAD_V_ALT;
         break;
@@ -5956,8 +5896,6 @@ void uiTemplatePalette(uiLayout *layout, PointerRNA *ptr, const char *propname, 
                                                     -1,
                                                     0.0,
                                                     1.0,
-                                                    0.0,
-                                                    0.0,
                                                     "");
     color_but->is_pallete_color = true;
     color_but->palette_color_index = col_id;
@@ -5977,17 +5915,16 @@ void uiTemplateCryptoPicker(uiLayout *layout, PointerRNA *ptr, const char *propn
 
   uiBlock *block = uiLayoutGetBlock(layout);
 
-  uiBut *but = uiDefIconTextButO(block,
-                                 UI_BTYPE_BUT,
-                                 "UI_OT_eyedropper_color",
-                                 WM_OP_INVOKE_DEFAULT,
-                                 icon,
-                                 "",
-                                 0,
-                                 0,
-                                 UI_UNIT_X,
-                                 UI_UNIT_Y,
-                                 RNA_property_ui_description(prop));
+  uiBut *but = uiDefIconButO(block,
+                             UI_BTYPE_BUT,
+                             "UI_OT_eyedropper_color",
+                             WM_OP_INVOKE_DEFAULT,
+                             icon,
+                             0,
+                             0,
+                             UI_UNIT_X,
+                             UI_UNIT_Y,
+                             RNA_property_ui_description(prop));
   but->rnapoin = *ptr;
   but->rnaprop = prop;
   but->rnaindex = -1;
@@ -6154,7 +6091,7 @@ static std::string progress_tooltip_func(bContext * /*C*/, void *argN, const cha
   /* create tooltip text and associate it with the job */
   char elapsed_str[32];
   char remaining_str[32] = "Unknown";
-  const double elapsed = BLI_check_seconds_timer() - WM_jobs_starttime(wm, owner);
+  const double elapsed = BLI_time_now_seconds() - WM_jobs_starttime(wm, owner);
   BLI_timecode_string_from_time_simple(elapsed_str, sizeof(elapsed_str), elapsed);
 
   if (progress) {
@@ -6362,7 +6299,7 @@ void uiTemplateRunningJobs(uiLayout *layout, bContext *C)
       UI_but_func_tooltip_set(but_progress, progress_tooltip_func, tip_arg, MEM_freeN);
     }
 
-    if (!wm->is_interface_locked) {
+    if (!wm->runtime->is_interface_locked) {
       uiDefIconTextBut(block,
                        UI_BTYPE_BUT,
                        handle_event,
@@ -6541,10 +6478,10 @@ void uiTemplateInputStatus(uiLayout *layout, bContext *C)
     uiLayout *row = uiLayoutRow(col, true);
     uiLayoutSetAlignment(row, UI_LAYOUT_ALIGN_LEFT);
 
-    const char *msg = CTX_RPT_(BLT_I18NCONTEXT_OPERATOR_DEFAULT,
-                               WM_window_cursor_keymap_status_get(win, i, 0));
-    const char *msg_drag = CTX_RPT_(BLT_I18NCONTEXT_OPERATOR_DEFAULT,
-                                    WM_window_cursor_keymap_status_get(win, i, 1));
+    const char *msg = CTX_IFACE_(BLT_I18NCONTEXT_OPERATOR_DEFAULT,
+                                 WM_window_cursor_keymap_status_get(win, i, 0));
+    const char *msg_drag = CTX_IFACE_(BLT_I18NCONTEXT_OPERATOR_DEFAULT,
+                                      WM_window_cursor_keymap_status_get(win, i, 1));
 
     if (msg || (msg_drag == nullptr)) {
       uiItemL(row, msg ? msg : "", (ICON_MOUSE_LMB + i));
@@ -6794,13 +6731,13 @@ bool uiTemplateEventFromKeymapItem(uiLayout *layout,
     for (int j = 0; j < ARRAY_SIZE(icon_mod) && icon_mod[j]; j++) {
       uiItemL(layout, "", icon_mod[j]);
     }
-    uiItemL(layout, CTX_RPT_(BLT_I18NCONTEXT_ID_WINDOWMANAGER, text), icon);
+    uiItemL(layout, CTX_IFACE_(BLT_I18NCONTEXT_ID_WINDOWMANAGER, text), icon);
     ok = true;
   }
   else if (text_fallback) {
     const char *event_text = WM_key_event_string(kmi->type, true);
     uiItemL(layout, event_text, ICON_NONE);
-    uiItemL(layout, CTX_RPT_(BLT_I18NCONTEXT_ID_WINDOWMANAGER, text), ICON_NONE);
+    uiItemL(layout, CTX_IFACE_(BLT_I18NCONTEXT_ID_WINDOWMANAGER, text), ICON_NONE);
     ok = true;
   }
   return ok;

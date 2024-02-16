@@ -2,20 +2,20 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "usd_reader_stage.h"
-#include "usd_reader_camera.h"
-#include "usd_reader_curve.h"
-#include "usd_reader_instance.h"
-#include "usd_reader_light.h"
-#include "usd_reader_material.h"
-#include "usd_reader_mesh.h"
-#include "usd_reader_nurbs.h"
-#include "usd_reader_pointinstancer.h"
-#include "usd_reader_prim.h"
-#include "usd_reader_shape.h"
-#include "usd_reader_skeleton.h"
-#include "usd_reader_volume.h"
-#include "usd_reader_xform.h"
+#include "usd_reader_stage.hh"
+#include "usd_reader_camera.hh"
+#include "usd_reader_curve.hh"
+#include "usd_reader_instance.hh"
+#include "usd_reader_light.hh"
+#include "usd_reader_material.hh"
+#include "usd_reader_mesh.hh"
+#include "usd_reader_nurbs.hh"
+#include "usd_reader_pointinstancer.hh"
+#include "usd_reader_prim.hh"
+#include "usd_reader_shape.hh"
+#include "usd_reader_skeleton.hh"
+#include "usd_reader_volume.hh"
+#include "usd_reader_xform.hh"
 
 #include <pxr/pxr.h>
 #include <pxr/usd/usd/primRange.h>
@@ -45,17 +45,17 @@
 #include "BLI_sort.hh"
 #include "BLI_string.h"
 
-#include "BKE_collection.h"
+#include "BKE_collection.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_modifier.hh"
-#include "BKE_report.h"
+#include "BKE_report.hh"
 
 #include "CLG_log.h"
 
 #include "DNA_collection_types.h"
 #include "DNA_material_types.h"
 
-#include <iomanip>
+#include <fmt/format.h>
 
 static CLG_LogRef LOG = {"io.usd"};
 
@@ -690,7 +690,7 @@ void USDStageReader::create_proto_collections(Main *bmain, Collection *parent_co
 
     /* Determine the max number of digits we will need for the possibly zero-padded
      * string representing the prototype index. */
-    int max_index_digits = integer_digits_i(instancer_reader->proto_paths().size());
+    const int max_index_digits = integer_digits_i(instancer_reader->proto_paths().size());
 
     int proto_index = 0;
 
@@ -698,9 +698,7 @@ void USDStageReader::create_proto_collections(Main *bmain, Collection *parent_co
       BLI_assert(max_index_digits > 0);
 
       /* Format the collection name to follow the proto_<index> pattern. */
-      std::ostringstream ss;
-      ss << std::setw(max_index_digits) << std::setfill('0') << proto_index;
-      std::string coll_name = "proto_" + ss.str();
+      std::string coll_name = fmt::format("proto_{0:0{1}}", proto_index, max_index_digits);
 
       /* Create the collection and populate it with the prototype objects. */
       Collection *proto_coll = create_collection(bmain, instancer_protos_coll, coll_name.c_str());

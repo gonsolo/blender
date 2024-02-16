@@ -11,7 +11,7 @@
 #include "BLI_math_base.h"
 #include "BLI_string_utf8_symbols.h"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -65,7 +65,7 @@ constexpr int COLOR_SETS_MAX_THEMED_INDEX = 20;
 
 #  include "BKE_action.h"
 #  include "BKE_context.hh"
-#  include "BKE_global.h"
+#  include "BKE_global.hh"
 #  include "BKE_idprop.h"
 #  include "BKE_main.hh"
 
@@ -397,6 +397,12 @@ static void rna_BoneCollection_is_solo_set(PointerRNA *ptr, const bool is_solo)
   BoneCollection *bcoll = (BoneCollection *)ptr->data;
 
   ANIM_armature_bonecoll_solo_set(arm, bcoll, is_solo);
+}
+
+static void rna_BoneCollection_is_expanded_set(PointerRNA *ptr, const bool is_expanded)
+{
+  BoneCollection *bcoll = (BoneCollection *)ptr->data;
+  ANIM_armature_bonecoll_is_expanded_set(bcoll, is_expanded);
 }
 
 static std::optional<std::string> rna_BoneCollection_path(const PointerRNA *ptr)
@@ -1219,7 +1225,7 @@ void rna_def_bone_curved_common(StructRNA *srna, bool is_posebone, bool is_editb
   RNA_def_property_float_sdna(prop, nullptr, "ease1");
   RNA_def_property_ui_range(prop, -5.0f, 5.0f, 1, 3);
   RNA_def_property_float_default(prop, 1.0f);
-  RNA_def_property_ui_text(prop, "Ease In", "Length of first Bezier Handle (for B-Bones only)");
+  RNA_def_property_ui_text(prop, "Ease In", "Length of first Bézier Handle (for B-Bones only)");
   RNA_def_property_translation_context(prop, BLT_I18NCONTEXT_ID_ARMATURE);
   RNA_DEF_CURVEBONE_UPDATE(prop, is_posebone, is_editbone);
 
@@ -1227,7 +1233,7 @@ void rna_def_bone_curved_common(StructRNA *srna, bool is_posebone, bool is_editb
   RNA_def_property_float_sdna(prop, nullptr, "ease2");
   RNA_def_property_ui_range(prop, -5.0f, 5.0f, 1, 3);
   RNA_def_property_float_default(prop, 1.0f);
-  RNA_def_property_ui_text(prop, "Ease Out", "Length of second Bezier Handle (for B-Bones only)");
+  RNA_def_property_ui_text(prop, "Ease Out", "Length of second Bézier Handle (for B-Bones only)");
   RNA_def_property_translation_context(prop, BLT_I18NCONTEXT_ID_ARMATURE);
   RNA_DEF_CURVEBONE_UPDATE(prop, is_posebone, is_editbone);
 
@@ -2304,6 +2310,15 @@ static void rna_def_bonecollection(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Name", "Unique within the Armature");
   RNA_def_struct_name_property(srna, prop);
   RNA_def_property_string_funcs(prop, nullptr, nullptr, "rna_BoneCollection_name_set");
+  RNA_def_property_update(prop, NC_OBJECT | ND_BONE_COLLECTION, nullptr);
+
+  prop = RNA_def_property(srna, "is_expanded", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_sdna(prop, nullptr, "flags", BONE_COLLECTION_EXPANDED);
+  RNA_def_property_ui_text(
+      prop, "Expanded", "This bone collection is expanded in the bone collections tree view");
+  RNA_def_property_flag(prop, PROP_LIB_EXCEPTION);
+  RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_LIBRARY);
+  RNA_def_property_boolean_funcs(prop, nullptr, "rna_BoneCollection_is_expanded_set");
   RNA_def_property_update(prop, NC_OBJECT | ND_BONE_COLLECTION, nullptr);
 
   prop = RNA_def_property(srna, "is_visible", PROP_BOOLEAN, PROP_NONE);

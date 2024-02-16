@@ -12,7 +12,6 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
 #include "BLI_math_matrix.h"
 #include "BLI_rand.hh"
 #include "BLI_utildefines.h"
@@ -315,21 +314,6 @@ static bool paint_brush_update(bContext *C,
     copy_v2_v2(ups->mask_tex_mouse, mouse);
     stroke->cached_size_pressure = pressure;
 
-    ups->do_linear_conversion = false;
-    ups->colorspace = nullptr;
-
-    /* check here if color sampling the main brush should do color conversion. This is done here
-     * to avoid locking up to get the image buffer during sampling */
-    if (brush->mtex.tex && brush->mtex.tex->type == TEX_IMAGE && brush->mtex.tex->ima) {
-      ImBuf *tex_ibuf = BKE_image_pool_acquire_ibuf(
-          brush->mtex.tex->ima, &brush->mtex.tex->iuser, nullptr);
-      if (tex_ibuf && tex_ibuf->float_buffer.data == nullptr) {
-        ups->do_linear_conversion = true;
-        ups->colorspace = tex_ibuf->byte_buffer.colorspace;
-      }
-      BKE_image_pool_release_ibuf(brush->mtex.tex->ima, tex_ibuf, nullptr);
-    }
-
     stroke->brush_init = true;
   }
 
@@ -566,7 +550,7 @@ static void paint_brush_stroke_add_step(
             C, world_space_position, stroke->last_mouse_position, stroke->original))
     {
       copy_v3_v3(stroke->last_world_space_position, world_space_position);
-      mul_m4_v3(stroke->vc.obact->object_to_world, stroke->last_world_space_position);
+      mul_m4_v3(stroke->vc.obact->object_to_world().ptr(), stroke->last_world_space_position);
     }
     else {
       add_v3_v3(stroke->last_world_space_position, stroke->last_scene_spacing_delta);
@@ -684,7 +668,7 @@ static float paint_space_stroke_spacing(bContext *C,
     if (!BKE_brush_use_locked_size(scene, brush)) {
       float last_object_space_position[3];
       mul_v3_m4v3(last_object_space_position,
-                  stroke->vc.obact->world_to_object,
+                  stroke->vc.obact->world_to_object().ptr(),
                   stroke->last_world_space_position);
       size_clamp = paint_calc_object_space_radius(&stroke->vc, last_object_space_position, size);
     }
@@ -834,7 +818,7 @@ static int paint_space_stroke(bContext *C,
   if (use_scene_spacing) {
     float world_space_position[3];
     bool hit = SCULPT_stroke_get_location(C, world_space_position, final_mouse, stroke->original);
-    mul_m4_v3(stroke->vc.obact->object_to_world, world_space_position);
+    mul_m4_v3(stroke->vc.obact->object_to_world().ptr(), world_space_position);
     if (hit && stroke->stroke_over_mesh) {
       sub_v3_v3v3(d_world_space_position, world_space_position, stroke->last_world_space_position);
       length = len_v3(d_world_space_position);
@@ -928,6 +912,21 @@ PaintStroke *paint_stroke_new(bContext *C,
 
   get_imapaint_zoom(C, &zoomx, &zoomy);
   stroke->zoom_2d = max_ff(zoomx, zoomy);
+
+  /* Check here if color sampling the main brush should do color conversion. This is done here
+   * to avoid locking up to get the image buffer during sampling. */
+  ups->do_linear_conversion = false;
+  ups->colorspace = nullptr;
+
+  if (br->mtex.tex && br->mtex.tex->type == TEX_IMAGE && br->mtex.tex->ima) {
+    ImBuf *tex_ibuf = BKE_image_pool_acquire_ibuf(
+        br->mtex.tex->ima, &br->mtex.tex->iuser, nullptr);
+    if (tex_ibuf && tex_ibuf->float_buffer.data == nullptr) {
+      ups->do_linear_conversion = true;
+      ups->colorspace = tex_ibuf->byte_buffer.colorspace;
+    }
+    BKE_image_pool_release_ibuf(br->mtex.tex->ima, tex_ibuf, nullptr);
+  }
 
   if (stroke->stroke_mode == BRUSH_STROKE_INVERT) {
     if (br->flag & BRUSH_CURVE) {
@@ -1225,8 +1224,8 @@ static void paint_line_strokes_spacing(bContext *C,
         C, world_space_position_old, old_pos, stroke->original);
     bool hit_new = SCULPT_stroke_get_location(
         C, world_space_position_new, new_pos, stroke->original);
-    mul_m4_v3(stroke->vc.obact->object_to_world, world_space_position_old);
-    mul_m4_v3(stroke->vc.obact->object_to_world, world_space_position_new);
+    mul_m4_v3(stroke->vc.obact->object_to_world().ptr(), world_space_position_old);
+    mul_m4_v3(stroke->vc.obact->object_to_world().ptr(), world_space_position_new);
     if (hit_old && hit_new && stroke->stroke_over_mesh) {
       sub_v3_v3v3(d_world_space_position, world_space_position_new, world_space_position_old);
       length = len_v3(d_world_space_position);
@@ -1370,7 +1369,8 @@ static bool paint_stroke_curve_end(bContext *C, wmOperator *op, PaintStroke *str
           if (paint_stroke_use_scene_spacing(br, BKE_paintmode_get_active_from_context(C))) {
             stroke->stroke_over_mesh = SCULPT_stroke_get_location(
                 C, stroke->last_world_space_position, data + 2 * j, stroke->original);
-            mul_m4_v3(stroke->vc.obact->object_to_world, stroke->last_world_space_position);
+            mul_m4_v3(stroke->vc.obact->object_to_world().ptr(),
+                      stroke->last_world_space_position);
           }
 
           stroke->stroke_started = stroke->test_start(C, op, stroke->last_mouse_position);
@@ -1504,7 +1504,7 @@ int paint_stroke_modal(bContext *C, wmOperator *op, const wmEvent *event, PaintS
     if (paint_stroke_use_scene_spacing(br, mode)) {
       stroke->stroke_over_mesh = SCULPT_stroke_get_location(
           C, stroke->last_world_space_position, sample_average.mouse, stroke->original);
-      mul_m4_v3(stroke->vc.obact->object_to_world, stroke->last_world_space_position);
+      mul_m4_v3(stroke->vc.obact->object_to_world().ptr(), stroke->last_world_space_position);
     }
     stroke->stroke_started = stroke->test_start(C, op, sample_average.mouse);
 

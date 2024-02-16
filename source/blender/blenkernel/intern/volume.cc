@@ -30,9 +30,10 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_anim_data.h"
-#include "BKE_bpath.h"
+#include "BKE_bake_data_block_id.hh"
+#include "BKE_bpath.hh"
 #include "BKE_geometry_set.hh"
-#include "BKE_global.h"
+#include "BKE_global.hh"
 #include "BKE_idtype.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_lib_query.hh"
@@ -42,14 +43,14 @@
 #include "BKE_object.hh"
 #include "BKE_object_types.hh"
 #include "BKE_packedFile.h"
-#include "BKE_report.h"
-#include "BKE_scene.h"
+#include "BKE_report.hh"
+#include "BKE_scene.hh"
 #include "BKE_volume.hh"
 #include "BKE_volume_grid.hh"
 #include "BKE_volume_grid_file_cache.hh"
 #include "BKE_volume_openvdb.hh"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "DEG_depsgraph_query.hh"
 
@@ -170,6 +171,11 @@ static void volume_copy_data(Main * /*bmain*/, ID *id_dst, const ID *id_src, con
   STRNCPY(volume_dst->runtime->velocity_y_grid, volume_src->runtime->velocity_y_grid);
   STRNCPY(volume_dst->runtime->velocity_z_grid, volume_src->runtime->velocity_z_grid);
 
+  if (volume_src->runtime->bake_materials) {
+    volume_dst->runtime->bake_materials = std::make_unique<blender::bke::bake::BakeMaterialsList>(
+        *volume_src->runtime->bake_materials);
+  }
+
   volume_dst->batch_cache = nullptr;
 }
 
@@ -267,6 +273,7 @@ static void volume_blend_read_after_liblink(BlendLibReader * /*reader*/, ID *id)
 IDTypeInfo IDType_ID_VO = {
     /*id_code*/ ID_VO,
     /*id_filter*/ FILTER_ID_VO,
+    /*dependencies_id_types*/ FILTER_ID_MA,
     /*main_listbase_index*/ INDEX_ID_VO,
     /*struct_size*/ sizeof(Volume),
     /*name*/ "Volume",

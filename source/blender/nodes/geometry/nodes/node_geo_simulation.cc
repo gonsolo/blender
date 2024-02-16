@@ -18,7 +18,7 @@
 #include "BKE_modifier.hh"
 #include "BKE_node_socket_value.hh"
 #include "BKE_object.hh"
-#include "BKE_scene.h"
+#include "BKE_scene.hh"
 
 #include "DEG_depsgraph_query.hh"
 
@@ -42,7 +42,7 @@
 
 #include "MOD_nodes.hh"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "GEO_mix_geometries.hh"
 
@@ -72,6 +72,7 @@ static bke::bake::BakeSocketConfig make_bake_socket_config(
   bke::bake::BakeSocketConfig config;
   const int items_num = node_simulation_items.size();
   config.domains.resize(items_num);
+  config.names.resize(items_num);
   config.types.resize(items_num);
   config.geometries_by_attribute.resize(items_num);
 
@@ -79,6 +80,7 @@ static bke::bake::BakeSocketConfig make_bake_socket_config(
   for (const int item_i : node_simulation_items.index_range()) {
     const NodeSimulationItem &item = node_simulation_items[item_i];
     config.types[item_i] = eNodeSocketDatatype(item.socket_type);
+    config.names[item_i] = item.name;
     config.domains[item_i] = AttrDomain(item.attribute_domain);
     if (item.socket_type == SOCK_GEOMETRY) {
       last_geometry_index = item_i;
@@ -425,9 +427,9 @@ class LazyFunctionForSimulationOutputNode final : public LazyFunction {
   Span<NodeSimulationItem> simulation_items_;
   int skip_input_index_;
   /**
-   * Start index of the simulation state inputs that are used when the simulation is skipped. Those
-   * inputs are linked directly to the simulation input node. Those inputs only exist internally,
-   * but not in the UI.
+   * Start index of the simulation state inputs that are used when the simulation is skipped.
+   * Those inputs are linked directly to the simulation input node. Those inputs only exist
+   * internally, but not in the UI.
    */
   int skip_inputs_offset_;
   /**
@@ -646,8 +648,8 @@ class LazyFunctionForSimulationOutputNode final : public LazyFunction {
     }
     const bool skip = skip_variant->get<bool>();
 
-    /* Instead of outputting the values directly, convert them to a bake state and then back. This
-     * ensures that some geometry processing happens on the data consistently (e.g. removing
+    /* Instead of outputting the values directly, convert them to a bake state and then back.
+     * This ensures that some geometry processing happens on the data consistently (e.g. removing
      * anonymous attributes). */
     std::optional<bke::bake::BakeState> bake_state = this->get_bake_state_from_inputs(
         params, data_block_map, skip);
@@ -943,7 +945,8 @@ void mix_baked_data_item(const eNodeSocketDatatype socket_type,
     case SOCK_INT:
     case SOCK_BOOLEAN:
     case SOCK_ROTATION:
-    case SOCK_RGBA: {
+    case SOCK_RGBA:
+    case SOCK_MATRIX: {
       const CPPType &type = node_geo_simulation_cc::get_simulation_item_cpp_type(socket_type);
       SocketValueVariant prev_value_variant = *static_cast<const SocketValueVariant *>(prev);
       SocketValueVariant next_value_variant = *static_cast<const SocketValueVariant *>(next);

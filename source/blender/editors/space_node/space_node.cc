@@ -12,9 +12,7 @@
 #include "BLI_string.h"
 
 #include "DNA_ID.h"
-#include "DNA_gpencil_legacy_types.h"
 #include "DNA_image_types.h"
-#include "DNA_light_types.h"
 #include "DNA_material_types.h"
 #include "DNA_modifier_types.h"
 #include "DNA_node_types.h"
@@ -22,7 +20,6 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
-#include "DNA_world_types.h"
 
 #include "MEM_guardedalloc.h"
 
@@ -34,7 +31,6 @@
 #include "BKE_lib_id.hh"
 #include "BKE_lib_query.hh"
 #include "BKE_lib_remap.hh"
-#include "BKE_node.hh"
 #include "BKE_node_runtime.hh"
 #include "BKE_node_tree_zones.hh"
 #include "BKE_screen.hh"
@@ -42,7 +38,6 @@
 #include "ED_image.hh"
 #include "ED_node.hh"
 #include "ED_node_preview.hh"
-#include "ED_render.hh"
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
 
@@ -1228,7 +1223,9 @@ static void node_id_remap_cb(ID *old_id, ID *new_id, void *user_data)
   }
 }
 
-static void node_id_remap(ScrArea * /*area*/, SpaceLink *slink, const IDRemapper *mappings)
+static void node_id_remap(ScrArea * /*area*/,
+                          SpaceLink *slink,
+                          const blender::bke::id::IDRemapper &mappings)
 {
   /* Although we should be able to perform all the mappings in a single go this lead to issues when
    * running the python test cases. Somehow the nodetree/edittree weren't updated to the new
@@ -1241,7 +1238,7 @@ static void node_id_remap(ScrArea * /*area*/, SpaceLink *slink, const IDRemapper
    * We could also move a remap address at a time to use the IDRemapper as that should get closer
    * to cleaner code. See {D13615} for more information about this topic.
    */
-  BKE_id_remapper_iter(mappings, node_id_remap_cb, slink);
+  mappings.iter(node_id_remap_cb, slink);
 }
 
 static void node_foreach_id(SpaceLink *space_link, LibraryForeachIDData *data)
@@ -1399,7 +1396,7 @@ void ED_spacetype_node()
 {
   using namespace blender::ed::space_node;
 
-  SpaceType *st = MEM_cnew<SpaceType>("spacetype node");
+  std::unique_ptr<SpaceType> st = std::make_unique<SpaceType>();
   ARegionType *art;
 
   st->spaceid = SPACE_NODE;
@@ -1480,5 +1477,5 @@ void ED_spacetype_node()
   WM_menutype_add(MEM_new<MenuType>(__func__, add_unassigned_assets_menu_type()));
   WM_menutype_add(MEM_new<MenuType>(__func__, add_root_catalogs_menu_type()));
 
-  BKE_spacetype_register(st);
+  BKE_spacetype_register(std::move(st));
 }

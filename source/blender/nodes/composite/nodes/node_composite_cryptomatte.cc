@@ -12,7 +12,7 @@
 
 #include "BLI_assert.h"
 #include "BLI_dynstr.h"
-#include "BLI_hash_mm3.h"
+#include "BLI_hash_mm3.hh"
 #include "BLI_listbase.h"
 #include "BLI_math_vector.h"
 #include "BLI_math_vector_types.hh"
@@ -30,7 +30,7 @@
 
 #include "BKE_context.hh"
 #include "BKE_cryptomatte.hh"
-#include "BKE_global.h"
+#include "BKE_global.hh"
 #include "BKE_image.h"
 #include "BKE_lib_id.hh"
 #include "BKE_library.hh"

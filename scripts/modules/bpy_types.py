@@ -1316,13 +1316,18 @@ class UserExtensionRepo(StructRNA):
     __slots__ = ()
 
     @property
-    def directory_or_default(self):
+    def directory(self):
         """Return ``directory`` or a default path derived from the users scripts path."""
-        if directory := self.directory:
-            return directory
-        import os
+        if self.use_custom_directory:
+            return self.custom_directory
         import bpy
-        return os.path.join(bpy.utils.user_resource('SCRIPTS', path="extensions"), self.module)
+        import os
+        # TODO: this should eventually be accessed via `bpy.utils.user_resource('EXTENSIONS')`
+        # which points to the same location (by default).
+        if (path := bpy.utils.resource_path('USER')):
+            return os.path.join(path, "extensions", self.module)
+        # Unlikely this is ever encountered.
+        return ""
 
 
 class HydraRenderEngine(RenderEngine):

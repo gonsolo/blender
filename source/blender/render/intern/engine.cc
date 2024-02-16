@@ -12,31 +12,25 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLT_translation.h"
-
 #include "BLI_ghash.h"
 #include "BLI_listbase.h"
 #include "BLI_math_bits.h"
-#include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
 #include "DNA_object_types.h"
 
 #include "BKE_camera.h"
-#include "BKE_global.h"
-#include "BKE_layer.hh"
+#include "BKE_global.hh"
 #include "BKE_node.hh"
-#include "BKE_report.h"
-#include "BKE_scene.h"
+#include "BKE_report.hh"
+#include "BKE_scene.hh"
 
 #include "DEG_depsgraph.hh"
 #include "DEG_depsgraph_debug.hh"
 #include "DEG_depsgraph_query.hh"
 
 #include "GPU_context.h"
-
-#include "RNA_access.hh"
 
 #ifdef WITH_PYTHON
 #  include "BPY_extern.h"
@@ -960,7 +954,7 @@ bool RE_engine_render(Render *re, bool do_all)
   if ((type->flag & RE_USE_GPU_CONTEXT) && !GPU_backend_supported()) {
     /* Clear UI drawing locks. */
     re->draw_unlock();
-    BKE_report(re->reports, RPT_ERROR, "Can not initialize the GPU");
+    BKE_report(re->reports, RPT_ERROR, "Cannot initialize the GPU");
     G.is_break = true;
     return true;
   }

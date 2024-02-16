@@ -396,6 +396,8 @@ typedef struct bNodeType {
 
   /** True when the node cannot be muted. */
   bool no_muting;
+  /** True when the node still works but it's usage is discouraged. */
+  const char *deprecation_notice;
 
   /* RNA integration */
   ExtensionRNA rna_ext;
@@ -1364,6 +1366,13 @@ void BKE_nodetree_remove_layer_n(struct bNodeTree *ntree, struct Scene *scene, i
 #define FN_NODE_ROTATE_VECTOR 1229
 #define FN_NODE_ROTATE_ROTATION 1230
 #define FN_NODE_INVERT_ROTATION 1231
+#define FN_NODE_TRANSFORM_POINT 1232
+#define FN_NODE_TRANSFORM_DIRECTION 1233
+#define FN_NODE_MATRIX_MULTIPLY 1234
+#define FN_NODE_COMBINE_TRANSFORM 1235
+#define FN_NODE_SEPARATE_TRANSFORM 1236
+#define FN_NODE_INVERT_MATRIX 1237
+#define FN_NODE_TRANSPOSE_MATRIX 1238
 
 /** \} */
 

@@ -51,11 +51,11 @@
 #include "MEM_guardedalloc.h"
 
 #include "BKE_context.hh"
-#include "BKE_global.h" /* evil G.* */
+#include "BKE_global.hh" /* evil G.* */
 #include "BKE_idprop.h"
 #include "BKE_idtype.hh"
 #include "BKE_main.hh"
-#include "BKE_report.h"
+#include "BKE_report.hh"
 
 /* Only for types. */
 #include "BKE_node.h"
@@ -8735,7 +8735,9 @@ static int bpy_class_call(bContext *C, PointerRNA *ptr, FunctionRNA *func, Param
   if (err != -1 && (is_staticmethod || is_classmethod || py_class_instance)) {
     PyObject *item = PyObject_GetAttrString((PyObject *)py_class, RNA_function_identifier(func));
 
-    if (item) {
+    const bool item_type_valid = (item != nullptr) &&
+                                 (is_staticmethod ? PyMethod_Check(item) : PyFunction_Check(item));
+    if (item_type_valid) {
       funcptr = RNA_pointer_create(nullptr, &RNA_Function, func);
 
       if (is_staticmethod) {

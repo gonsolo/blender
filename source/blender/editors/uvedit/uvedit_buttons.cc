@@ -20,7 +20,7 @@
 #include "BLI_math_vector.h"
 #include "BLI_utildefines.h"
 
-#include "BLT_translation.h"
+#include "BLT_translation.hh"
 
 #include "BKE_context.hh"
 #include "BKE_customdata.hh"
@@ -169,8 +169,6 @@ static void uvedit_vertex_buttons(const bContext *C, uiBlock *block)
                     UI_UNIT_Y,
                     &uvedit_old_center[0],
                     UNPACK2(range_xy[0]),
-                    0,
-                    0,
                     "");
     UI_but_number_step_size_set(but, step);
     UI_but_number_precision_set(but, digits);
@@ -184,8 +182,6 @@ static void uvedit_vertex_buttons(const bContext *C, uiBlock *block)
                     UI_UNIT_Y,
                     &uvedit_old_center[1],
                     UNPACK2(range_xy[1]),
-                    0,
-                    0,
                     "");
     UI_but_number_step_size_set(but, step);
     UI_but_number_precision_set(but, digits);

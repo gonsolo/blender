@@ -7,18 +7,11 @@
 #include "BKE_editmesh.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_mesh.hh"
-#include "BKE_mesh_runtime.hh"
 #include "BKE_mesh_wrapper.hh"
 #include "BKE_modifier.hh"
-#include "BKE_type_conversions.hh"
 
 #include "BLI_math_matrix.hh"
 #include "BLI_task.hh"
-
-#include "UI_interface.hh"
-#include "UI_resources.hh"
-
-#include "NOD_socket_search_link.hh"
 
 #include "GEO_reverse_uv_sampler.hh"
 
@@ -274,14 +267,14 @@ static void node_geo_exec(GeoNodeExecParams params)
   if (!mesh_attributes_eval.contains(uv_map_name)) {
     pass_through_input();
     const std::string message = fmt::format(TIP_("Evaluated surface missing UV map: \"{}\""),
-                                            std::string_view(uv_map_name));
+                                            uv_map_name);
     params.error_message_add(NodeWarningType::Error, message);
     return;
   }
   if (!mesh_attributes_orig.contains(uv_map_name)) {
     pass_through_input();
     const std::string message = fmt::format(TIP_("Original surface missing UV map: \"{}\""),
-                                            std::string_view(uv_map_name));
+                                            uv_map_name);
     params.error_message_add(NodeWarningType::Error, message);
     return;
   }

@@ -8,7 +8,6 @@
 
 #include <cmath>
 
-#include "BLI_math_color.h"
 #include "BLI_utildefines.h"
 #include "MEM_guardedalloc.h"
 
@@ -16,7 +15,6 @@
 #include "IMB_imbuf.hh"
 #include "IMB_imbuf_types.hh"
 #include "IMB_interp.hh"
-#include "imbuf.hh"
 
 #include "BLI_sys_types.h" /* for intptr_t support */
 
@@ -1761,12 +1759,12 @@ static void *do_scale_thread(void *data_v)
       int offset = y * data->newx + x;
 
       if (data->byte_buffer) {
-        interpolate_bilinear_byte(ibuf, data->byte_buffer + 4 * offset, u, v);
+        interpolate_bilinear_border_byte(ibuf, data->byte_buffer + 4 * offset, u, v);
       }
 
       if (data->float_buffer) {
         float *pixel = data->float_buffer + ibuf->channels * offset;
-        blender::math::interpolate_bilinear_fl(
+        blender::math::interpolate_bilinear_border_fl(
             ibuf->float_buffer.data, pixel, ibuf->x, ibuf->y, ibuf->channels, u, v);
       }
     }
