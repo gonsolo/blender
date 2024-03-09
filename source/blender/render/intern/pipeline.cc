@@ -39,7 +39,7 @@
 
 #include "BLT_translation.hh"
 
-#include "BKE_anim_data.h"
+#include "BKE_anim_data.hh"
 #include "BKE_animsys.h" /* <------ should this be here?, needed for sequencer update */
 #include "BKE_callbacks.hh"
 #include "BKE_camera.h"
@@ -1097,7 +1097,7 @@ static void do_render_compositor_scene(Render *re, Scene *sce, int cfra)
 
   BKE_scene_camera_switch_update(sce);
 
-  /* exception: scene uses own size (unfinished code) */
+  /* exception: scene uses its own size (unfinished code) */
   if (false) {
     BKE_render_resolution(&sce->r, false, &winx, &winy);
   }

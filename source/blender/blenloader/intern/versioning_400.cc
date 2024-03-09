@@ -38,12 +38,13 @@
 #include "BLI_assert.h"
 #include "BLI_listbase.h"
 #include "BLI_map.hh"
+#include "BLI_math_rotation.h"
 #include "BLI_math_vector.h"
 #include "BLI_set.hh"
 #include "BLI_string.h"
 #include "BLI_string_ref.hh"
 
-#include "BKE_anim_data.h"
+#include "BKE_anim_data.hh"
 #include "BKE_animsys.h"
 #include "BKE_armature.hh"
 #include "BKE_attribute.hh"
@@ -1939,10 +1940,10 @@ static bool seq_filter_bilinear_to_auto(Sequence *seq, void * /*user_data*/)
   return true;
 }
 
-static void image_settings_avi_to_ffmpeg(Scene *sce)
+static void image_settings_avi_to_ffmpeg(Scene *scene)
 {
-  if (ELEM(sce->r.im_format.imtype, R_IMF_IMTYPE_AVIRAW, R_IMF_IMTYPE_AVIJPEG)) {
-    sce->r.im_format.imtype = R_IMF_IMTYPE_FFMPEG;
+  if (ELEM(scene->r.im_format.imtype, R_IMF_IMTYPE_AVIRAW, R_IMF_IMTYPE_AVIJPEG)) {
+    scene->r.im_format.imtype = R_IMF_IMTYPE_FFMPEG;
   }
 }
 
@@ -2951,7 +2952,7 @@ void blo_do_versions_400(FileData *fd, Library * /*lib*/, Main *bmain)
         LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
           LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
             if (sl->spacetype == SPACE_IMAGE) {
-              SpaceImage *sima = (SpaceImage *)sl;
+              SpaceImage *sima = reinterpret_cast<SpaceImage *>(sl);
               sima->stretch_opacity = 0.9f;
             }
           }
@@ -2961,8 +2962,36 @@ void blo_do_versions_400(FileData *fd, Library * /*lib*/, Main *bmain)
   }
 
   if (!MAIN_VERSION_FILE_ATLEAST(bmain, 402, 5)) {
-    LISTBASE_FOREACH (Scene *, sce, &bmain->scenes) {
-      image_settings_avi_to_ffmpeg(sce);
+    LISTBASE_FOREACH (Scene *, scene, &bmain->scenes) {
+      image_settings_avi_to_ffmpeg(scene);
+    }
+  }
+
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 402, 6)) {
+    LISTBASE_FOREACH (Brush *, brush, &bmain->brushes) {
+      if (BrushCurvesSculptSettings *settings = brush->curves_sculpt_settings) {
+        settings->flag |= BRUSH_CURVES_SCULPT_FLAG_INTERPOLATE_RADIUS;
+        settings->curve_radius = 0.01f;
+      }
+    }
+  }
+
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 402, 8)) {
+    LISTBASE_FOREACH (Light *, light, &bmain->lights) {
+      light->shadow_filter_radius = 3.0f;
+    }
+  }
+
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 402, 9)) {
+    const float default_snap_angle_increment = DEG2RADF(15.0f);
+    const float default_snap_angle_increment_precision = DEG2RADF(5.0f);
+    LISTBASE_FOREACH (Scene *, scene, &bmain->scenes) {
+      scene->toolsettings->snap_angle_increment_2d = default_snap_angle_increment;
+      scene->toolsettings->snap_angle_increment_3d = default_snap_angle_increment;
+      scene->toolsettings->snap_angle_increment_2d_precision =
+          default_snap_angle_increment_precision;
+      scene->toolsettings->snap_angle_increment_3d_precision =
+          default_snap_angle_increment_precision;
     }
   }
 

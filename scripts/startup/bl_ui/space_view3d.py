@@ -209,7 +209,6 @@ class VIEW3D_HT_tool_header(Header):
 
             layout.label(text="Layer:")
             sub = layout.row()
-            sub.ui_units_x = 8
             sub.popover(
                 panel="TOPBAR_PT_gpencil_layers",
                 text=text,
@@ -605,36 +604,12 @@ class _draw_tool_settings_context_mode:
             )
             brush_basic__draw_color_selector(context, layout, brush, brush.gpencil_settings, None)
 
-        UnifiedPaintPanel.prop_unified(
-            layout,
-            context,
-            brush,
-            "size",
-            unified_name="use_unified_size",
-            pressure_name="use_pressure_size",
-            text="Radius",
-            slider=True,
-            header=True,
+        from bl_ui.properties_paint_common import (
+            brush_basic__draw_color_selector,
+            brush_basic_grease_pencil_paint_settings,
         )
 
-        UnifiedPaintPanel.prop_unified(
-            layout,
-            context,
-            brush,
-            "strength",
-            pressure_name="use_pressure_strength",
-            unified_name="use_unified_strength",
-            slider=True,
-            header=True,
-        )
-
-        if grease_pencil_tool == 'DRAW':
-            layout.prop(brush.gpencil_settings, "active_smooth_factor")
-        elif grease_pencil_tool == 'ERASE':
-            layout.prop(brush.gpencil_settings, "eraser_mode", expand=True)
-            if brush.gpencil_settings.eraser_mode == "HARD":
-                layout.prop(brush.gpencil_settings, "use_keep_caps_eraser")
-            layout.prop(brush.gpencil_settings, "use_active_layer_only")
+        brush_basic_grease_pencil_paint_settings(layout, context, brush, compact=True)
 
         return True
 
@@ -662,7 +637,6 @@ class VIEW3D_HT_header(Header):
             row = layout.row(align=True)
 
             sub = row.row()
-            sub.ui_units_x = 4
             sub.prop_with_popover(
                 orient_slot,
                 "type",
@@ -775,7 +749,6 @@ class VIEW3D_HT_header(Header):
         act_mode_i18n_context = bpy.types.Object.bl_rna.properties["mode"].translation_context
 
         sub = row.row(align=True)
-        sub.ui_units_x = 5.5
         sub.operator_menu_enum(
             "object.mode_set", "mode",
             text=iface_(act_mode_item.name, act_mode_i18n_context),
@@ -970,7 +943,6 @@ class VIEW3D_HT_header(Header):
             color_type = shading.color_type
 
             row = layout.row()
-            row.ui_units_x = 6
             row.active = is_paint_tool and color_type == 'VERTEX'
 
             if context.preferences.experimental.use_sculpt_texture_paint:
@@ -988,12 +960,10 @@ class VIEW3D_HT_header(Header):
 
         elif object_mode == 'VERTEX_PAINT':
             row = layout.row()
-            row.ui_units_x = 6
             row.popover(panel="VIEW3D_PT_slots_color_attributes", icon='GROUP_VCOL')
 
         elif object_mode == 'WEIGHT_PAINT':
             row = layout.row()
-            row.ui_units_x = 6
             row.popover(panel="VIEW3D_PT_slots_vertex_groups", icon='GROUP_VERTEX')
 
         elif object_mode == 'TEXTURE_PAINT':
@@ -1001,7 +971,6 @@ class VIEW3D_HT_header(Header):
             icon = 'MATERIAL' if tool_mode == 'MATERIAL' else 'IMAGE_DATA'
 
             row = layout.row()
-            row.ui_units_x = 9
             row.popover(panel="VIEW3D_PT_slots_projectpaint", icon=icon)
             row.popover(panel="VIEW3D_PT_mask", icon='MOD_MASK', text="")
         else:
@@ -2589,6 +2558,13 @@ class VIEW3D_MT_grease_pencil_add(Menu):
         layout.operator("object.grease_pencil_add", text="Empty", icon='EMPTY_AXIS').type = 'EMPTY'
         layout.operator("object.grease_pencil_add", text="Stroke", icon='STROKE').type = 'STROKE'
         layout.operator("object.grease_pencil_add", text="Suzanne", icon='MONKEY').type = 'MONKEY'
+        layout.separator()
+        layout.operator("object.grease_pencil_add", text="Scene Line Art", icon='SCENE').type = 'LINEART_SCENE'
+        layout.operator(
+            "object.grease_pencil_add",
+            text="Collection Line Art",
+            icon='GROUP').type = 'LINEART_COLLECTION'
+        layout.operator("object.grease_pencil_add", text="Object Line Art", icon='CUBE').type = 'LINEART_OBJECT'
 
 
 class VIEW3D_MT_add(Menu):
@@ -3603,15 +3579,13 @@ class VIEW3D_MT_sculpt(Menu):
         props = layout.operator("sculpt.face_set_change_visibility", text="Hide Active Face Set")
         props.mode = 'HIDE_ACTIVE'
 
-        props = layout.operator("paint.hide_show", text="Show All")
+        props = layout.operator("paint.hide_show_all", text="Show All")
         props.action = 'SHOW'
-        props.area = 'ALL'
 
         layout.operator("paint.visibility_invert", text="Invert Visible")
 
-        props = layout.operator("paint.hide_show", text="Hide Masked")
+        props = layout.operator("paint.hide_show_masked", text="Hide Masked")
         props.action = 'HIDE'
-        props.area = 'MASKED'
 
         layout.separator()
 
@@ -5848,6 +5822,11 @@ class VIEW3D_MT_edit_greasepencil(Menu):
 
         layout.separator()
 
+        layout.operator("grease_pencil.copy", text="Copy", icon='COPYDOWN')
+        layout.operator("grease_pencil.paste", text="Paste", icon='PASTEDOWN')
+
+        layout.separator()
+
         layout.menu("VIEW3D_MT_edit_greasepencil_showhide")
         layout.operator_menu_enum("grease_pencil.separate", "mode", text="Separate")
         layout.operator("grease_pencil.clean_loose")
@@ -6158,9 +6137,8 @@ class VIEW3D_MT_sculpt_face_sets_edit_pie(Menu):
 
         pie.operator("paint.visibility_invert", text="Invert Visible")
 
-        props = pie.operator("paint.hide_show", text="Show All")
+        props = pie.operator("paint.hide_show_all", text="Show All")
         props.action = "SHOW"
-        props.area = "ALL"
 
 
 class VIEW3D_MT_wpaint_vgroup_lock_pie(Menu):
@@ -7613,6 +7591,10 @@ class VIEW3D_PT_snapping(Panel):
         row.prop(tool_settings, "use_snap_translate", text="Move", toggle=True)
         row.prop(tool_settings, "use_snap_rotate", text="Rotate", toggle=True)
         row.prop(tool_settings, "use_snap_scale", text="Scale", toggle=True)
+        col.label(text="Rotation Increment")
+        row = col.row(align=True)
+        row.prop(tool_settings, "snap_angle_increment_3d", text="")
+        row.prop(tool_settings, "snap_angle_increment_3d_precision", text="")
 
 
 class VIEW3D_PT_proportional_edit(Panel):
@@ -8237,6 +8219,12 @@ class VIEW3D_MT_greasepencil_edit_context_menu(Menu):
             col = row.column(align=True)
             col.label(text="Point", icon='GP_SELECT_POINTS')
 
+            # Copy/paste
+            col.operator("grease_pencil.copy", text="Copy", icon="COPYDOWN")
+            col.operator("grease_pencil.paste", text="Paste", icon="PASTEDOWN")
+
+            col.separator()
+
             # Main Strokes Operators
             col.operator("grease_pencil.stroke_subdivide", text="Subdivide")
             col.operator("grease_pencil.stroke_subdivide_smooth", text="Subdivide and Smooth")
@@ -8272,6 +8260,12 @@ class VIEW3D_MT_greasepencil_edit_context_menu(Menu):
         if is_stroke_mode:
             col = row.column(align=True)
             col.label(text="Stroke", icon='GP_SELECT_STROKES')
+
+            # Copy/paste
+            col.operator("grease_pencil.copy", text="Copy", icon="COPYDOWN")
+            col.operator("grease_pencil.paste", text="Paste", icon="PASTEDOWN")
+
+            col.separator()
 
             # Main Strokes Operators
             col.operator("grease_pencil.stroke_subdivide", text="Subdivide")
@@ -8757,16 +8751,21 @@ class VIEW3D_PT_curves_sculpt_add_shape(Panel):
         brush = settings.brush
 
         col = layout.column(heading="Interpolate", align=True)
-        col.prop(brush.curves_sculpt_settings, "interpolate_length", text="Length")
-        col.prop(brush.curves_sculpt_settings, "interpolate_shape", text="Shape")
-        col.prop(brush.curves_sculpt_settings, "interpolate_point_count", text="Point Count")
+        col.prop(brush.curves_sculpt_settings, "use_length_interpolate", text="Length")
+        col.prop(brush.curves_sculpt_settings, "use_radius_interpolate", text="Radius")
+        col.prop(brush.curves_sculpt_settings, "use_shape_interpolate", text="Shape")
+        col.prop(brush.curves_sculpt_settings, "use_point_count_interpolate", text="Point Count")
 
         col = layout.column()
-        col.active = not brush.curves_sculpt_settings.interpolate_length
+        col.active = not brush.curves_sculpt_settings.use_length_interpolate
         col.prop(brush.curves_sculpt_settings, "curve_length", text="Length")
 
         col = layout.column()
-        col.active = not brush.curves_sculpt_settings.interpolate_point_count
+        col.active = not brush.curves_sculpt_settings.use_radius_interpolate
+        col.prop(brush.curves_sculpt_settings, "curve_radius", text="Radius")
+
+        col = layout.column()
+        col.active = not brush.curves_sculpt_settings.use_point_count_interpolate
         col.prop(brush.curves_sculpt_settings, "points_per_curve", text="Points")
 
 
@@ -8808,7 +8807,7 @@ class VIEW3D_PT_curves_sculpt_grow_shrink_scaling(Panel):
         settings = UnifiedPaintPanel.paint_settings(context)
         brush = settings.brush
 
-        layout.prop(brush.curves_sculpt_settings, "scale_uniform")
+        layout.prop(brush.curves_sculpt_settings, "use_uniform_scale")
         layout.prop(brush.curves_sculpt_settings, "minimum_length")
 
 

@@ -1,10 +1,10 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 4.1.0 Beta (b'09ff1b1f7e3f')\n"
+"Project-Id-Version: Blender 4.1.0 Beta (b'7e9a36c1fa37')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-02-19 09:41+0000\n"
-"PO-Revision-Date: 2024-02-12 22:15+0000\n"
+"POT-Creation-Date: 2024-03-04 10:17+0000\n"
+"PO-Revision-Date: 2024-02-27 00:56+0000\n"
 "Last-Translator: Damien Picard <dam.pic@free.fr>\n"
 "Language-Team: French <https://translate.blender.org/projects/blender-ui/ui/fr/>\n"
 "Language: fr\n"
@@ -4063,10 +4063,6 @@ msgstr "Le nom de la collection d’os active de l’armature ; vide s’il n�
 
 msgid "Solo Active"
 msgstr "Solo actif"
-
-
-msgid "Read-ony flag that indicates there is at least one bone collection marked as 'solo'"
-msgstr "Drapeau en lecture seule indiquant qu’il y a au moins une collection d’os marquée « solo »"
 
 
 msgid "Theme color or custom color of a bone"
@@ -45766,18 +45762,6 @@ msgid "Rotate Euler"
 msgstr "Rotation Euler"
 
 
-msgid "Base orientation for rotation"
-msgstr "Orientation de base pour la rotation"
-
-
-msgid "Rotate the input rotation in the local space of the object"
-msgstr "Faire pivoter la rotation en entrée dans l’espace local de l’objet"
-
-
-msgid "Rotate the input rotation in its local space"
-msgstr "Faire pivoter la rotation en entrée dans son espace local"
-
-
 msgid "Method used to describe the rotation"
 msgstr "Méthode à utiliser pour décrire la rotation"
 
@@ -45788,6 +45772,18 @@ msgstr "Rotation autour d’un axe selon un angle"
 
 msgid "Rotate around the X, Y, and Z axes"
 msgstr "Rotation autour des axes X,Y et Z"
+
+
+msgid "Base orientation for rotation"
+msgstr "Orientation de base pour la rotation"
+
+
+msgid "Rotate the input rotation in the local space of the object"
+msgstr "Faire pivoter la rotation en entrée dans l’espace local de l’objet"
+
+
+msgid "Rotate the input rotation in its local space"
+msgstr "Faire pivoter la rotation en entrée dans son espace local"
 
 
 msgid "Rotate Rotation"
@@ -106264,10 +106260,6 @@ msgid "Use Remote"
 msgstr "Utiliser distant"
 
 
-msgid "Synchonize the repository with a remote URL/path"
-msgstr "Synchroniser le dépôt avec une URL ou chemin distant"
-
-
 msgid "User Extension Repositories"
 msgstr "Dépôts d’extensions de l’utilisateur"
 
@@ -113746,6 +113738,14 @@ msgstr "Multiplication d’enveloppe"
 
 msgid "Radius Head"
 msgstr "Rayon de tête"
+
+
+msgid "Cannot figure out which object this bone belongs to."
+msgstr "Impossible de savoir à quel objet cet os appartient."
+
+
+msgid "Please file a bug report."
+msgstr "Veuillez signaler ce bug."
 
 
 msgid "Not assigned to any bone collection."
@@ -125924,6 +125924,10 @@ msgid "File must be saved before baking"
 msgstr "Le fichier doit être enregistré avant le précalcul"
 
 
+msgid "Cache has to be enabled"
+msgstr "Le cache doit être activé"
+
+
 msgid "Skipped some collections because of cycle detected"
 msgstr "Certaines collections ont été ignorées car des cycles ont été détectés"
 
@@ -137729,12 +137733,20 @@ msgid "Surface UV Coordinate"
 msgstr "Coordonnées UV de la surface"
 
 
+msgid "Surface UV coordinates at the attachment point"
+msgstr "Coordonnées UV de la surface au point d’attache"
+
+
 msgid "Surface Normal"
 msgstr "Normale de la surface"
 
 
 msgid "Surface normal at the attachment point"
 msgstr "Normale de la surface au point d’attache"
+
+
+msgid "Surface geometry to attach hair curves to"
+msgstr "Géométrie de surface à laquelle attacher les courbes de poils"
 
 
 msgid "Surface Object to attach to (needs to have matching transforms)"
@@ -137771,6 +137783,10 @@ msgstr "Aimanter la racine de chaque courbe au point le plus proche de la surfac
 
 msgid "Align to Surface Normal"
 msgstr "Aligner à la normale de surface"
+
+
+msgid "Align the curve to the surface normal (needs a guide as reference)"
+msgstr "Aligner la courbe à la normale de surface (nécessite un guide comme référence)"
 
 
 msgid "Blend along Curve"
@@ -137863,6 +137879,10 @@ msgstr "Distance minimale entre deux guides pour la nouvelle correspondance d’
 
 msgid "Guide Mask"
 msgstr "Masque de guides"
+
+
+msgid "Mask for which curves are eligible to be selected as guides"
+msgstr "Masque pour quelles courbes sont susceptibles d’être sélectionnées comme guides"
 
 
 msgid "Existing Guide Map"
@@ -138029,8 +138049,16 @@ msgid "Guide Selection"
 msgstr "Sélection de guides"
 
 
+msgid "Guide curves or points used for the selection of guide curves"
+msgstr "Courbes ou points guides utilisés pour la sélection des courbe guides"
+
+
 msgid "Minimum distance between two guides"
 msgstr "Distance minimum entre deux guides"
+
+
+msgid "ID to group curves together for guide map creation"
+msgstr "ID pour regrouper des courbes lors de la création de la correspondance des guides"
 
 
 msgid "Curl Hair Curves"
@@ -138089,8 +138117,28 @@ msgid "Curve ID"
 msgstr "ID de courbe"
 
 
+msgid "ID of each curve"
+msgstr "ID de chaque courbe"
+
+
+msgid "Length of each curve"
+msgstr "Longueur de chaque courbe"
+
+
+msgid "Direction from root to tip of each curve"
+msgstr "Direction de la racine à la pointe pour chaque courbe"
+
+
+msgid "Random vector for each curve"
+msgstr "Vecteur aléatoire pour chaque courbe"
+
+
 msgid "Surface UV"
 msgstr "UV de surface"
+
+
+msgid "Attachment surface UV coordinates of each curve"
+msgstr "Coordonnées UV de la surface d’attache de chaque courbe"
 
 
 msgid "Curve Root"
@@ -138113,12 +138161,24 @@ msgid "Root Position"
 msgstr "Position de la racine"
 
 
+msgid "Position of the root point of a curve"
+msgstr "Position du point racine d’une courbe"
+
+
 msgid "Root Direction"
 msgstr "Direction de la racine"
 
 
+msgid "Direction of the root segment of a curve"
+msgstr "Direction du segment racine d’une courbe"
+
+
 msgid "Root Index"
 msgstr "Indice de la racine"
+
+
+msgid "Index of the root point of a curve"
+msgstr "Indice du point racine d’une courbe"
 
 
 msgid "Curve Segment"
@@ -138131,6 +138191,10 @@ msgstr "Lire des informations sur le segment de courbe précédent de chaque poi
 
 msgid "Segment Length"
 msgstr "Longueur du segment"
+
+
+msgid "Distance to previous point on curve"
+msgstr "Distance au point précédent sur la courbe"
 
 
 msgid "Segment Direction"
@@ -138169,12 +138233,24 @@ msgid "Tip Position"
 msgstr "Position de la pointe"
 
 
+msgid "Position of the tip point of a curve"
+msgstr "Position de la pointe d’une courbe"
+
+
 msgid "Tip Direction"
 msgstr "Direction de la pointe"
 
 
+msgid "Direction of the tip segment of a curve"
+msgstr "Direction du segment de pointe d’une courbe"
+
+
 msgid "Tip Index"
 msgstr "Indice de la pointe"
+
+
+msgid "Index of the tip point of a curve"
+msgstr "Indice de la pointe d’une courbe"
 
 
 msgid "Displace Hair Curves"
@@ -138297,6 +138373,14 @@ msgid "Normal direction of the surface mesh at the attachment point"
 msgstr "Direction normale du maillage de surface au point d’attache"
 
 
+msgid "Surface geometry for generation"
+msgstr "Géométrie de surface pour la génération"
+
+
+msgid "Surface object for generation (needs matching transforms)"
+msgstr "Objet de surface pour la génération (nécessite une correspondance des transformations)"
+
+
 msgid "Length of the generated hair curves"
 msgstr "Longueur des courbes de poils générées"
 
@@ -138317,6 +138401,10 @@ msgid "Poisson Disk Distribution"
 msgstr "Distribution par disques de Poisson"
 
 
+msgid "Use Poisson disk distribution method to keep a minimum distance"
+msgstr "Utiliser une méthode de distribution par disques de Poisson pour garder une distance minimale"
+
+
 msgid "Surface density of generated hair curves"
 msgstr "Densité de surface des courbes de poils générées"
 
@@ -138327,6 +138415,10 @@ msgstr "Masque de densité"
 
 msgid "Factor applied on the density for curve distribution"
 msgstr "Facteur à appliquer à la densité pour la distribution des courbes"
+
+
+msgid "Discard points based on a mask texture after distribution"
+msgstr "Éliminer des points selon une texture de masque, après la distribution"
 
 
 msgid "Factor applied on the density for the viewport"
@@ -138343,6 +138435,10 @@ msgstr "Lire les informations d’attache des poils par rapport à la surface d�
 
 msgid "Attachment UV"
 msgstr "UV d’attache"
+
+
+msgid "Surface attachment UV coordinates stored on each curve"
+msgstr "Coordonnées UV de la surface d’attache stockées sur chaque courbe"
 
 
 msgid "Attachment is Valid"
@@ -138381,12 +138477,24 @@ msgid "Scale along Curve"
 msgstr "Échelle le long de la courbe"
 
 
+msgid "Scale of noise texture along each curve"
+msgstr "Échelle de la texture bruit le long de chaque courbe"
+
+
 msgid "Offset per Curve"
 msgstr "Décalage par courbe"
 
 
+msgid "Random offset of noise texture for each curve"
+msgstr "Décalage aléatoire de la texture bruit pour chaque courbe"
+
+
 msgid "Seed value for randomization"
 msgstr "Valeur de la graine pour la randomisation"
+
+
+msgid "Preserve the length of the curves on a segment basis"
+msgstr "Conserver la longueur des courbes sur une base de segment"
 
 
 msgid "Interpolates existing guide curves on a surface mesh"
@@ -138439,6 +138547,10 @@ msgstr "Redistribuer uniformément les points de contrôle existants le long de 
 
 msgid "Feature Awareness"
 msgstr "Détection des détails"
+
+
+msgid "Use simple feature awareness to keep feature definition"
+msgstr "Utiliser une détection des détails simple pour garder la définition des détails"
 
 
 msgid "Restore Curve Segment Length"
@@ -138549,6 +138661,14 @@ msgid "Factor to influence the rotation angle"
 msgstr "Facteur d’influence de l’angle de rotation"
 
 
+msgid "Rotation axis (default: tangent at root)"
+msgstr "Axe de rotation (défaut : tangent au point racine)"
+
+
+msgid "Random offset to the rotation angle per curve"
+msgstr "Décalage aléatoire de l’angle de rotation par curve"
+
+
 msgid "Lock Ends"
 msgstr "Verrouiller aux extrémités"
 
@@ -138615,6 +138735,10 @@ msgstr "Adoucir la contraction/enveloppement pour les points au-dessus de la sur
 
 msgid "Smoothing Steps"
 msgstr "Étapes d’adoucissement"
+
+
+msgid "Amount of steps of smoothing applied after shrinkwrap"
+msgstr "Étapes d’adoucissement appliqués après la contraction/enveloppement"
 
 
 msgid "Lock Roots"

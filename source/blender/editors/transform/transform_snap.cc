@@ -961,6 +961,18 @@ void freeSnapping(TransInfo *t)
   }
 }
 
+void initSnapAngleIncrements(TransInfo *t)
+{
+  if (t->spacetype == SPACE_VIEW3D) {
+    t->snap[0] = t->settings->snap_angle_increment_3d;
+    t->snap[1] = t->settings->snap_angle_increment_3d_precision;
+  }
+  else {
+    t->snap[0] = t->settings->snap_angle_increment_2d;
+    t->snap[1] = t->settings->snap_angle_increment_2d_precision;
+  }
+}
+
 static void setSnappingCallback(TransInfo *t)
 {
   if (t->spacetype == SPACE_VIEW3D) {
@@ -1746,7 +1758,6 @@ bool transform_snap_increment_ex(const TransInfo *t, bool use_local_space, float
   }
 
   if (use_local_space) {
-    BLI_assert(t->idx_max == 2);
     mul_m3_v3(t->spacemtx_inv, r_val);
   }
 

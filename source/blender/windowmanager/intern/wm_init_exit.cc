@@ -51,6 +51,7 @@
 
 #include "BKE_addon.h"
 #include "BKE_appdir.hh"
+#include "BKE_blender_cli_command.hh"
 #include "BKE_mask.h"     /* free mask clipboard */
 #include "BKE_material.h" /* BKE_material_copybuf_clear */
 #include "BKE_studiolight.h"
@@ -471,26 +472,18 @@ void WM_exit_ex(bContext *C, const bool do_python_exit, const bool do_user_exit_
   /* NOTE: same code copied in `wm_files.cc`. */
   if (C && wm) {
     if (do_user_exit_actions) {
-      MemFile *undo_memfile = wm->undo_stack ?
-                                  ED_undosys_stack_memfile_get_active(wm->undo_stack) :
-                                  nullptr;
-      if (undo_memfile != nullptr) {
-        /* save the undo state as quit.blend */
-        Main *bmain = CTX_data_main(C);
-        char filepath[FILE_MAX];
-        const int fileflags = G.fileflags & ~G_FILE_COMPRESS;
+      /* Save quit.blend. */
+      Main *bmain = CTX_data_main(C);
+      char filepath[FILE_MAX];
+      const int fileflags = G.fileflags & ~G_FILE_COMPRESS;
 
-        BLI_path_join(filepath, sizeof(filepath), BKE_tempdir_base(), BLENDER_QUIT_FILE);
+      BLI_path_join(filepath, sizeof(filepath), BKE_tempdir_base(), BLENDER_QUIT_FILE);
 
-        /* When true, the `undo_memfile` doesn't contain all information necessary
-         * for writing and up to date blend file. */
-        const bool is_memfile_outdated = ED_editors_flush_edits(bmain);
+      ED_editors_flush_edits(bmain);
 
-        BlendFileWriteParams blend_file_write_params{};
-        if (is_memfile_outdated ?
-                BLO_write_file(bmain, filepath, fileflags, &blend_file_write_params, nullptr) :
-                BLO_memfile_write_file(undo_memfile, filepath))
-        {
+      BlendFileWriteParams blend_file_write_params{};
+      if (BLO_write_file(bmain, filepath, fileflags, &blend_file_write_params, nullptr)) {
+        if (!G.quiet) {
           printf("Saved session recovery to \"%s\"\n", filepath);
         }
       }
@@ -544,6 +537,14 @@ void WM_exit_ex(bContext *C, const bool do_python_exit, const bool do_user_exit_
     BPY_run_string_eval(C, imports, "addon_utils.disable_all()");
   }
 #endif
+
+  /* Perform this early in case commands reference other data freed later in this function.
+   * This most run:
+   * - After add-ons are disabled because they may unregister commands.
+   * - Before Python exits so Python objects can be de-referenced.
+   * - Before #BKE_blender_atexit runs they free the `argv` on WIN32.
+   */
+  BKE_blender_cli_command_free_all();
 
   BLI_timer_free();
 
@@ -701,7 +702,9 @@ void WM_exit(bContext *C, const int exit_code)
   const bool do_user_exit_actions = G.background ? false : (exit_code == EXIT_SUCCESS);
   WM_exit_ex(C, true, do_user_exit_actions);
 
-  printf("\nBlender quit\n");
+  if (!G.quiet) {
+    printf("\nBlender quit\n");
+  }
 
   exit(exit_code);
 }

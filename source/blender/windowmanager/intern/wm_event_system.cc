@@ -396,22 +396,6 @@ void WM_main_remove_notifier_reference(const void *reference)
   }
 }
 
-static void wm_main_remap_assetlist(ID *old_id, ID *new_id, void * /*user_data*/)
-{
-  blender::ed::asset::list::storage_id_remap(old_id, new_id);
-}
-
-static void wm_main_remap_msgbus_notify(ID *old_id, ID *new_id, void *user_data)
-{
-  wmMsgBus *mbus = static_cast<wmMsgBus *>(user_data);
-  if (new_id != nullptr) {
-    WM_msg_id_update(mbus, old_id, new_id);
-  }
-  else {
-    WM_msg_id_remove(mbus, old_id);
-  }
-}
-
 void WM_main_remap_editor_id_reference(const blender::bke::id::IDRemapper &mappings)
 {
   Main *bmain = G_MAIN;
@@ -424,11 +408,20 @@ void WM_main_remap_editor_id_reference(const blender::bke::id::IDRemapper &mappi
     }
   }
 
-  mappings.iter(wm_main_remap_assetlist, nullptr);
+  mappings.iter(
+      [](ID *old_id, ID *new_id) { blender::ed::asset::list::storage_id_remap(old_id, new_id); });
 
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
-  if (wm && wm->message_bus) {
-    mappings.iter(wm_main_remap_msgbus_notify, wm->message_bus);
+  if (wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first)) {
+    if (wmMsgBus *mbus = wm->message_bus) {
+      mappings.iter([&](ID *old_id, ID *new_id) {
+        if (new_id != nullptr) {
+          WM_msg_id_update(mbus, old_id, new_id);
+        }
+        else {
+          WM_msg_id_remove(mbus, old_id);
+        }
+      });
+    }
   }
 
   AS_asset_library_remap_ids(mappings);
@@ -1194,7 +1187,7 @@ static void wm_operator_finished(bContext *C,
     }
 
     if (do_register) {
-      /* Take ownership of reports (in case python provided own). */
+      /* Take ownership of reports (in case python provided its own). */
       op->reports->flag |= RPT_FREE;
 
       wm_operator_register(C, op);
@@ -1589,7 +1582,7 @@ static int wm_operator_invoke(bContext *C,
       wm_operator_finished(C, op, false, store, has_undo_step, has_register);
     }
     else if (retval & OPERATOR_RUNNING_MODAL) {
-      /* Take ownership of reports (in case python provided own). */
+      /* Take ownership of reports (in case python provided its own). */
       op->reports->flag |= RPT_FREE;
 
       /* Grab cursor during blocking modal operators (X11)
@@ -4460,6 +4453,35 @@ wmEventHandler_Op *WM_event_add_modal_handler(bContext *C, wmOperator *op)
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
   return WM_event_add_modal_handler_ex(win, area, region, op);
+}
+
+void WM_event_remove_model_handler(ListBase *handlers, const wmOperator *op, const bool postpone)
+{
+  LISTBASE_FOREACH (wmEventHandler *, handler_base, handlers) {
+    if (handler_base->type == WM_HANDLER_TYPE_OP) {
+      wmEventHandler_Op *handler = (wmEventHandler_Op *)handler_base;
+      if ((handler->op == op) || (op->opm && (handler->op == op->opm))) {
+        /* Handlers will be freed in #wm_handlers_do(). */
+        if (postpone) {
+          handler->head.flag |= WM_HANDLER_DO_FREE;
+        }
+        else {
+          BLI_remlink(handlers, handler);
+          wm_event_free_handler(&handler->head);
+        }
+        break;
+      }
+    }
+  }
+}
+
+void WM_event_remove_modal_handler_all(const wmOperator *op, const bool postpone)
+{
+  Main *bmain = G_MAIN;
+  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+    WM_event_remove_model_handler(&win->modalhandlers, op, postpone);
+  }
 }
 
 void WM_event_modal_handler_area_replace(wmWindow *win, const ScrArea *old_area, ScrArea *new_area)
